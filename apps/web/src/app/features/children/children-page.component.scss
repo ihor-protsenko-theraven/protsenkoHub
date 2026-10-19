@@ -1,0 +1,10 @@
+.page-actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center;justify-content:flex-end}
+.page-actions .button{height:44px}
+.quick-status{display:flex;align-items:center}
+.quick-status select{height:44px;min-height:44px;min-width:148px;border:1px solid var(--line);border-radius:12px;background:#fff;color:var(--ink);padding:0 12px;font-size:.85rem;font-weight:700}
+.priority-choice{display:flex;gap:8px}
+.priority-choice button{flex:1;height:44px;min-height:44px;border:1px solid var(--line);border-radius:12px;background:#fff;font-weight:700;color:var(--ink)}
+.priority-choice button.is-selected{background:var(--forest);border-color:var(--forest);color:#fff}
+.priority-choice button.is-important.is-selected{background:#8a5a32;border-color:#8a5a32}
+.priority-choice button.is-urgent.is-selected{background:#9a3b2f;border-color:#9a3b2f}
+.badge--urgent{background:#fae7e1;color:#9a3b2f}

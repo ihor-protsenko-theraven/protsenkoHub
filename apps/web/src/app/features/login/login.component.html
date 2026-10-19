@@ -1,0 +1,51 @@
+<main class="auth-layout">
+  <div class="auth-intro"><span class="auth-mark" aria-hidden="true">ph</span>
+    <p class="eyebrow">ВАШ СІМЕЙНИЙ ПРОСТІР</p>
+    <h1>Усе важливе<br>для родини — разом.</h1>
+    <p>Події, покупки, задачі та контакти в одному зручному місці.</p>
+    <div class="auth-feature"><span aria-hidden="true">✳</span> Менше дрібниць у голові, більше часу разом.</div>
+  </div>
+  <section class="auth-card panel" aria-labelledby="auth-title"><p class="eyebrow">ЛАСКАВО ПРОСИМО</p>
+    <h2 id="auth-title">protsenkoHub</h2>
+    <p class="auth-card__lead">Увійдіть або створіть сімейний простір.</p>
+    <div ngTabs class="auth-tabs">
+      <div ngTabList [(selectedTab)]="mode" class="auth-tab-list" aria-label="Спосіб доступу">
+        <button ngTab value="login" type="button">Увійти</button>
+        <button ngTab value="register" type="button">Створити акаунт</button>
+      </div>
+      <div ngTabPanel value="login">
+        <ng-template ngTabContent>
+          <form (submit)="$event.preventDefault(); submit('login')"><label
+            class="field"><span>Електронна пошта</span><input type="email" autocomplete="email"
+                                                              [formField]="loginForm.email"></label><label
+            class="field"><span>Пароль</span><input type="password" autocomplete="current-password"
+                                                    [formField]="loginForm.password"></label>@if (error()) {
+            <p class="message message--error" role="alert">{{ error() }}</p>
+          }
+            <button class="button button--primary auth-submit" type="submit"
+                    [disabled]="busy()">{{ busy() ? 'Зачекайте…' : 'Увійти' }}
+            </button>
+          </form>
+        </ng-template>
+      </div>
+      <div ngTabPanel value="register">
+        <ng-template ngTabContent>
+          <form (submit)="$event.preventDefault(); submit('register')"><label class="field"><span>Ваше ім’я</span><input
+            autocomplete="name" [formField]="registerForm.displayName"></label><label
+            class="field"><span>Назва сім’ї</span><input [formField]="registerForm.householdName"></label><label
+            class="field"><span>Електронна пошта</span><input type="email" autocomplete="email"
+                                                              [formField]="registerForm.email"></label><label
+            class="field"><span>Пароль</span><input type="password" autocomplete="new-password"
+                                                    [formField]="registerForm.password"></label><span
+            class="field-help">Щонайменше 8 символів.</span>@if (error()) {
+            <p class="message message--error" role="alert">{{ error() }}</p>
+          }
+            <button class="button button--primary auth-submit" type="submit"
+                    [disabled]="busy()">{{ busy() ? 'Зачекайте…' : 'Створити простір' }}
+            </button>
+          </form>
+        </ng-template>
+      </div>
+    </div>
+  </section>
+</main>

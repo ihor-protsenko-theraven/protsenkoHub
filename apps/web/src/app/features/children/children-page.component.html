@@ -1,0 +1,143 @@
+<section class="page" aria-labelledby="page-title">
+  <header class="page-header">
+    <div>
+      <span class="eyebrow">СПРАВИ ДІТЕЙ</span>
+      <h1 id="page-title">Діти</h1>
+      <p class="page-subtitle">Задачі й нагадування по дітях: що зробити, до якого терміну і наскільки це терміново.</p>
+    </div>
+    <div class="page-actions">
+      <a class="button button--secondary" routerLink="/app/sleep">Трекер сну</a>
+      <button class="button button--primary" type="button" (click)="createNew()">+ Додати задачу</button>
+    </div>
+  </header>
+
+  @if (notice()) { <p class="message message--success" role="status">{{ notice() }}</p> }
+  @if (error() && !formOpen()) { <p class="message message--error" role="alert">{{ error() }}</p> }
+
+  @if (formOpen()) {
+    <section class="panel form-panel" aria-labelledby="task-form-title">
+      <div class="form-panel__header">
+        <h2 id="task-form-title">{{ editingId() ? 'Редагувати задачу' : 'Нова задача' }}</h2>
+      </div>
+      <form (submit)="$event.preventDefault(); save()">
+        <div class="field-grid">
+          <label class="field field--wide">
+            <span>Назва *</span>
+            <input [formField]="taskForm.title" placeholder="Що потрібно зробити?">
+          </label>
+          <div class="field field--wide">
+            <span id="priority-label">Пріоритет</span>
+            <div class="priority-choice" role="radiogroup" aria-labelledby="priority-label">
+              @for (option of priorities; track option.value) {
+                <button
+                  type="button"
+                  role="radio"
+                  [attr.aria-checked]="model().priority === option.value"
+                  [class.is-selected]="model().priority === option.value"
+                  [class.is-important]="option.value === 2"
+                  [class.is-urgent]="option.value === 3"
+                  (click)="setPriority(option.value)"
+                >{{ option.label }}</button>
+              }
+            </div>
+          </div>
+          <label class="field">
+            <span>Термін</span>
+            <input type="datetime-local" [formField]="taskForm.dueAt">
+          </label>
+          <label class="field">
+            <span>Статус</span>
+            <select [formField]="taskForm.status">
+              @for (option of statuses; track option.value) {
+                <option [value]="option.value">{{ option.label }}</option>
+              }
+            </select>
+          </label>
+          <label class="field field--wide">
+            <span>Нотатки</span>
+            <textarea [formField]="taskForm.notes" placeholder="Додаткові деталі"></textarea>
+          </label>
+        </div>
+        @if (error()) { <p class="message message--error" role="alert">{{ error() }}</p> }
+        <div class="form-actions">
+          <button class="button button--primary" type="submit" [disabled]="busy()">Зберегти</button>
+          <button class="button button--quiet" type="button" (click)="cancel()">Скасувати</button>
+        </div>
+      </form>
+    </section>
+  }
+
+  <div class="panel toolbar">
+    <label class="field field--search">
+      <span>Пошук задач</span>
+      <input type="search" placeholder="Назва або нотатки" [value]="search()" (input)="search.set($any($event.target).value)">
+    </label>
+    <label class="field field--filter">
+      <span>Статус</span>
+      <select [value]="status()" (change)="status.set($any($event.target).value)">
+        <option value="ALL">Усі задачі</option>
+        @for (option of statuses; track option.value) {
+          <option [value]="option.value">{{ option.label }}</option>
+        }
+      </select>
+    </label>
+  </div>
+
+  <div class="section-heading">
+    <h2>Задачі</h2>
+    <span>{{ recordCount(filtered().length) }}</span>
+  </div>
+
+  @if (tasks.isLoading()) {
+    <div class="panel state" role="status">Завантажуємо задачі…</div>
+  } @else if (tasks.error()) {
+    <div class="panel state">
+      <h2>Не вдалося завантажити</h2>
+      <button class="button button--secondary" type="button" (click)="tasks.reload()">Повторити</button>
+    </div>
+  } @else if (!filtered().length) {
+    <div class="panel state">
+      <h2>Задач не знайдено</h2>
+      <p>{{ tasks.value().length ? 'Змініть пошук або фільтр.' : 'Додайте першу задачу для дитини.' }}</p>
+      <button class="button button--secondary" type="button" (click)="createNew()">Додати задачу</button>
+    </div>
+  } @else {
+    <div class="list">
+      @for (task of filtered(); track task.id) {
+        <article class="panel list-card">
+          <div class="list-card__main">
+            <h3>{{ task.title }}</h3>
+            <div class="list-card__meta">
+              @if (task.dueAt) { <span>До {{ task.dueAt | date:'d MMM y, HH:mm':'':'uk' }}</span> }
+              @if (asPriority(task.priority) > 1) {
+                <span class="badge" [class.badge--warm]="asPriority(task.priority) === 2" [class.badge--urgent]="asPriority(task.priority) === 3">
+                  {{ priorityLabel(asPriority(task.priority)) }}
+                </span>
+              }
+            </div>
+            @if (task.notes) { <p>{{ task.notes }}</p> }
+          </div>
+          <div class="list-card__actions">
+            @if (deletingId() === task.id) {
+              <div class="confirm">
+                <span>Видалити?</span>
+                <button class="button button--danger" type="button" [disabled]="busy()" (click)="remove(task.id)">Так</button>
+                <button class="button button--quiet" type="button" (click)="deletingId.set(null)">Ні</button>
+              </div>
+            } @else {
+              <label class="quick-status">
+                <select [value]="task.status" [disabled]="busy()" [attr.aria-label]="'Статус задачі ' + task.title" (change)="changeStatus(task, $any($event.target).value)">
+                  @for (option of statuses; track option.value) {
+                    <option [value]="option.value">{{ option.label }}</option>
+                  }
+                </select>
+              </label>
+              <button class="button button--secondary" type="button" (click)="edit(task)">Змінити</button>
+              <button class="button button--quiet" type="button" [attr.aria-label]="'Видалити задачу ' + task.title" (click)="deletingId.set(task.id)">Видалити</button>
+            }
+          </div>
+        </article>
+      }
+    </div>
+  }
+</section>

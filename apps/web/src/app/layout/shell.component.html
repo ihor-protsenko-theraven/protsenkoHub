@@ -1,0 +1,46 @@
+<a class="skip-link" href="#main-content">Перейти до вмісту</a>
+<div class="app-shell">
+  <aside class="sidebar" aria-label="Бічна панель">
+    <a class="brand" routerLink="/app/calendar" aria-label="protsenkoHub — головна">
+      <span class="brand__mark" aria-hidden="true">ph</span>
+      <span><strong>protsenkoHub</strong><small>Сімейний простір</small></span>
+    </a>
+    <div class="sidebar__section-label">РОЗДІЛИ</div>
+    <nav class="desktop-nav" aria-label="Основна навігація">
+      @for (item of nav; track item.path) {
+        <a [routerLink]="item.path" routerLinkActive="is-active" ariaCurrentWhenActive="page">
+          <span class="nav-icon" aria-hidden="true">{{ item.icon }}</span>
+          <span><strong>{{ item.label }}</strong><small>{{ item.description }}</small></span>
+        </a>
+      }
+    </nav>
+    <div class="sidebar__footer">
+      <span class="avatar" aria-hidden="true">{{ auth.user()?.displayName?.slice(0, 1) || 'С' }}</span>
+      <span class="sidebar__user"><strong>{{ auth.user()?.displayName }}</strong><small>Сімейний акаунт</small></span>
+      <button type="button" class="logout" (click)="auth.logout()" aria-label="Вийти з акаунту">Вийти</button>
+    </div>
+  </aside>
+
+  <div class="workspace">
+    <header class="workspace-header">
+      <div>
+        <span class="workspace-header__eyebrow">СІМЕЙНИЙ ПРОСТІР</span>
+        <p>Вітаємо, {{ auth.user()?.displayName }} <span aria-hidden="true">✳</span></p>
+      </div>
+      <span class="workspace-header__date">{{ today }}</span>
+      <button type="button" class="mobile-logout" (click)="auth.logout()">Вийти</button>
+    </header>
+    <main id="main-content" class="workspace-main" tabindex="-1">
+      <router-outlet />
+    </main>
+  </div>
+
+  <nav class="mobile-nav" aria-label="Основна навігація">
+    @for (item of nav; track item.path) {
+      <a [routerLink]="item.path" routerLinkActive="is-active" ariaCurrentWhenActive="page">
+        <span class="nav-icon" aria-hidden="true">{{ item.icon }}</span>
+        <span>{{ item.label }}</span>
+      </a>
+    }
+  </nav>
+</div>

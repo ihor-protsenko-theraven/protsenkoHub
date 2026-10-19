@@ -1,0 +1,9 @@
+node_modules
+dist
+.env
+*.tsbuildinfo
+prisma/seed.js
+prisma/seed.d.ts
+prisma/seed.js.map
+prisma/*.db
+prisma/*.db-journal

@@ -1,0 +1,23 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "services": {
+    "web": {
+      "root": "apps/web",
+      "framework": "angular",
+      "installCommand": "cd ../.. && npm ci",
+      "buildCommand": "cd ../.. && npm run build -w web",
+      "outputDirectory": "dist/web/browser",
+      "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }]
+    },
+    "api": {
+      "root": "apps/api",
+      "framework": "nestjs",
+      "entrypoint": "src/main.ts",
+      "installCommand": "node ../vercel-install.js"
+    }
+  },
+  "rewrites": [
+    { "source": "/api/(.*)", "destination": { "service": "api" } },
+    { "source": "/(.*)", "destination": { "service": "web" } }
+  ]
+}

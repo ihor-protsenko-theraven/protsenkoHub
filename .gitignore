@@ -1,0 +1,16 @@
+node_modules
+.idea/
+*.angular19-backup
+dist
+.angular
+.env
+.env.local
+.vercel
+*.log
+.DS_Store
+coverage
+.turbo
+.pnpm-store
+apps/api/prisma/*.db
+apps/api/prisma/*.db-journal
+.env*

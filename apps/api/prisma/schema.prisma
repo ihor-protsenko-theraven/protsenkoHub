@@ -1,0 +1,209 @@
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "rhel-openssl-3.0.x"]
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum MemberRole {
+  ADMIN
+  MEMBER
+}
+
+enum TaskStatus {
+  TODO
+  IN_PROGRESS
+  DONE
+}
+
+enum ContactCategory {
+  DOCTOR
+  TUTOR
+  SCHOOL
+  FAMILY
+  OTHER
+}
+
+enum SleepKind {
+  NAP
+  NIGHT
+}
+
+model User {
+  id           String         @id @default(cuid())
+  email        String         @unique
+  passwordHash String
+  displayName  String
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+  memberships   Membership[]
+  assignedTasks SolomiyaTask[] @relation("TaskAssignee")
+  sleepStarted  SleepSession[] @relation("SleepStartedBy")
+  sleepEnded    SleepSession[] @relation("SleepEndedBy")
+}
+
+model Household {
+  id            String          @id @default(cuid())
+  name          String
+  timezone      String          @default("Europe/Kyiv")
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+  members       Membership[]
+  events        Event[]
+  shoppingLists ShoppingList[]
+  tasks         SolomiyaTask[]
+  contacts      Contact[]
+  sleepProfile  SleepProfile?
+  sleepSessions SleepSession[]
+  activeSleep   ActiveSleep?
+}
+
+model Membership {
+  id          String     @id @default(cuid())
+  userId      String
+  householdId String
+  role        MemberRole @default(MEMBER)
+  color       String     @default("#2F6F5E")
+  displayName String
+  createdAt   DateTime   @default(now())
+  user        User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  household   Household  @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  events      Event[]
+
+  @@unique([userId, householdId])
+  @@index([householdId])
+}
+
+model Event {
+  id           String      @id @default(cuid())
+  householdId  String
+  memberId     String?
+  title        String
+  notes        String?
+  startsAt     DateTime
+  endsAt       DateTime
+  rrule        String?
+  softDeletedAt DateTime?
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+  household    Household   @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  member       Membership? @relation(fields: [memberId], references: [id], onDelete: SetNull)
+
+  @@index([householdId, startsAt])
+}
+
+model ShoppingList {
+  id          String         @id @default(cuid())
+  householdId String
+  name        String         @default("Продукти")
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+  household   Household      @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  items       ShoppingItem[]
+
+  @@index([householdId])
+}
+
+model ShoppingItem {
+  id        String       @id @default(cuid())
+  listId    String
+  name      String
+  qty       Float        @default(1)
+  unit      String?
+  category  String?
+  isChecked Boolean      @default(false)
+  sortOrder Int          @default(0)
+  version   Int          @default(1)
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+  list      ShoppingList @relation(fields: [listId], references: [id], onDelete: Cascade)
+
+  @@index([listId, isChecked])
+}
+
+model SolomiyaTask {
+  id          String     @id @default(cuid())
+  householdId String
+  title       String
+  notes       String?
+  dueAt       DateTime?
+  status      TaskStatus @default(TODO)
+  priority    Int        @default(0)
+  assigneeId  String?
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  household   Household  @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  assignee    User?      @relation("TaskAssignee", fields: [assigneeId], references: [id], onDelete: SetNull)
+
+  @@index([householdId, status, dueAt])
+}
+
+model Contact {
+  id           String          @id @default(cuid())
+  householdId  String
+  name         String
+  category     ContactCategory @default(OTHER)
+  phone        String?
+  email        String?
+  organization String?
+  notes        String?
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+  household    Household       @relation(fields: [householdId], references: [id], onDelete: Cascade)
+
+  @@index([householdId, category])
+}
+
+model SleepProfile {
+  id          String    @id @default(cuid())
+  householdId String    @unique
+  babyName    String    @default("Соломія")
+  birthDate   DateTime?
+  napTarget   Int?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  household   Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
+}
+
+// Open tracker lives in ActiveSleep (one row per household). SleepSession keeps
+// the start time; reloading the app only reads that row and must not rewrite it.
+model SleepSession {
+  id          String      @id @default(cuid())
+  householdId String
+  kind        SleepKind
+  startedAt   DateTime
+  endedAt     DateTime?
+  notes       String?
+  startedById String?
+  endedById   String?
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  household   Household   @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  startedBy   User?       @relation("SleepStartedBy", fields: [startedById], references: [id], onDelete: SetNull)
+  endedBy     User?       @relation("SleepEndedBy", fields: [endedById], references: [id], onDelete: SetNull)
+  active      ActiveSleep?
+  pauses      SleepPause[]
+
+  @@index([householdId, startedAt])
+}
+
+model SleepPause {
+  id        String       @id @default(cuid())
+  sessionId String
+  startedAt DateTime
+  endedAt   DateTime?
+  session   SleepSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId, startedAt])
+}
+
+model ActiveSleep {
+  householdId String       @id
+  sessionId   String       @unique
+  household   Household    @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  session     SleepSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+}

@@ -1,0 +1,91 @@
+<section class="page" aria-labelledby="page-title">
+  <header class="page-header">
+    <div><span class="eyebrow">ВАЖЛИВІ ЛЮДИ</span>
+      <h1 id="page-title">Контакти</h1>
+      <p class="page-subtitle">Швидкий доступ до потрібних людей і номерів.</p></div>
+    <button class="button button--primary" type="button" (click)="createNew()">+ Додати контакт</button>
+  </header>
+  @if (notice()) {
+    <p class="message message--success" role="status">{{ notice() }}</p>
+  } @if (error() && !formOpen()) {
+  <p class="message message--error" role="alert">{{ error() }}</p>
+} @if (formOpen()) {
+  <section class="panel form-panel" aria-labelledby="contact-form-title">
+    <div class="form-panel__header"><h2
+      id="contact-form-title">{{ editingId() ? 'Редагувати контакт' : 'Новий контакт' }}</h2></div>
+    <form (submit)="$event.preventDefault(); save()">
+      <div class="field-grid"><label class="field field--wide"><span>Ім’я або назва *</span><input
+        [formField]="contactForm.name" placeholder="Наприклад, сімейний лікар"></label><label class="field"><span>Категорія</span><select
+        [formField]="contactForm.category">@for (option of categories; track option.value) {
+        <option [value]="option.value">{{ option.label }}</option>
+      }</select></label><label class="field"><span>Організація</span><input
+        [formField]="contactForm.organization"></label><label class="field"><span>Телефон</span><input type="tel"
+                                                                                                       [formField]="contactForm.phone"
+                                                                                                       autocomplete="tel"></label><label
+        class="field"><span>Електронна пошта</span><input type="email" [formField]="contactForm.email"
+                                                          autocomplete="email"></label><label class="field field--wide"><span>Нотатки</span><textarea
+        [formField]="contactForm.notes"></textarea></label></div>
+      @if (error()) {
+        <p class="message message--error" role="alert">{{ error() }}</p>
+      }
+      <div class="form-actions">
+        <button class="button button--primary" type="submit" [disabled]="busy()">Зберегти</button>
+        <button class="button button--quiet" type="button" (click)="cancel()">Скасувати</button>
+      </div>
+    </form>
+  </section>
+}
+  <div class="panel toolbar"><label class="field field--search"><span>Пошук контактів</span><input type="search"
+                                                                                                   placeholder="Ім’я, організація, телефон або email"
+                                                                                                   [value]="search()"
+                                                                                                   (input)="search.set($any($event.target).value)"></label><label
+    class="field field--filter"><span>Категорія</span><select [value]="category()"
+                                                              (change)="category.set($any($event.target).value)">
+    <option value="ALL">Усі категорії</option>
+    @for (option of categories; track option.value) {
+      <option [value]="option.value">{{ option.label }}</option>
+    }</select></label></div>
+  <div class="section-heading"><h2>Люди й служби</h2><span>{{ filtered().length }} записів</span></div>
+  @if (contacts.isLoading()) {
+    <div class="panel state" role="status">Завантажуємо контакти…</div>
+  } @else if (contacts.error()) {
+  <div class="panel state"><h2>Не вдалося завантажити</h2>
+    <button class="button button--secondary" type="button" (click)="contacts.reload()">Повторити</button>
+  </div>
+} @else if (!filtered().length) {
+  <div class="panel state"><h2>Контактів не знайдено</h2>
+    <p>{{ contacts.value().length ? 'Змініть пошук або категорію.' : 'Додайте перший контакт.' }}</p>
+    <button class="button button--secondary" type="button" (click)="createNew()">Додати контакт</button>
+  </div>
+} @else {
+  <div class="list">@for (contact of filtered(); track contact.id) {
+    <article class="panel list-card">
+      <div class="list-card__main"><h3>{{ contact.name }}</h3>
+        <div class="list-card__meta"><span
+          class="badge">{{ categoryLabel(contact.category) }}</span>@if (contact.organization) {
+          <span>{{ contact.organization }}</span>
+        }</div>
+        <div class="contact-links">@if (contact.phone) {
+          <a [href]="'tel:' + contact.phone">{{ contact.phone }}</a>
+        } @if (contact.email) {
+          <a [href]="'mailto:' + contact.email">{{ contact.email }}</a>
+        }</div>
+        @if (contact.notes) {
+          <p>{{ contact.notes }}</p>
+        }</div>
+      <div class="list-card__actions">@if (deletingId() === contact.id) {
+        <div class="confirm"><span>Видалити?</span>
+          <button class="button button--danger" type="button" [disabled]="busy()" (click)="remove(contact.id)">Так
+          </button>
+          <button class="button button--quiet" type="button" (click)="deletingId.set(null)">Ні</button>
+        </div>
+      } @else {
+        <button class="button button--secondary" type="button" (click)="edit(contact)">Змінити</button>
+        <button class="button button--quiet" type="button" [attr.aria-label]="'Видалити контакт ' + contact.name"
+                (click)="deletingId.set(contact.id)">Видалити
+        </button>
+      }</div>
+    </article>
+  }</div>
+}
+</section>

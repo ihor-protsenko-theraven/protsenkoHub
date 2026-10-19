@@ -1,0 +1,87 @@
+<section class="page" aria-labelledby="page-title">
+  <header class="page-header">
+    <div><span class="eyebrow">СІМЕЙНІ ПЛАНИ</span>
+      <h1 id="page-title">Календар</h1>
+      <p class="page-subtitle">Усі важливі події в одному місці.</p></div>
+    <button class="button button--primary" type="button" (click)="createNew()">+ Додати подію</button>
+  </header>
+  @if (notice()) {
+    <p class="message message--success" role="status">{{ notice() }}</p>
+  } @if (error() && !formOpen()) {
+  <p class="message message--error" role="alert">{{ error() }}</p>
+} @if (formOpen()) {
+  <section class="panel form-panel" aria-labelledby="event-form-title">
+    <div class="form-panel__header"><h2 id="event-form-title">{{ editingId() ? 'Редагувати подію' : 'Нова подія' }}</h2>
+    </div>
+    <form (submit)="$event.preventDefault(); save()">
+      <div class="field-grid">
+        <label class="field field--wide"><span>Назва *</span><input [formField]="eventForm.title" autocomplete="off"
+                                                                    placeholder="Наприклад, зустріч у школі"></label>
+        <label class="field"><span>Початок *</span><input type="datetime-local"
+                                                          [formField]="eventForm.startsAt"></label>
+        <label class="field"><span>Завершення *</span><input type="datetime-local"
+                                                             [formField]="eventForm.endsAt"></label>
+        <label class="field field--wide"><span>Нотатки</span><textarea [formField]="eventForm.notes"
+                                                                       placeholder="Що потрібно пам’ятати?"></textarea></label>
+      </div>
+      @if (error()) {
+        <p class="message message--error" role="alert">{{ error() }}</p>
+      }
+      <div class="form-actions">
+        <button class="button button--primary" type="submit"
+                [disabled]="busy()">{{ busy() ? 'Зберігаємо…' : 'Зберегти' }}
+        </button>
+        <button class="button button--quiet" type="button" (click)="cancel()">Скасувати</button>
+      </div>
+    </form>
+  </section>
+}
+  <div class="panel toolbar"><label class="field field--search"><span>Пошук подій</span><input type="search"
+                                                                                               placeholder="Назва або нотатки"
+                                                                                               [value]="search()"
+                                                                                               (input)="search.set($any($event.target).value)"></label><label
+    class="field field--filter"><span>Період</span><select [value]="period()"
+                                                           (change)="period.set($any($event.target).value)">
+    <option value="upcoming">Майбутні</option>
+    <option value="all">Усі</option>
+    <option value="past">Минулі</option>
+  </select></label></div>
+  <div class="section-heading"><h2>Події</h2><span>{{ filtered().length }} записів</span></div>
+  @if (events.isLoading()) {
+    <div class="panel state" role="status">Завантажуємо події…</div>
+  } @else if (events.error()) {
+  <div class="panel state"><h2>Не вдалося завантажити</h2>
+    <p>Перевірте з’єднання та спробуйте ще раз.</p>
+    <button class="button button--secondary" type="button" (click)="events.reload()">Повторити</button>
+  </div>
+} @else if (!filtered().length) {
+  <div class="panel state"><h2>Подій не знайдено</h2>
+    <p>{{ events.value().length ? 'Спробуйте змінити пошук або період.' : 'Додайте першу подію для родини.' }}</p>
+    <button class="button button--secondary" type="button" (click)="createNew()">Додати подію</button>
+  </div>
+} @else {
+  <div class="list">@for (event of filtered(); track event.id) {
+    <article class="panel list-card">
+      <div class="list-card__main"><h3>{{ event.title }}</h3>
+        <div class="list-card__meta"><span
+          class="badge">{{ event.startsAt | date:'d MMM y, HH:mm':'':'uk' }}</span><span>до {{ event.endsAt | date:'d MMM y, HH:mm':'':'uk' }}</span>
+        </div>
+        @if (event.notes) {
+          <p>{{ event.notes }}</p>
+        }</div>
+      <div class="list-card__actions">@if (deletingId() === event.id) {
+        <div class="confirm"><span>Видалити?</span>
+          <button class="button button--danger" type="button" [disabled]="busy()" (click)="remove(event.id)">Так
+          </button>
+          <button class="button button--quiet" type="button" (click)="deletingId.set(null)">Ні</button>
+        </div>
+      } @else {
+        <button class="button button--secondary" type="button" (click)="edit(event)">Змінити</button>
+        <button class="button button--quiet" type="button" [attr.aria-label]="'Видалити подію ' + event.title"
+                (click)="deletingId.set(event.id)">Видалити
+        </button>
+      }</div>
+    </article>
+  }</div>
+}
+</section>
