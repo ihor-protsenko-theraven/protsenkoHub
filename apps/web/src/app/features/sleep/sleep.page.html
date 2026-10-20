@@ -266,6 +266,7 @@
               <div class="list-card__meta">
                 <span>{{ session.startedAt | date:'d MMM, HH:mm':sleep.timeZone:'uk' }}</span>
                 <span>{{ session.endedAt ? (session.endedAt | date:'HH:mm':sleep.timeZone:'uk') : 'триває' }}</span>
+                <span class="badge">{{ session.endedAt ? 'Тривалість' : 'Вже спить' }}: {{ historyDuration(session) }}</span>
                 @if (session.startedByName) { <span class="badge">{{ session.startedByName }}</span> }
               </div>
               @if (session.notes) { <p>{{ session.notes }}</p> }

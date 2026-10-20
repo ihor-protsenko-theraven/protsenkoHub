@@ -144,6 +144,18 @@ export class SleepPage {
     return Math.min(100, (day.sleepMin / day.targetMin) * 100);
   }
 
+  historyDuration(session: SleepSession): string {
+    this.minuteTick();
+    const durationMs = asleepMs(
+      session.startedAt,
+      session.endedAt,
+      session.pauses,
+      Date.now(),
+      this.clockOffset(),
+    );
+    return formatMinutes(Math.floor(durationMs / SLEEP_UI.minuteMs));
+  }
+
   start(): void {
     const raw = this.backdate();
     const startedAt = raw ? new Date(raw) : null;

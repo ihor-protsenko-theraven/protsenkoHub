@@ -30,4 +30,16 @@ describe('sleep clock', () => {
     expect(frozen).toBe(20 * 60 * 1000);
     expect(resumed).toBe(30 * 60 * 1000);
   });
+
+  it('subtracts pauses from the duration of a finished sleep', () => {
+    const duration = asleepMs(
+      '2026-10-19T08:00:00.000Z',
+      '2026-10-19T09:35:00.000Z',
+      [{ startedAt: '2026-10-19T08:20:00.000Z', endedAt: '2026-10-19T08:35:00.000Z' }],
+      Date.parse('2026-10-19T12:00:00.000Z'),
+      0,
+    );
+
+    expect(duration).toBe(80 * 60 * 1000);
+  });
 });
