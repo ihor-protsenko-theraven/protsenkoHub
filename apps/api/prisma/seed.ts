@@ -5,6 +5,7 @@ import {
   TaskStatus,
 } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
+import { HOUSEHOLD } from '../src/config/household.config';
 
 const prisma = new PrismaClient();
 
@@ -40,7 +41,7 @@ async function main() {
     create: {
       id: 'seed-household-protsenko',
       name: 'Сімʼя Проценко',
-      timezone: 'Europe/Kyiv',
+      timezone: HOUSEHOLD.defaultTimeZone,
     },
   });
 

@@ -44,6 +44,7 @@ model User {
   assignedTasks SolomiyaTask[] @relation("TaskAssignee")
   sleepStarted  SleepSession[] @relation("SleepStartedBy")
   sleepEnded    SleepSession[] @relation("SleepEndedBy")
+  pushSubscriptions PushSubscription[]
 }
 
 model Household {
@@ -60,6 +61,7 @@ model Household {
   sleepProfile  SleepProfile?
   sleepSessions SleepSession[]
   activeSleep   ActiveSleep?
+  pushSubscriptions PushSubscription[]
 }
 
 model Membership {
@@ -206,4 +208,33 @@ model ActiveSleep {
   sessionId   String       @unique
   household   Household    @relation(fields: [householdId], references: [id], onDelete: Cascade)
   session     SleepSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+}
+
+model PushSubscription {
+  id          String   @id @default(cuid())
+  userId      String
+  householdId String
+  endpoint    String   @unique
+  p256dh      String
+  auth        String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  household   Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  deliveries  SleepReminderDelivery[]
+
+  @@index([householdId])
+  @@index([userId])
+}
+
+model SleepReminderDelivery {
+  id             String   @id @default(cuid())
+  subscriptionId String
+  awakeSince     DateTime
+  leadMinutes    Int
+  nextSleepAt    DateTime
+  sentAt         DateTime @default(now())
+  subscription   PushSubscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+
+  @@unique([subscriptionId, awakeSince, leadMinutes])
 }

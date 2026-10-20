@@ -12,21 +12,24 @@ import {
 import {form, FormField, required} from '@angular/forms/signals';
 import {toLocalDateTime} from '../../shared/date-time.util';
 import {asleepMs, elapsedMs, formatClockDuration, formatMinutes} from './sleep-clock';
+import {SLEEP_UI} from './sleep.config';
 import {SleepForm, SleepKind, sleepKindLabel, SleepOverview, SleepPause, SleepPayload, SleepSession, WeekDay,} from './sleep.model';
 import {SleepService} from './sleep.service';
+import {SleepReminderService} from './sleep-reminder.service';
 
 const emptyForm = (): SleepForm => ({kind: 'NAP', startedAt: '', endedAt: '', notes: ''});
 
 @Component({
   selector: 'app-sleep-page',
   imports: [DatePipe, FormField],
-  providers: [SleepService],
+  providers: [SleepService, SleepReminderService],
   templateUrl: './sleep.page.html',
   styleUrl: './sleep.page.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class SleepPage {
   readonly data = inject(SleepService);
+  readonly reminders = inject(SleepReminderService);
   private readonly destroyRef = inject(DestroyRef);
   readonly kindLabel = sleepKindLabel;
   readonly minutes = formatMinutes;
@@ -108,13 +111,13 @@ export class SleepPage {
   constructor() {
     const timer = setInterval(() => {
       this.tick.update((value) => value + 1);
-      const minute = Math.floor(Date.now() / 60_000);
+      const minute = Math.floor(Date.now() / SLEEP_UI.minuteMs);
       if (minute !== this.lastMinute) {
         this.lastMinute = minute;
         this.minuteTick.set(minute);
       }
-    }, 1000);
-    const poll = setInterval(() => this.data.overview.reload(), 15_000);
+    }, SLEEP_UI.tickMs);
+    const poll = setInterval(() => this.data.overview.reload(), SLEEP_UI.pollMs);
     const onVisible = () => {
       if (document.visibilityState === 'visible') this.data.overview.reload();
     };
@@ -279,7 +282,7 @@ export class SleepPage {
 
   openCreate(): void {
     const now = new Date();
-    const start = new Date(now.getTime() - 60 * 60_000);
+    const start = new Date(now.getTime() - SLEEP_UI.defaultEditLookbackMs);
     this.editingId.set(null);
     this.model.set({
       kind: this.kind(),

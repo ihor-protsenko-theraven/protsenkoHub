@@ -1,6 +1,7 @@
 import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { AuthService } from '../core/auth.service';
+import { APP_LOCALE } from '../core/locale.config';
 import { NavItem } from './nav-item.model';
 
 @Component({
@@ -12,7 +13,7 @@ import { NavItem } from './nav-item.model';
 })
 export class ShellComponent {
   readonly auth = inject(AuthService);
-  readonly today = new Intl.DateTimeFormat('uk-UA', { dateStyle: 'full' }).format(new Date());
+  readonly today = new Intl.DateTimeFormat(APP_LOCALE, { dateStyle: 'full' }).format(new Date());
   readonly nav: readonly NavItem[] = [
     { path: '/app/calendar', label: 'Календар', icon: '▦', description: 'Події та плани сім’ї' },
     { path: '/app/shopping', label: 'Покупки', icon: '◧', description: 'Спільний список покупок' },

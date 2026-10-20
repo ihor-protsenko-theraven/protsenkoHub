@@ -47,7 +47,9 @@ describe('SleepService active tracker', () => {
       },
     };
     const prisma = {
-      $transaction: jest.fn((fn: (client: typeof tx) => Promise<unknown>) => fn(tx)),
+      $transaction: jest.fn((fn: (client: typeof tx) => Promise<unknown>) =>
+        fn(tx),
+      ),
     } as unknown as PrismaService;
     const service = new SleepService(prisma);
 
@@ -65,18 +67,19 @@ describe('SleepService active tracker', () => {
   });
 
   it('stores a new start only when nobody is already tracking sleep', async () => {
-    const createSession = jest.fn().mockImplementation(({ data }: { data: { startedAt: Date } }) =>
-      Promise.resolve({
-        id: 'sleep-2',
-        kind: data.startedAt ? 'NAP' : 'NAP',
-        startedAt: data.startedAt,
-        endedAt: null,
-        notes: null,
-        startedBy: { displayName: 'Ігор' },
-        endedBy: null,
-        ...data,
-      }),
-    );
+    const createSession = jest
+      .fn()
+      .mockImplementation(({ data }: { data: { startedAt: Date } }) =>
+        Promise.resolve({
+          id: 'sleep-2',
+          kind: 'NAP',
+          endedAt: null,
+          notes: null,
+          startedBy: { displayName: 'Ігор' },
+          endedBy: null,
+          ...data,
+        }),
+      );
     const tx = {
       activeSleep: {
         findUnique: jest.fn().mockResolvedValue(null),
@@ -90,7 +93,9 @@ describe('SleepService active tracker', () => {
       },
     };
     const prisma = {
-      $transaction: jest.fn((fn: (client: typeof tx) => Promise<unknown>) => fn(tx)),
+      $transaction: jest.fn((fn: (client: typeof tx) => Promise<unknown>) =>
+        fn(tx),
+      ),
       household: { findUnique: jest.fn() },
     } as unknown as PrismaService;
     const service = new SleepService(prisma);
@@ -117,17 +122,21 @@ describe('SleepService active tracker', () => {
       },
       sleepSession: {
         findFirst: jest.fn(),
-        update: jest.fn().mockImplementation(({ data }: { data: { endedAt: Date } }) =>
-          Promise.resolve({
-            ...current,
-            endedAt: data.endedAt,
-            endedBy: { displayName: 'Сімʼя' },
-          }),
-        ),
+        update: jest
+          .fn()
+          .mockImplementation(({ data }: { data: { endedAt: Date } }) =>
+            Promise.resolve({
+              ...current,
+              endedAt: data.endedAt,
+              endedBy: { displayName: 'Сімʼя' },
+            }),
+          ),
       },
     };
     const prisma = {
-      $transaction: jest.fn((fn: (client: typeof tx) => Promise<unknown>) => fn(tx)),
+      $transaction: jest.fn((fn: (client: typeof tx) => Promise<unknown>) =>
+        fn(tx),
+      ),
     } as unknown as PrismaService;
     const service = new SleepService(prisma);
 
@@ -153,11 +162,15 @@ describe('SleepService active tracker', () => {
       },
     };
     const prisma = {
-      $transaction: jest.fn((fn: (client: typeof tx) => Promise<unknown>) => fn(tx)),
+      $transaction: jest.fn((fn: (client: typeof tx) => Promise<unknown>) =>
+        fn(tx),
+      ),
     } as unknown as PrismaService;
     const service = new SleepService(prisma);
 
-    await expect(service.stop(user(), {})).rejects.toBeInstanceOf(ConflictException);
+    await expect(service.stop(user(), {})).rejects.toBeInstanceOf(
+      ConflictException,
+    );
   });
 
   it('keeps the same pause when pause is tapped again', async () => {
@@ -177,7 +190,9 @@ describe('SleepService active tracker', () => {
       sleepPause: { create: createPause },
     };
     const prisma = {
-      $transaction: jest.fn((fn: (client: typeof tx) => Promise<unknown>) => fn(tx)),
+      $transaction: jest.fn((fn: (client: typeof tx) => Promise<unknown>) =>
+        fn(tx),
+      ),
     } as unknown as PrismaService;
     const service = new SleepService(prisma);
 
@@ -185,7 +200,9 @@ describe('SleepService active tracker', () => {
 
     expect(result.alreadyPaused).toBe(true);
     expect(result.session.startedAt).toBe(startedAt.toISOString());
-    expect(result.session.pauses[0]?.startedAt).toBe(pauseStarted.toISOString());
+    expect(result.session.pauses[0]?.startedAt).toBe(
+      pauseStarted.toISOString(),
+    );
     expect(createPause).not.toHaveBeenCalled();
   });
 });

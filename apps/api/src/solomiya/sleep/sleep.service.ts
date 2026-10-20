@@ -5,6 +5,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
+import { HOUSEHOLD } from '../../config/household.config';
 import type { AuthUser } from '../../common/types';
 import { PrismaService } from '../../prisma/prisma.service';
 import {
@@ -17,7 +18,9 @@ import {
   UpdateSleepDto,
   UpdateSleepProfileDto,
 } from './dto/sleep.dto';
+import { SLEEP_TRACKER } from './sleep.config';
 import { buildSleepGuidance } from './sleep-guidance';
+import { sessionInclude, type SessionRow, type SleepDb } from './sleep.model';
 import {
   ageLabelFromDays,
   ASSUMED_AGE_WEEKS,
@@ -27,32 +30,25 @@ import {
   suggestedKind,
 } from './sleep-time';
 
-const sessionInclude = {
-  startedBy: { select: { displayName: true } },
-  endedBy: { select: { displayName: true } },
-  pauses: { orderBy: { startedAt: 'asc' as const } },
-} satisfies Prisma.SleepSessionInclude;
-
-type SessionRow = Prisma.SleepSessionGetPayload<{
-  include: typeof sessionInclude;
-}>;
-
-type SleepDb = Prisma.TransactionClient | PrismaService;
-
-const HISTORY_MS = 21 * 24 * 60 * 60 * 1000;
+const HISTORY_MS = SLEEP_TRACKER.historyDays * SLEEP_TRACKER.dayMs;
 
 @Injectable()
 export class SleepService {
   constructor(private readonly prisma: PrismaService) {}
 
   async overview(user: AuthUser) {
-    const timeZone = await this.timeZoneOf(user);
-    const profile = await this.ensureProfile(user.householdId);
-    const active = await this.loadActive(user.householdId);
+    return this.overviewForHousehold(user.householdId);
+  }
+
+  /** Reuse the same current guidance for the push dispatcher. */
+  async overviewForHousehold(householdId: string) {
+    const timeZone = await this.timeZoneOf(householdId);
+    const profile = await this.ensureProfile(householdId);
+    const active = await this.loadActive(householdId);
     const since = new Date(Date.now() - HISTORY_MS);
     const sessions = await this.prisma.sleepSession.findMany({
       where: {
-        householdId: user.householdId,
+        householdId,
         OR: [
           { startedAt: { gte: since } },
           { endedAt: null },
@@ -68,7 +64,10 @@ export class SleepService {
   async start(user: AuthUser, dto: StartSleepDto) {
     const startedAt = dto.startedAt ? new Date(dto.startedAt) : new Date();
     this.assertInstant(startedAt, 'Час початку');
-    if (Date.now() - startedAt.getTime() > MAX_SLEEP_MIN * 60_000) {
+    if (
+      Date.now() - startedAt.getTime() >
+      MAX_SLEEP_MIN * SLEEP_TRACKER.minuteMs
+    ) {
       throw new BadRequestException(
         'Активний сон не може починатися раніше ніж 16 годин тому. Додайте завершений запис.',
       );
@@ -89,7 +88,8 @@ export class SleepService {
         }
         await this.assertNoOverlap(tx, user.householdId, startedAt, null);
         const kind =
-          dto.kind ?? suggestedKind(startedAt, await this.timeZoneOf(user));
+          dto.kind ??
+          suggestedKind(startedAt, await this.timeZoneOf(user.householdId));
         const session = await tx.sleepSession.create({
           data: {
             householdId: user.householdId,
@@ -192,7 +192,9 @@ export class SleepService {
         include: { session: { include: sessionInclude } },
       });
       if (!pause) throw new NotFoundException('Паузу не знайдено.');
-      const startedAt = dto.startedAt ? new Date(dto.startedAt) : pause.startedAt;
+      const startedAt = dto.startedAt
+        ? new Date(dto.startedAt)
+        : pause.startedAt;
       const endedAt =
         dto.endedAt === undefined
           ? pause.endedAt
@@ -206,7 +208,8 @@ export class SleepService {
       if (pause.session.endedAt && startedAt > pause.session.endedAt) {
         throw new BadRequestException('Пауза має бути всередині сну.');
       }
-      if (endedAt) this.assertPauseEnd(startedAt, endedAt, pause.session.startedAt);
+      if (endedAt)
+        this.assertPauseEnd(startedAt, endedAt, pause.session.startedAt);
       if (endedAt === null) {
         const other = pause.session.pauses.find(
           (item) => item.id !== pause.id && item.endedAt === null,
@@ -271,22 +274,21 @@ export class SleepService {
       else this.assertInstant(startedAt, 'Час початку');
       if (
         endedAt === null &&
-        Date.now() - startedAt.getTime() > MAX_SLEEP_MIN * 60_000
+        Date.now() - startedAt.getTime() >
+          MAX_SLEEP_MIN * SLEEP_TRACKER.minuteMs
       ) {
         throw new BadRequestException(
           'Активний сон не може починатися раніше ніж 16 годин тому.',
         );
       }
-      await this.assertNoOverlap(
-        tx,
-        user.householdId,
-        startedAt,
-        endedAt,
-        id,
-      );
+      await this.assertNoOverlap(tx, user.householdId, startedAt, endedAt, id);
       if (endedAt === null) {
         const other = await tx.sleepSession.findFirst({
-          where: { householdId: user.householdId, endedAt: null, id: { not: id } },
+          where: {
+            householdId: user.householdId,
+            endedAt: null,
+            id: { not: id },
+          },
         });
         if (other) {
           throw new ConflictException('Уже є інший активний сон.');
@@ -336,8 +338,7 @@ export class SleepService {
         : dto.birthDate
           ? new Date(`${dto.birthDate}T00:00:00.000Z`)
           : null;
-    const napTarget =
-      dto.napTarget === undefined ? undefined : dto.napTarget;
+    const napTarget = dto.napTarget === undefined ? undefined : dto.napTarget;
     const profile = await this.prisma.sleepProfile.upsert({
       where: { householdId: user.householdId },
       create: {
@@ -357,7 +358,11 @@ export class SleepService {
 
   private compose(
     timeZone: string,
-    profile: { babyName: string; birthDate: Date | null; napTarget: number | null },
+    profile: {
+      babyName: string;
+      birthDate: Date | null;
+      napTarget: number | null;
+    },
     sessions: SessionRow[],
     active: SessionRow | null,
   ) {
@@ -369,18 +374,18 @@ export class SleepService {
       ageWeeks: age.weeks,
       ageLabel: age.label,
       assumedAge: age.assumed,
-    sessions: sessions.map((session) => ({
-      id: session.id,
-      kind: session.kind,
-      startedAt: session.startedAt,
-      endedAt: session.endedAt,
-      pauses: session.pauses.map((pause) => ({
-        startedAt: pause.startedAt,
-        endedAt: pause.endedAt,
+      sessions: sessions.map((session) => ({
+        id: session.id,
+        kind: session.kind,
+        startedAt: session.startedAt,
+        endedAt: session.endedAt,
+        pauses: session.pauses.map((pause) => ({
+          startedAt: pause.startedAt,
+          endedAt: pause.endedAt,
+        })),
       })),
-    })),
-    napTarget: profile.napTarget,
-  });
+      napTarget: profile.napTarget,
+    });
     return {
       serverNow: now.toISOString(),
       timeZone,
@@ -463,7 +468,8 @@ export class SleepService {
     excludeId?: string,
   ) {
     const end =
-      endedAt ?? new Date(startedAt.getTime() + MAX_SLEEP_MIN * 60_000);
+      endedAt ??
+      new Date(startedAt.getTime() + MAX_SLEEP_MIN * SLEEP_TRACKER.minuteMs);
     const conflict = await tx.sleepSession.findFirst({
       where: {
         householdId,
@@ -496,12 +502,12 @@ export class SleepService {
     }
   }
 
-  private async timeZoneOf(user: AuthUser): Promise<string> {
+  private async timeZoneOf(householdId: string): Promise<string> {
     const household = await this.prisma.household.findUnique({
-      where: { id: user.householdId },
+      where: { id: householdId },
       select: { timezone: true },
     });
-    return household?.timezone || 'Europe/Kyiv';
+    return household?.timezone || HOUSEHOLD.defaultTimeZone;
   }
 
   private ageOf(
@@ -546,7 +552,11 @@ export class SleepService {
   }
 
   private assertPauseStart(
-    session: { startedAt: Date; endedAt: Date | null; pauses: { endedAt: Date | null }[] },
+    session: {
+      startedAt: Date;
+      endedAt: Date | null;
+      pauses: { endedAt: Date | null }[];
+    },
     startedAt: Date,
   ) {
     this.assertInstant(startedAt, 'Початок паузи');
@@ -558,7 +568,8 @@ export class SleepService {
     }
     const closed = session.pauses.filter((pause) => pause.endedAt);
     const latest = closed.reduce<Date | null>(
-      (max, pause) => (!max || (pause.endedAt && pause.endedAt > max) ? pause.endedAt : max),
+      (max, pause) =>
+        !max || (pause.endedAt && pause.endedAt > max) ? pause.endedAt : max,
       null,
     );
     if (latest && startedAt < latest) {
@@ -569,7 +580,9 @@ export class SleepService {
   private assertPauseEnd(startedAt: Date, endedAt: Date, sleepStart: Date) {
     this.assertInstant(endedAt, 'Кінець паузи');
     if (endedAt <= startedAt) {
-      throw new BadRequestException('Кінець паузи має бути пізніше за початок.');
+      throw new BadRequestException(
+        'Кінець паузи має бути пізніше за початок.',
+      );
     }
     if (startedAt < sleepStart) {
       throw new BadRequestException('Пауза не може початися раніше за сон.');
@@ -580,10 +593,10 @@ export class SleepService {
     this.assertInstant(startedAt, 'Час початку');
     this.assertInstant(endedAt, 'Час завершення');
     const duration = endedAt.getTime() - startedAt.getTime();
-    if (duration < 60_000) {
+    if (duration < SLEEP_TRACKER.minSessionMs) {
       throw new BadRequestException('Сон має тривати хоча б хвилину.');
     }
-    if (duration > MAX_SLEEP_MIN * 60_000) {
+    if (duration > MAX_SLEEP_MIN * SLEEP_TRACKER.minuteMs) {
       throw new BadRequestException(
         'Один сон не довший за 16 годин. Перевірте час.',
       );
@@ -604,7 +617,7 @@ export class SleepService {
     if (Number.isNaN(date.getTime())) {
       throw new BadRequestException('Некоректна дата народження.');
     }
-    const days = (Date.now() - date.getTime()) / 86_400_000;
+    const days = (Date.now() - date.getTime()) / SLEEP_TRACKER.dayMs;
     if (days < 0) {
       throw new BadRequestException(
         'Дата народження не може бути в майбутньому.',

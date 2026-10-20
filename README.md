@@ -36,6 +36,8 @@ npm run dev:web
 - `admin@protsenkohub.local` / `protsenko123`
 - `family@protsenkohub.local` / `protsenko123`
 
+Правила для агентів: [AGENTS.md](AGENTS.md). Структура й стиль коду: [docs/project-context.md](docs/project-context.md).
+
 ## Структура
 
 ```text
@@ -71,6 +73,34 @@ protsenkoHub/
 | POST | `/api/v1/solomiya/sleep/resume` | Продовжити сон |
 | PATCH | `/api/v1/solomiya/sleep/pauses/:id` | Змінити початок або кінець паузи |
 | GET/POST/PATCH/DELETE | `/api/v1/contacts` | Контакти |
+
+## Нагадування про сон у PWA
+
+Встановлений PWA може отримувати нагадування за 20 і 10 хвилин та в орієнтовний
+момент наступного сну. Дозвіл вмикається окремо на кожному телефоні кнопкою на
+екрані «Сон». Прогноз береться з поточного `nextSleepAt`: після початку сну,
+зміни записів або втрати актуального прогнозу старе повідомлення не відправляється.
+Кожен етап надсилається максимум раз на цикл неспання на пристрій. Сповіщення
+можуть приходити з невеликим запізненням через планувальник і push-сервіс ОС.
+
+Потрібні HTTPS, нова міграція Postgres і стабільна пара VAPID ключів:
+
+1. Згенеруйте ключі локально: `npx web-push generate-vapid-keys`. Приватний ключ
+   зберігайте тільки в секретах, не в репозиторії.
+2. Задайте в API/Vercel `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`,
+   `VAPID_SUBJECT` (`mailto:` адреса або HTTPS URL) і довгий `CRON_SECRET`.
+3. Для безкоштовного запуску щохвилини створіть Cloudflare Worker із
+   [конфігом](workers/sleep-reminders/wrangler.jsonc). У Worker задайте секрет
+   `CRON_SECRET` (той самий, що у Vercel); `APP_ORIGIN` вже задано в конфігу.
+   Потім виконайте
+   `npx wrangler deploy --config workers/sleep-reminders/wrangler.jsonc`.
+   Worker звертається до захищеного `/api/v1/sleep-reminders/dispatch`.
+4. На Android та iOS встановіть PWA з головного екрана, відкрийте «Сон» і
+   натисніть «Увімкнути». На iOS потрібна версія 16.4 або новіша.
+
+Локальний `ng serve` не запускає service worker. Перевіряйте дозвіл і
+надходження push у production збірці через HTTPS. Vercel Hobby cron не
+підходить: він не підтримує щохвилинний запуск.
 
 ## Продакшен на Vercel
 

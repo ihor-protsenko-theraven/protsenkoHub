@@ -1,4 +1,6 @@
-import { buildSleepGuidance, GuidanceSession } from './sleep-guidance';
+import { HOUSEHOLD } from '../../config/household.config';
+import { buildSleepGuidance } from './sleep-guidance';
+import type { GuidanceSession } from './sleep-guidance.model';
 import {
   addCalendarDays,
   formatClock,
@@ -6,9 +8,15 @@ import {
   zonedWallTimeToUtc,
 } from './sleep-time';
 
-const timeZone = 'Europe/Kyiv';
+const timeZone = HOUSEHOLD.defaultTimeZone;
 
-function at(year: number, month: number, day: number, hour: number, minute: number) {
+function at(
+  year: number,
+  month: number,
+  day: number,
+  hour: number,
+  minute: number,
+) {
   return zonedWallTimeToUtc(year, month, day, hour, minute, timeZone);
 }
 
@@ -27,7 +35,13 @@ describe('sleep clock', () => {
   it('round-trips a Kyiv wall time', () => {
     const date = at(2026, 10, 19, 7, 30);
     const parts = zonedParts(date, timeZone);
-    expect(parts).toMatchObject({ year: 2026, month: 10, day: 19, hour: 7, minute: 30 });
+    expect(parts).toMatchObject({
+      year: 2026,
+      month: 10,
+      day: 19,
+      hour: 7,
+      minute: 30,
+    });
   });
 });
 
@@ -46,8 +60,12 @@ describe('sleep guidance', () => {
     expect(result.wakeWindowMin).toBe(105);
     expect(result.headline).toContain('Ще рано');
     expect(result.headline).toContain('08:50');
-    expect(result.nextSleepAt && formatClock(new Date(result.nextSleepAt), timeZone)).toBe('08:50');
-    expect(result.prepareAt && formatClock(new Date(result.prepareAt), timeZone)).toBe('08:40');
+    expect(
+      result.nextSleepAt && formatClock(new Date(result.nextSleepAt), timeZone),
+    ).toBe('08:50');
+    expect(
+      result.prepareAt && formatClock(new Date(result.prepareAt), timeZone),
+    ).toBe('08:40');
     expect(result.schedule[0]?.clock.startsWith('08:50')).toBe(true);
     expect(result.schedule.at(-1)?.label).toBe('Ніч');
     expect(result.howItWorks).toHaveLength(3);
@@ -62,6 +80,8 @@ describe('sleep guidance', () => {
     const result = guide(at(2026, 10, 19, 9, 20), [balancedNight()]);
     expect(result.headline).toContain('вкласти зараз');
     expect(result.basis).toBe('age');
+    expect(result.nextSleepAt).toBeNull();
+    expect(result.prepareAt).toBeNull();
   });
 
   it('shortens the next window when the last day is short on sleep', () => {
@@ -82,7 +102,12 @@ describe('sleep guidance', () => {
     const sessions: GuidanceSession[] = [];
     for (let ago = 1; ago <= 7; ago += 1) {
       const morning = addCalendarDays(2026, 10, 19, -ago);
-      const previous = addCalendarDays(morning.year, morning.month, morning.day, -1);
+      const previous = addCalendarDays(
+        morning.year,
+        morning.month,
+        morning.day,
+        -1,
+      );
       sessions.push(
         {
           id: `night-${ago}`,
@@ -120,7 +145,9 @@ describe('sleep guidance', () => {
     const result = guide(at(2026, 10, 19, 7, 30), sessions);
     expect(result.basis).toBe('blended');
     expect(result.wakeWindowMin).toBe(95);
-    expect(result.nextSleepAt && formatClock(new Date(result.nextSleepAt), timeZone)).toBe('08:40');
+    expect(
+      result.nextSleepAt && formatClock(new Date(result.nextSleepAt), timeZone),
+    ).toBe('08:40');
   });
 
   it('describes the sleep already in progress instead of asking to start another', () => {
@@ -137,7 +164,10 @@ describe('sleep guidance', () => {
     expect(result.headline.toLowerCase()).toContain('спить');
     expect(result.headline).not.toContain('вкласти зараз');
     expect(result.nextSleepAt).toBeNull();
-    expect(result.expectedWakeAt && formatClock(new Date(result.expectedWakeAt), timeZone)).toBe('09:30');
+    expect(
+      result.expectedWakeAt &&
+        formatClock(new Date(result.expectedWakeAt), timeZone),
+    ).toBe('09:30');
     expect(result.awakeSince).toBeNull();
   });
 
@@ -154,7 +184,102 @@ describe('sleep guidance', () => {
   it('stays the same when the same records are read again', () => {
     const now = at(2026, 10, 19, 8, 0);
     const sessions = [balancedNight()];
-    expect(JSON.stringify(guide(now, sessions))).toBe(JSON.stringify(guide(now, sessions)));
+    expect(JSON.stringify(guide(now, sessions))).toBe(
+      JSON.stringify(guide(now, sessions)),
+    );
+  });
+
+  it('ignores a missed-log gap instead of learning a long wake window', () => {
+    const result = guide(at(2026, 10, 19, 16, 0), [
+      balancedNight(),
+      {
+        id: 'late-only',
+        kind: 'NAP',
+        startedAt: at(2026, 10, 19, 15, 0),
+        endedAt: at(2026, 10, 19, 15, 40),
+      },
+    ]);
+    expect(result.basis).toBe('age');
+    expect(result.wakeWindowMin).toBe(120);
+  });
+
+  it('keeps the fourth nap on a nap window while the target is still 4', () => {
+    const result = guide(at(2026, 10, 19, 15, 0), [
+      balancedNight(),
+      {
+        id: 'nap-1',
+        kind: 'NAP',
+        startedAt: at(2026, 10, 19, 8, 50),
+        endedAt: at(2026, 10, 19, 9, 50),
+      },
+      {
+        id: 'nap-2',
+        kind: 'NAP',
+        startedAt: at(2026, 10, 19, 11, 50),
+        endedAt: at(2026, 10, 19, 12, 50),
+      },
+      {
+        id: 'nap-3',
+        kind: 'NAP',
+        startedAt: at(2026, 10, 19, 14, 10),
+        endedAt: at(2026, 10, 19, 14, 40),
+      },
+    ]);
+    expect(result.napTarget).toBe(4);
+    expect(result.wakeWindowMin).toBe(118);
+    expect(result.wakeWindowMin).toBeLessThan(155);
+    expect(result.basis).toBe('debt');
+    expect(result.schedule[0]?.kind).toBe('NAP');
+    expect(result.detail).toContain('коротший за 35 хвилин');
+    expect(
+      result.signals.find((signal) => signal.label === 'Звідки порада')?.value,
+    ).toBe('ваші дні і короткий попередній сон');
+  });
+
+  it('freezes the expected wake while a pause is open', () => {
+    const result = guide(at(2026, 10, 19, 9, 0), [
+      balancedNight(),
+      {
+        id: 'nap',
+        kind: 'NAP',
+        startedAt: at(2026, 10, 19, 8, 30),
+        endedAt: null,
+        pauses: [{ startedAt: at(2026, 10, 19, 8, 40), endedAt: null }],
+      },
+    ]);
+    expect(
+      result.expectedWakeAt &&
+        formatClock(new Date(result.expectedWakeAt), timeZone),
+    ).toBe('09:50');
+  });
+
+  it('pulls bedtime toward her own recent nights inside 18:30–20:30', () => {
+    const sessions: GuidanceSession[] = [];
+    for (let ago = 1; ago <= 5; ago += 1) {
+      const morning = addCalendarDays(2026, 10, 19, -ago);
+      const previous = addCalendarDays(
+        morning.year,
+        morning.month,
+        morning.day,
+        -1,
+      );
+      sessions.push({
+        id: `night-${ago}`,
+        kind: 'NIGHT',
+        startedAt: at(previous.year, previous.month, previous.day, 19, 30),
+        endedAt: at(morning.year, morning.month, morning.day, 7, 0),
+      });
+    }
+    const result = guide(at(2026, 10, 19, 7, 30), [
+      ...sessions,
+      {
+        id: 'last-night',
+        kind: 'NIGHT',
+        startedAt: at(2026, 10, 18, 19, 30),
+        endedAt: at(2026, 10, 19, 7, 0),
+      },
+    ]);
+    expect(result.schedule.at(-1)?.clock.startsWith('19:30')).toBe(true);
   });
 
   it('explains the age norm before any sleep is logged', () => {

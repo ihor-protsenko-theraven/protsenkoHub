@@ -128,6 +128,29 @@
       }
     </section>
 
+    <section class="panel reminder-card" aria-labelledby="reminder-title">
+      <div>
+        <span class="eyebrow">НАГАДУВАННЯ</span>
+        <h2 id="reminder-title">Наступний сон</h2>
+        <p>На цьому пристрої: за 20 хв, за 10 хв і в орієнтовний час початку.</p>
+        @if (reminders.message()) { <p role="status">{{ reminders.message() }}</p> }
+        @if (!reminders.supported) {
+          <p class="field-help">Для push-сповіщень установіть PWA на головний екран і відкрийте його через HTTPS.</p>
+        } @else if (reminders.config.error()) {
+          <p class="field-help">Не вдалося перевірити налаштування сповіщень.</p>
+        } @else if (!reminders.config.isLoading() && !reminders.config.value().available) {
+          <p class="field-help">Серверні сповіщення ще не налаштовані.</p>
+        }
+      </div>
+      @if (reminders.enabled()) {
+        <button class="button button--secondary" type="button" [disabled]="reminders.busy()" (click)="reminders.disable()">Вимкнути</button>
+      } @else {
+        <button class="button button--primary" type="button"
+          [disabled]="reminders.busy() || !reminders.supported || !reminders.config.value().available"
+          (click)="reminders.enable()">Увімкнути</button>
+      }
+    </section>
+
     <section class="panel block" aria-labelledby="today-title">
       <div class="section-heading"><h2 id="today-title">Сьогодні</h2><span>{{ minutes(sleep.stats.todaySleepMin) }}</span></div>
       <div class="day-track">

@@ -1,12 +1,9 @@
+import type { PauseSpan } from './sleep.model';
+
 export function elapsedMs(startedAtIso: string, nowMs: number, clockOffsetMs: number): number {
   const start = new Date(startedAtIso).getTime();
   if (!Number.isFinite(start)) return 0;
   return Math.max(0, nowMs + clockOffsetMs - start);
-}
-
-export interface PauseSpan {
-  startedAt: string;
-  endedAt: string | null;
 }
 
 export function asleepMs(

@@ -13,10 +13,13 @@ export function sleepKindLabel(kind: SleepKind): string {
   }
 }
 
-export interface SleepPause {
-  id: string;
+export interface PauseSpan {
   startedAt: string;
   endedAt: string | null;
+}
+
+export interface SleepPause extends PauseSpan {
+  id: string;
 }
 
 export interface SleepSession {

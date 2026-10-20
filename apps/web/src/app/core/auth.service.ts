@@ -1,7 +1,8 @@
 import { Injectable, inject, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
-import { Observable, tap } from 'rxjs';
+import { firstValueFrom, Observable, take, tap, timeout } from 'rxjs';
+import { SwPush } from '@angular/service-worker';
 import { API_BASE_URL } from './api.config';
 import { AuthUser, RegisterModel } from './auth.model';
 
@@ -9,6 +10,7 @@ import { AuthUser, RegisterModel } from './auth.model';
 export class AuthService {
   private readonly http = inject(HttpClient);
   private readonly router = inject(Router);
+  private readonly push = inject(SwPush);
 
   readonly user = signal<AuthUser | null>(null);
   readonly ready = signal(false);
@@ -51,6 +53,27 @@ export class AuthService {
   }
 
   logout(): void {
+    void this.logoutAndClearPush();
+  }
+
+  private async logoutAndClearPush(): Promise<void> {
+    if (this.push.isEnabled) {
+      try {
+        const subscription = await firstValueFrom(this.push.subscription.pipe(take(1), timeout(3000)));
+        if (subscription) {
+          await Promise.allSettled([
+            firstValueFrom(this.http.post(
+              `${API_BASE_URL}/sleep-reminders/unsubscribe`,
+              { endpoint: subscription.endpoint },
+              { withCredentials: true },
+            ).pipe(timeout(3000))),
+            this.push.unsubscribe(),
+          ]);
+        }
+      } catch {
+        // Logout still completes if push permissions or network are unavailable.
+      }
+    }
     this.http
       .post(`${API_BASE_URL}/auth/logout`, {}, { withCredentials: true })
       .subscribe({

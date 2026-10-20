@@ -6,7 +6,8 @@ import { AppModule } from './app.module';
 
 function databaseEnv(): void {
   if (!process.env.DATABASE_URL) {
-    process.env.DATABASE_URL = process.env.POSTGRES_PRISMA_URL || process.env.POSTGRES_URL;
+    process.env.DATABASE_URL =
+      process.env.POSTGRES_PRISMA_URL || process.env.POSTGRES_URL;
   }
   if (!process.env.DIRECT_URL) {
     process.env.DIRECT_URL =
@@ -21,7 +22,10 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   const config = app.get(ConfigService);
   const configured = config.get<string>('CORS_ORIGIN', 'http://localhost:4200');
-  const vercelHosts = [process.env.VERCEL_PROJECT_PRODUCTION_URL, process.env.VERCEL_URL]
+  const vercelHosts = [
+    process.env.VERCEL_PROJECT_PRODUCTION_URL,
+    process.env.VERCEL_URL,
+  ]
     .filter((host): host is string => Boolean(host))
     .map((host) => (host.startsWith('http') ? host : `https://${host}`));
 

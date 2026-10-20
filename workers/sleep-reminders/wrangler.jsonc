@@ -1,0 +1,9 @@
+{
+  "name": "protsenkohub-sleep-reminders",
+  "main": "worker.mjs",
+  "compatibility_date": "2026-10-20",
+  "workers_dev": false,
+  "preview_urls": false,
+  "vars": { "APP_ORIGIN": "https://protsenko-hub.vercel.app" },
+  "triggers": { "crons": ["* * * * *"] }
+}

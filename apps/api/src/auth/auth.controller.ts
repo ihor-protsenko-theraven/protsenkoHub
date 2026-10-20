@@ -8,6 +8,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import type { Response } from 'express';
+import { AUTH } from './auth.config';
 import { AuthService } from './auth.service';
 import { LoginDto, RegisterDto } from './dto/auth.dto';
 import { JwtAuthGuard } from './jwt-auth.guard';
@@ -42,7 +43,7 @@ export class AuthController {
   @Post('logout')
   @HttpCode(200)
   logout(@Res({ passthrough: true }) res: Response) {
-    res.clearCookie('access_token', { path: '/' });
+    res.clearCookie(AUTH.cookieName, { path: AUTH.cookiePath });
     return { ok: true };
   }
 
@@ -53,12 +54,13 @@ export class AuthController {
   }
 
   private setCookie(res: Response, token: string): void {
-    res.cookie('access_token', token, {
+    res.cookie(AUTH.cookieName, token, {
       httpOnly: true,
-      sameSite: 'lax',
-      secure: process.env.NODE_ENV === 'production' || process.env.VERCEL === '1',
-      maxAge: 7 * 24 * 60 * 60 * 1000,
-      path: '/',
+      sameSite: AUTH.sameSite,
+      secure:
+        process.env.NODE_ENV === 'production' || process.env.VERCEL === '1',
+      maxAge: AUTH.maxAgeMs,
+      path: AUTH.cookiePath,
     });
   }
 }

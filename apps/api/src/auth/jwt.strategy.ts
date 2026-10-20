@@ -4,18 +4,14 @@ import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
 import type { Request } from 'express';
 import { PrismaService } from '../prisma/prisma.service';
+import { AUTH } from './auth.config';
+import type { JwtPayload } from './auth.model';
 import type { AuthUser } from '../common/types';
-
-interface JwtPayload {
-  sub: string;
-  email: string;
-}
 
 function cookieExtractor(req: Request): string | null {
   const cookies = req.cookies as Record<string, string> | undefined;
-  if (cookies?.access_token) {
-    return cookies.access_token;
-  }
+  const token = cookies?.[AUTH.cookieName];
+  if (token) return token;
   return null;
 }
 

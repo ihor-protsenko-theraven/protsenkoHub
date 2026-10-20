@@ -1,23 +1,22 @@
-export const ASSUMED_AGE_WEEKS = 17;
-export const MAX_SLEEP_MIN = 16 * 60;
-export const STALE_SLEEP_MIN = 14 * 60;
-export const CLOCK_SKEW_MS = 2 * 60 * 1000;
+import { HOUSEHOLD } from '../../config/household.config';
+import {
+  ASSUMED_AGE_WEEKS,
+  CLOCK_SKEW_MS,
+  MAX_SLEEP_MIN,
+  STALE_SLEEP_MIN,
+} from './sleep.config';
+import type { ZonedParts } from './sleep-time.model';
+
+export { ASSUMED_AGE_WEEKS, CLOCK_SKEW_MS, MAX_SLEEP_MIN, STALE_SLEEP_MIN };
 
 export function pad(value: number): string {
   return String(value).padStart(2, '0');
 }
 
-export interface ZonedParts {
-  year: number;
-  month: number;
-  day: number;
-  hour: number;
-  minute: number;
-  second: number;
-}
+export type { ZonedParts } from './sleep-time.model';
 
 export function zonedParts(date: Date, timeZone: string): ZonedParts {
-  const parts = new Intl.DateTimeFormat('en-US', {
+  const parts = new Intl.DateTimeFormat(HOUSEHOLD.partLocale, {
     timeZone,
     hourCycle: 'h23',
     year: 'numeric',
@@ -84,14 +83,7 @@ export function zonedWallTimeToUtc(
 
 export function startOfLocalDay(date: Date, timeZone: string): Date {
   const parts = zonedParts(date, timeZone);
-  return zonedWallTimeToUtc(
-    parts.year,
-    parts.month,
-    parts.day,
-    0,
-    0,
-    timeZone,
-  );
+  return zonedWallTimeToUtc(parts.year, parts.month, parts.day, 0, 0, timeZone);
 }
 
 export function nextLocalMidnight(date: Date, timeZone: string): Date {
@@ -134,10 +126,7 @@ export function median(values: number[]): number {
   return sorted[mid];
 }
 
-export function suggestedKind(
-  date: Date,
-  timeZone: string,
-): 'NAP' | 'NIGHT' {
+export function suggestedKind(date: Date, timeZone: string): 'NAP' | 'NIGHT' {
   const hour = zonedParts(date, timeZone).hour;
   return hour >= 18 || hour < 6 ? 'NIGHT' : 'NAP';
 }
