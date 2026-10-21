@@ -68,7 +68,11 @@
         </div>
         @if (event.notes) {
           <p>{{ event.notes }}</p>
-        }</div>
+        }
+        <div class="record-audit">
+          <span>Додав: {{ event.createdBy?.displayName || 'невідомо' }}</span>
+          @if (event.updatedBy; as editor) { <span>Змінив: {{ editor.displayName }}</span> }
+        </div></div>
       <div class="list-card__actions">@if (deletingId() === event.id) {
         <div class="confirm"><span>Видалити?</span>
           <button class="button button--danger" type="button" [disabled]="busy()" (click)="remove(event.id)">Так

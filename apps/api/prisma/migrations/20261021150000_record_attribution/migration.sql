@@ -1,0 +1,15 @@
+ALTER TABLE "Event" ADD COLUMN "createdById" TEXT, ADD COLUMN "updatedById" TEXT;
+ALTER TABLE "ShoppingItem" ADD COLUMN "createdById" TEXT, ADD COLUMN "updatedById" TEXT;
+ALTER TABLE "SolomiyaTask" ADD COLUMN "createdById" TEXT, ADD COLUMN "updatedById" TEXT;
+ALTER TABLE "Contact" ADD COLUMN "createdById" TEXT, ADD COLUMN "updatedById" TEXT;
+ALTER TABLE "SleepSession" ADD COLUMN "updatedById" TEXT;
+
+ALTER TABLE "Event" ADD CONSTRAINT "Event_createdById_fkey" FOREIGN KEY ("createdById") REFERENCES "User"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "Event" ADD CONSTRAINT "Event_updatedById_fkey" FOREIGN KEY ("updatedById") REFERENCES "User"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "ShoppingItem" ADD CONSTRAINT "ShoppingItem_createdById_fkey" FOREIGN KEY ("createdById") REFERENCES "User"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "ShoppingItem" ADD CONSTRAINT "ShoppingItem_updatedById_fkey" FOREIGN KEY ("updatedById") REFERENCES "User"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "SolomiyaTask" ADD CONSTRAINT "SolomiyaTask_createdById_fkey" FOREIGN KEY ("createdById") REFERENCES "User"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "SolomiyaTask" ADD CONSTRAINT "SolomiyaTask_updatedById_fkey" FOREIGN KEY ("updatedById") REFERENCES "User"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "Contact" ADD CONSTRAINT "Contact_createdById_fkey" FOREIGN KEY ("createdById") REFERENCES "User"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "Contact" ADD CONSTRAINT "Contact_updatedById_fkey" FOREIGN KEY ("updatedById") REFERENCES "User"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "SleepSession" ADD CONSTRAINT "SleepSession_updatedById_fkey" FOREIGN KEY ("updatedById") REFERENCES "User"("id") ON DELETE SET NULL ON UPDATE CASCADE;

@@ -1,12 +1,13 @@
 services:
   db:
     image: postgres:16
+    restart: unless-stopped
     environment:
       POSTGRES_USER: protsenko
       POSTGRES_PASSWORD: protsenko
       POSTGRES_DB: protsenkohub
     ports:
-      - "5432:5432"
+      - "127.0.0.1:5432:5432"
     volumes:
       - protsenko-hub-db:/var/lib/postgresql/data
 

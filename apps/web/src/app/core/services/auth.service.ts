@@ -3,8 +3,9 @@ import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { firstValueFrom, Observable, take, tap, timeout } from 'rxjs';
 import { SwPush } from '@angular/service-worker';
-import { API_BASE_URL } from './api.config';
-import { AuthUser, RegisterModel } from './auth.model';
+import { API_BASE_URL } from '../configs/api.config';
+import { readPushSubscription } from '../push-subscription';
+import { AuthUser, RegisterModel } from '../models/auth.model';
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
@@ -52,6 +53,11 @@ export class AuthService {
       .pipe(tap((res) => this.user.set(res.user)));
   }
 
+  setUser(user: AuthUser): void {
+    this.user.set(user);
+    this.ready.set(true);
+  }
+
   logout(): void {
     void this.logoutAndClearPush();
   }
@@ -59,7 +65,13 @@ export class AuthService {
   private async logoutAndClearPush(): Promise<void> {
     if (this.push.isEnabled) {
       try {
-        const subscription = await firstValueFrom(this.push.subscription.pipe(take(1), timeout(3000)));
+        let subscription: PushSubscription | null = null;
+        try {
+          subscription = await firstValueFrom(this.push.subscription.pipe(take(1), timeout(3000)));
+        } catch {
+          subscription = null;
+        }
+        subscription ??= await readPushSubscription();
         if (subscription) {
           await Promise.allSettled([
             firstValueFrom(this.http.post(

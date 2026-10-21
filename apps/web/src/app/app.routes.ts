@@ -1,7 +1,12 @@
 import { Routes } from '@angular/router';
-import { authGuard, guestGuard } from './core/auth.guard';
+import { authGuard, guestGuard } from './core/guards/auth.guard';
 
 export const routes: Routes = [
+  {
+    path: 'invite/:token',
+    loadComponent: () =>
+      import('./features/family/invite.page').then((m) => m.InvitePage),
+  },
   {
     path: 'login',
     canActivate: [guestGuard],
@@ -39,6 +44,11 @@ export const routes: Routes = [
         path: 'contacts',
         loadComponent: () =>
           import('./features/contacts/contacts.page').then((m) => m.ContactsPage),
+      },
+      {
+        path: 'family',
+        loadComponent: () =>
+          import('./features/family/family.page').then((m) => m.FamilyPage),
       },
     ],
   },

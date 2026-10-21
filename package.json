@@ -22,7 +22,7 @@
     "db:bootstrap": "node ./scripts/bootstrap-admin.js",
     "test:api": "npm run test -w api",
     "test:web": "npm run test -w web -- --watch=false",
-    "test": "npm run test -w api -- --runInBand && npm run test:web",
+    "test": "npm run test:api && npm run test:web",
     "postinstall": "node ./scripts/ensure-env.js && node ./scripts/with-database-env.js npm run db:generate"
   },
   "engines": {

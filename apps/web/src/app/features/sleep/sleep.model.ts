@@ -30,6 +30,7 @@ export interface SleepSession {
   notes: string | null;
   startedByName: string | null;
   endedByName: string | null;
+  updatedByName: string | null;
   pauses: SleepPause[];
 }
 
@@ -85,6 +86,7 @@ export interface SleepProfile {
   ageLabel: string;
   assumedAge: boolean;
   napTarget: number | null;
+  updatedByName: string | null;
 }
 
 export interface SleepOverview {

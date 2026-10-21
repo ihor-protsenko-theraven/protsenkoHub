@@ -1,4 +1,6 @@
-export interface ShoppingItem {
+import type { RecordAudit } from '../../shared/record-audit.model';
+
+export interface ShoppingItem extends RecordAudit {
   id: string;
   name: string;
   qty: number;

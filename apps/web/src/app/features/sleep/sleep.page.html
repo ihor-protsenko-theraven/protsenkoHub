@@ -30,7 +30,7 @@
         }
         <p class="page-subtitle">
           Старт {{ sleep.active.startedAt | date:'HH:mm':sleep.timeZone:'uk' }}
-          @if (sleep.active.startedByName) { · {{ sleep.active.startedByName }} }
+          @if (sleep.active.startedByName) { · Почав: {{ sleep.active.startedByName }} }
         </p>
         @if (sleep.active.pauses.length) {
           <ul class="pause-list">
@@ -170,6 +170,7 @@
           }
         </div>
       </div>
+      @if (sleep.profile.updatedByName) { <p class="record-audit">Налаштування оновив: {{ sleep.profile.updatedByName }}</p> }
       @if (sleep.scheduleNote) { <p class="field-help">{{ sleep.scheduleNote }}</p> }
       @if (sleep.detail && sleep.active) { <p class="field-help">{{ sleep.detail }}</p> }
       @if (!sleep.schedule.length) {
@@ -267,9 +268,13 @@
                 <span>{{ session.startedAt | date:'d MMM, HH:mm':sleep.timeZone:'uk' }}</span>
                 <span>{{ session.endedAt ? (session.endedAt | date:'HH:mm':sleep.timeZone:'uk') : 'триває' }}</span>
                 <span class="badge">{{ session.endedAt ? 'Тривалість' : 'Вже спить' }}: {{ historyDuration(session) }}</span>
-                @if (session.startedByName) { <span class="badge">{{ session.startedByName }}</span> }
               </div>
               @if (session.notes) { <p>{{ session.notes }}</p> }
+              <div class="record-audit">
+                <span>Додав: {{ session.startedByName || 'невідомо' }}</span>
+                @if (session.endedByName) { <span>Завершив: {{ session.endedByName }}</span> }
+                @if (session.updatedByName) { <span>Змінив: {{ session.updatedByName }}</span> }
+              </div>
             </div>
             <div class="list-card__actions">
               @if (deletingId() === session.id) {

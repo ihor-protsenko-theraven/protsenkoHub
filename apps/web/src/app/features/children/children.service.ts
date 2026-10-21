@@ -1,8 +1,8 @@
 import { httpResource } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { tap } from 'rxjs';
-import { ApiService } from '../../core/api.service';
-import { API_BASE_URL } from '../../core/api.config';
+import { ApiService } from '../../core/services/api.service';
+import { API_BASE_URL } from '../../core/configs/api.config';
 import { TaskItem, TaskPayload } from './children.model';
 
 @Injectable()

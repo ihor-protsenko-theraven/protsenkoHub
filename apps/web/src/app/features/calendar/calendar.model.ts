@@ -1,4 +1,6 @@
-export interface CalendarEvent {
+import type { RecordAudit } from '../../shared/record-audit.model';
+
+export interface CalendarEvent extends RecordAudit {
   id: string;
   title: string;
   notes: string | null;

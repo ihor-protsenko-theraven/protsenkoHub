@@ -116,6 +116,10 @@
               }
             </div>
             @if (task.notes) { <p>{{ task.notes }}</p> }
+            <div class="record-audit">
+              <span>Додав: {{ task.createdBy?.displayName || 'невідомо' }}</span>
+              @if (task.updatedBy; as editor) { <span>Змінив: {{ editor.displayName }}</span> }
+            </div>
           </div>
           <div class="list-card__actions">
             @if (deletingId() === task.id) {

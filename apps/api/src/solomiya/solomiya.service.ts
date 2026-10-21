@@ -15,6 +15,10 @@ export class SolomiyaService {
         ...(status ? { status } : {}),
       },
       orderBy: [{ status: 'asc' }, { priority: 'desc' }, { dueAt: 'asc' }],
+      include: {
+        createdBy: { select: { displayName: true } },
+        updatedBy: { select: { displayName: true } },
+      },
     });
   }
 
@@ -22,12 +26,17 @@ export class SolomiyaService {
     return this.prisma.solomiyaTask.create({
       data: {
         householdId: user.householdId,
+        createdById: user.userId,
         title: dto.title,
         notes: dto.notes,
         dueAt: dto.dueAt ? new Date(dto.dueAt) : null,
         status: dto.status ?? TaskStatus.TODO,
         priority: dto.priority ?? 0,
         assigneeId: dto.assigneeId,
+      },
+      include: {
+        createdBy: { select: { displayName: true } },
+        updatedBy: { select: { displayName: true } },
       },
     });
   }
@@ -48,6 +57,11 @@ export class SolomiyaService {
         status: dto.status,
         priority: dto.priority,
         assigneeId: dto.assigneeId === undefined ? undefined : dto.assigneeId,
+        updatedById: user.userId,
+      },
+      include: {
+        createdBy: { select: { displayName: true } },
+        updatedBy: { select: { displayName: true } },
       },
     });
   }

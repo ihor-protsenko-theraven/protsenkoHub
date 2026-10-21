@@ -70,7 +70,7 @@ export class AuthService {
     const user = await this.prisma.user.findUnique({
       where: { email: dto.email.toLowerCase() },
       include: {
-        memberships: { orderBy: { createdAt: 'asc' }, take: 1 },
+        memberships: { orderBy: { createdAt: 'asc' } },
       },
     });
 
@@ -83,7 +83,13 @@ export class AuthService {
       throw new UnauthorizedException('Invalid credentials');
     }
 
-    const authUser = this.toAuthUser(user, user.memberships[0]);
+    const activeMembership = user.memberships.find(
+      (membership) => membership.householdId === user.activeHouseholdId,
+    );
+    const authUser = this.toAuthUser(
+      user,
+      activeMembership ?? user.memberships[0],
+    );
     return { token: await this.sign(authUser), user: authUser };
   }
 

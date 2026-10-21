@@ -36,6 +36,36 @@ npm run dev:web
 - `admin@protsenkohub.local` / `protsenko123`
 - `family@protsenkohub.local` / `protsenko123`
 
+## pgAdmin у Docker
+
+На Windows спочатку встановіть Docker Desktop з WSL 2 та запустіть його. Для
+pgAdmin потрібен локальний файл `.env.pgadmin` з
+`PGADMIN_DEFAULT_EMAIL` і `PGADMIN_DEFAULT_PASSWORD`, а також
+`.pgadmin/servers.json` зі списком серверів. Обидва файли ігноруються Git.
+Після їх створення з кореня репозиторію виконайте:
+
+```powershell
+docker compose -f docker-compose.yml -f docker-compose.pgadmin.yml up -d
+docker compose -f docker-compose.yml -f docker-compose.pgadmin.yml ps
+```
+
+Відкрийте `http://localhost:5050` і увійдіть даними з `.env.pgadmin`.
+Для локального сервера пароль PostgreSQL вказаний у `docker-compose.yml`.
+Для production Neon pgAdmin запитає пароль під час першого з'єднання; увімкніть
+збереження пароля, якщо хочете, щоб він зберігався в локальному томі pgAdmin.
+У pgAdmin production підключення використовуйте для перегляду даних: зміни й
+видалення рядків набирають чинності одразу.
+
+Зупинити контейнери можна командою
+`docker compose -f docker-compose.yml -f docker-compose.pgadmin.yml down`.
+Не додавайте `-v`, якщо хочете зберегти локальну базу й налаштування pgAdmin.
+
+## Два акаунти в одній родині
+
+Головний користувач відкриває **Родина**, вводить email другого з батьків і передає йому створене посилання. Посилання одноразове й діє 7 днів. Запрошений може створити окремий акаунт або увійти в існуючий з тією самою адресою. Після прийняття обидва бачать дані родини запрошувача; його роль залишається `ADMIN`, роль запрошеного — `MEMBER`. Зараз у родині може бути два учасники.
+
+Якщо запрошений уже мав власну родину, її записи залишаються в базі окремо й не переносяться. Активною для його акаунта стає родина запрошувача. Механізм перенесення даних буде окремим.
+
 Правила для агентів: [AGENTS.md](AGENTS.md). Структура й стиль коду: [docs/project-context.md](docs/project-context.md).
 
 ## Структура

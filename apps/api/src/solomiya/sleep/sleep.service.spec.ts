@@ -1,3 +1,4 @@
+import { vi } from 'vitest';
 import { ConflictException } from '@nestjs/common';
 import { MemberRole } from '@prisma/client';
 import type { AuthUser } from '../../common/types';
@@ -33,21 +34,21 @@ describe('SleepService active tracker', () => {
   it('does not replace an open sleep when start is tapped again', async () => {
     const startedAt = new Date('2026-10-19T05:00:00.000Z');
     const current = session(startedAt);
-    const createSession = jest.fn();
+    const createSession = vi.fn();
     const tx = {
       activeSleep: {
-        findUnique: jest.fn().mockResolvedValue({ session: current }),
-        delete: jest.fn(),
-        create: jest.fn(),
-        upsert: jest.fn().mockResolvedValue({}),
+        findUnique: vi.fn().mockResolvedValue({ session: current }),
+        delete: vi.fn(),
+        create: vi.fn(),
+        upsert: vi.fn().mockResolvedValue({}),
       },
       sleepSession: {
-        findFirst: jest.fn(),
+        findFirst: vi.fn(),
         create: createSession,
       },
     };
     const prisma = {
-      $transaction: jest.fn((fn: (client: typeof tx) => Promise<unknown>) =>
+      $transaction: vi.fn((fn: (client: typeof tx) => Promise<unknown>) =>
         fn(tx),
       ),
     } as unknown as PrismaService;
@@ -67,7 +68,7 @@ describe('SleepService active tracker', () => {
   });
 
   it('stores a new start only when nobody is already tracking sleep', async () => {
-    const createSession = jest
+    const createSession = vi
       .fn()
       .mockImplementation(({ data }: { data: { startedAt: Date } }) =>
         Promise.resolve({
@@ -82,21 +83,21 @@ describe('SleepService active tracker', () => {
       );
     const tx = {
       activeSleep: {
-        findUnique: jest.fn().mockResolvedValue(null),
-        delete: jest.fn(),
-        create: jest.fn().mockResolvedValue({}),
-        upsert: jest.fn(),
+        findUnique: vi.fn().mockResolvedValue(null),
+        delete: vi.fn(),
+        create: vi.fn().mockResolvedValue({}),
+        upsert: vi.fn(),
       },
       sleepSession: {
-        findFirst: jest.fn().mockResolvedValue(null),
+        findFirst: vi.fn().mockResolvedValue(null),
         create: createSession,
       },
     };
     const prisma = {
-      $transaction: jest.fn((fn: (client: typeof tx) => Promise<unknown>) =>
+      $transaction: vi.fn((fn: (client: typeof tx) => Promise<unknown>) =>
         fn(tx),
       ),
-      household: { findUnique: jest.fn() },
+      household: { findUnique: vi.fn() },
     } as unknown as PrismaService;
     const service = new SleepService(prisma);
     const startedAt = new Date(Date.now() - 5 * 60_000).toISOString();
@@ -116,13 +117,13 @@ describe('SleepService active tracker', () => {
     const current = session(startedAt);
     const tx = {
       activeSleep: {
-        findUnique: jest.fn().mockResolvedValue({ session: current }),
-        delete: jest.fn(),
-        deleteMany: jest.fn().mockResolvedValue({ count: 1 }),
+        findUnique: vi.fn().mockResolvedValue({ session: current }),
+        delete: vi.fn(),
+        deleteMany: vi.fn().mockResolvedValue({ count: 1 }),
       },
       sleepSession: {
-        findFirst: jest.fn(),
-        update: jest
+        findFirst: vi.fn(),
+        update: vi
           .fn()
           .mockImplementation(({ data }: { data: { endedAt: Date } }) =>
             Promise.resolve({
@@ -134,7 +135,7 @@ describe('SleepService active tracker', () => {
       },
     };
     const prisma = {
-      $transaction: jest.fn((fn: (client: typeof tx) => Promise<unknown>) =>
+      $transaction: vi.fn((fn: (client: typeof tx) => Promise<unknown>) =>
         fn(tx),
       ),
     } as unknown as PrismaService;
@@ -154,15 +155,15 @@ describe('SleepService active tracker', () => {
   it('refuses to stop when the tracker is already idle', async () => {
     const tx = {
       activeSleep: {
-        findUnique: jest.fn().mockResolvedValue(null),
-        delete: jest.fn(),
+        findUnique: vi.fn().mockResolvedValue(null),
+        delete: vi.fn(),
       },
       sleepSession: {
-        findFirst: jest.fn().mockResolvedValue(null),
+        findFirst: vi.fn().mockResolvedValue(null),
       },
     };
     const prisma = {
-      $transaction: jest.fn((fn: (client: typeof tx) => Promise<unknown>) =>
+      $transaction: vi.fn((fn: (client: typeof tx) => Promise<unknown>) =>
         fn(tx),
       ),
     } as unknown as PrismaService;
@@ -180,17 +181,17 @@ describe('SleepService active tracker', () => {
       ...session(startedAt),
       pauses: [{ id: 'pause-1', startedAt: pauseStarted, endedAt: null }],
     };
-    const createPause = jest.fn();
+    const createPause = vi.fn();
     const tx = {
       activeSleep: {
-        findUnique: jest.fn().mockResolvedValue({ session: current }),
-        delete: jest.fn(),
+        findUnique: vi.fn().mockResolvedValue({ session: current }),
+        delete: vi.fn(),
       },
-      sleepSession: { findFirst: jest.fn() },
+      sleepSession: { findFirst: vi.fn() },
       sleepPause: { create: createPause },
     };
     const prisma = {
-      $transaction: jest.fn((fn: (client: typeof tx) => Promise<unknown>) =>
+      $transaction: vi.fn((fn: (client: typeof tx) => Promise<unknown>) =>
         fn(tx),
       ),
     } as unknown as PrismaService;

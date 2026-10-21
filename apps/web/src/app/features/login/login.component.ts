@@ -2,8 +2,8 @@ import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/cor
 import { FormField, email, form, minLength, required } from '@angular/forms/signals';
 import { Tab, TabContent, TabList, TabPanel, Tabs } from '@angular/aria/tabs';
 import { Router } from '@angular/router';
-import { AuthService } from '../../core/auth.service';
-import { LoginModel, RegisterModel } from '../../core/auth.model';
+import { AuthService } from '../../core/services/auth.service';
+import { LoginModel, RegisterModel } from '../../core/models/auth.model';
 
 @Component({
   selector: 'app-login',

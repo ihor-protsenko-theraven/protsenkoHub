@@ -1,8 +1,10 @@
+import { vi } from 'vitest';
 import * as webPush from 'web-push';
+import { SLEEP_REMINDER } from './sleep-reminder.config';
 import { SleepReminderService } from './sleep-reminder.service';
 
-jest.mock('web-push', () => ({
-  sendNotification: jest.fn().mockResolvedValue({ statusCode: 201 }),
+vi.mock('web-push', () => ({
+  sendNotification: vi.fn().mockResolvedValue({ statusCode: 201 }),
 }));
 
 describe('SleepReminderService dispatch', () => {
@@ -16,7 +18,7 @@ describe('SleepReminderService dispatch', () => {
     process.env.VAPID_SUBJECT = 'mailto:admin@example.com';
     process.env.VAPID_PUBLIC_KEY = 'public-test-key';
     process.env.VAPID_PRIVATE_KEY = 'private-test-key';
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   afterAll(() => {
@@ -39,16 +41,16 @@ describe('SleepReminderService dispatch', () => {
       auth: 'secret',
     };
     const prisma = {
-      pushSubscription: { findMany: jest.fn().mockResolvedValue([device]) },
+      pushSubscription: { findMany: vi.fn().mockResolvedValue([device]) },
       sleepReminderDelivery: {
-        createMany: jest
+        createMany: vi
           .fn()
           .mockResolvedValueOnce({ count: 1 })
           .mockResolvedValueOnce({ count: 0 }),
       },
     };
     const sleep = {
-      overviewForHousehold: jest.fn().mockResolvedValue({
+      overviewForHousehold: vi.fn().mockResolvedValue({
         active: null,
         awakeSince: '2026-10-20T09:00:00.000Z',
         nextSleepAt: '2026-10-20T12:00:00.000Z',
@@ -61,6 +63,14 @@ describe('SleepReminderService dispatch', () => {
     expect(await service.dispatch(now)).toEqual({ sent: 1 });
     expect(await service.dispatch(now)).toEqual({ sent: 0 });
     expect(webPush.sendNotification).toHaveBeenCalledTimes(1);
+    expect(webPush.sendNotification).toHaveBeenCalledWith(
+      expect.objectContaining({ endpoint: device.endpoint }),
+      expect.any(String),
+      expect.objectContaining({
+        TTL: SLEEP_REMINDER.pushTtlSeconds,
+        urgency: SLEEP_REMINDER.urgency,
+      }),
+    );
     expect(prisma.sleepReminderDelivery.createMany).toHaveBeenCalledTimes(2);
   });
 });

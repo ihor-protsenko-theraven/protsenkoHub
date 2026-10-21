@@ -24,6 +24,10 @@ export class ContactsService {
           : {}),
       },
       orderBy: [{ category: 'asc' }, { name: 'asc' }],
+      include: {
+        createdBy: { select: { displayName: true } },
+        updatedBy: { select: { displayName: true } },
+      },
     });
   }
 
@@ -31,12 +35,17 @@ export class ContactsService {
     return this.prisma.contact.create({
       data: {
         householdId: user.householdId,
+        createdById: user.userId,
         name: dto.name,
         category: dto.category ?? ContactCategory.OTHER,
         phone: dto.phone,
         email: dto.email,
         organization: dto.organization,
         notes: dto.notes,
+      },
+      include: {
+        createdBy: { select: { displayName: true } },
+        updatedBy: { select: { displayName: true } },
       },
     });
   }
@@ -53,6 +62,11 @@ export class ContactsService {
         organization:
           dto.organization === undefined ? undefined : dto.organization,
         notes: dto.notes === undefined ? undefined : dto.notes,
+        updatedById: user.userId,
+      },
+      include: {
+        createdBy: { select: { displayName: true } },
+        updatedBy: { select: { displayName: true } },
       },
     });
   }

@@ -23,6 +23,8 @@ export class CalendarService {
       },
       include: {
         member: { select: { id: true, color: true, displayName: true } },
+        createdBy: { select: { displayName: true } },
+        updatedBy: { select: { displayName: true } },
       },
       orderBy: { startsAt: 'asc' },
     });
@@ -38,9 +40,12 @@ export class CalendarService {
         endsAt: new Date(dto.endsAt),
         rrule: dto.rrule,
         memberId: dto.memberId ?? user.membershipId,
+        createdById: user.userId,
       },
       include: {
         member: { select: { id: true, color: true, displayName: true } },
+        createdBy: { select: { displayName: true } },
+        updatedBy: { select: { displayName: true } },
       },
     });
   }
@@ -56,9 +61,12 @@ export class CalendarService {
         endsAt: dto.endsAt ? new Date(dto.endsAt) : undefined,
         rrule: dto.rrule === undefined ? undefined : dto.rrule,
         memberId: dto.memberId === undefined ? undefined : dto.memberId,
+        updatedById: user.userId,
       },
       include: {
         member: { select: { id: true, color: true, displayName: true } },
+        createdBy: { select: { displayName: true } },
+        updatedBy: { select: { displayName: true } },
       },
     });
   }

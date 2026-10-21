@@ -291,6 +291,15 @@ a {
   font-size: .86rem
 }
 
+.record-audit {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  margin-top: 8px;
+  color: var(--muted);
+  font-size: .8rem;
+}
+
 .list-card__actions {
   display: flex;
   flex-wrap: wrap;

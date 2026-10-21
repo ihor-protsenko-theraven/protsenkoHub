@@ -105,6 +105,7 @@ export class SleepReminderService {
               {
                 vapidDetails,
                 TTL: SLEEP_REMINDER.pushTtlSeconds,
+                urgency: SLEEP_REMINDER.urgency,
                 timeout: SLEEP_REMINDER.pushTimeoutMs,
               },
             );
@@ -144,7 +145,6 @@ export class SleepReminderService {
         title: moment.leadMinutes ? 'Наближається час сну' : 'Час сну',
         body,
         icon: '/icons/icon-192.png',
-        badge: '/icons/icon-192.png',
         tag: `sleep-${moment.awakeSince.toISOString()}-${moment.leadMinutes}`,
         data: {
           onActionClick: {

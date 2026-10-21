@@ -72,6 +72,10 @@
           <div class="list-card__meta"><span>{{ item.qty }} {{ item.unit || 'шт' }}</span>@if (item.category) {
             <span class="badge">{{ item.category }}</span>
           }</div>
+          <div class="record-audit">
+            <span>Додав: {{ item.createdBy?.displayName || 'невідомо' }}</span>
+            @if (item.updatedBy; as editor) { <span>Змінив: {{ editor.displayName }}</span> }
+          </div>
         </div>
       </div>
       <div class="list-card__actions">@if (deletingId() === item.id) {

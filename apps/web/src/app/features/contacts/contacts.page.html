@@ -72,7 +72,11 @@
         }</div>
         @if (contact.notes) {
           <p>{{ contact.notes }}</p>
-        }</div>
+        }
+        <div class="record-audit">
+          <span>Додав: {{ contact.createdBy?.displayName || 'невідомо' }}</span>
+          @if (contact.updatedBy; as editor) { <span>Змінив: {{ editor.displayName }}</span> }
+        </div></div>
       <div class="list-card__actions">@if (deletingId() === contact.id) {
         <div class="confirm"><span>Видалити?</span>
           <button class="button button--danger" type="button" [disabled]="busy()" (click)="remove(contact.id)">Так

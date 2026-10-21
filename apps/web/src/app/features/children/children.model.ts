@@ -1,3 +1,5 @@
+import type { RecordAudit } from '../../shared/record-audit.model';
+
 export type TaskPriority = 1 | 2 | 3;
 
 export const TASK_PRIORITIES: ReadonlyArray<{ value: TaskPriority; label: string }> = [
@@ -39,7 +41,7 @@ export function taskStatusLabel(status: TaskStatus): string {
   return TASK_STATUSES.find((option) => option.value === status)?.label ?? status;
 }
 
-export interface TaskItem {
+export interface TaskItem extends RecordAudit {
   id: string;
   title: string;
   notes: string | null;

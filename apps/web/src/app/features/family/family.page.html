@@ -1,0 +1,27 @@
+<section class="page">
+  <header class="page-header"><div><span class="eyebrow">СПІЛЬНИЙ ПРОСТІР</span><h1>Родина</h1><p class="page-subtitle">Учасники бачать спільні події, покупки, задачі та сон.</p></div></header>
+  @if (family.overview.isLoading()) {
+    <div class="panel state"><p>Завантажуємо родину…</p></div>
+  } @else if (family.overview.error()) {
+    <div class="panel state"><h2>Не вдалося завантажити родину</h2><button class="button button--secondary" type="button" (click)="family.overview.reload()">Повторити</button></div>
+  } @else if (family.overview.value(); as overview) {
+    <div class="family-grid">
+      <section class="panel family-card" aria-labelledby="members-title"><h2 id="members-title">{{ overview.name }}</h2><p>Учасники</p>
+        <ul class="family-list">@for (member of overview.members; track member.id) {
+          <li><span><strong>{{ member.displayName }}</strong><small>{{ member.email }}</small></span><span class="badge">{{ member.role === 'ADMIN' ? 'Головний' : 'Учасник' }}</span></li>
+        }</ul>
+      </section>
+      @if (auth.user()?.role === 'ADMIN') {
+        <section class="panel family-card" aria-labelledby="invite-title"><h2 id="invite-title">Запросити до родини</h2><p>Дані цієї родини будуть доступні запрошеному. Його окремі дані не переносяться.</p>
+          @if (overview.members.length < 2) {
+            <form (submit)="$event.preventDefault(); invite()"><label class="field"><span>Електронна пошта</span><input type="email" autocomplete="email" [formField]="inviteForm.email"></label><button class="button button--primary" type="submit" [disabled]="busy() || !inviteForm().valid()">Створити запрошення</button></form>
+          } @else { <p>У родині вже є два учасники.</p> }
+          @if (link()) { <div class="invite-link"><label class="field"><span>Одноразове посилання</span><input readonly [value]="link()" (focus)="$any($event.target).select()"></label><button class="button button--secondary" type="button" (click)="copy()">Копіювати</button></div> }
+          @if (overview.invitations.length) { <h3>Очікують підтвердження</h3><ul class="family-list">@for (invitation of overview.invitations; track invitation.id) { <li><span><strong>{{ invitation.email }}</strong><small>Діє до {{ invitation.expiresAt | date:'d MMM, HH:mm':undefined:'uk' }}</small><small>Додав: {{ invitation.createdBy?.displayName || 'невідомо' }}</small></span><button class="button button--quiet" type="button" [disabled]="busy()" (click)="revoke(invitation.id)">Скасувати</button></li> }</ul> }
+        </section>
+      }
+    </div>
+  }
+  @if (error()) { <p class="message message--error" role="alert">{{ error() }}</p> }
+  @if (notice()) { <p class="message" role="status">{{ notice() }}</p> }
+</section>

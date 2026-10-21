@@ -157,6 +157,10 @@ export class SleepService {
       await tx.sleepPause.create({
         data: { sessionId: current.id, startedAt },
       });
+      await tx.sleepSession.update({
+        where: { id: current.id },
+        data: { updatedById: user.userId },
+      });
       const fresh = await tx.sleepSession.findFirstOrThrow({
         where: { id: current.id },
         include: sessionInclude,
@@ -176,6 +180,10 @@ export class SleepService {
       await tx.sleepPause.update({
         where: { id: open.id },
         data: { endedAt },
+      });
+      await tx.sleepSession.update({
+        where: { id: current.id },
+        data: { updatedById: user.userId },
       });
       const fresh = await tx.sleepSession.findFirstOrThrow({
         where: { id: current.id },
@@ -219,6 +227,10 @@ export class SleepService {
       await tx.sleepPause.update({
         where: { id },
         data: { startedAt, endedAt },
+      });
+      await tx.sleepSession.update({
+        where: { id: pause.sessionId },
+        data: { updatedById: user.userId },
       });
       const fresh = await tx.sleepSession.findFirstOrThrow({
         where: { id: pause.sessionId },
@@ -303,6 +315,7 @@ export class SleepService {
           notes:
             dto.notes === undefined ? undefined : this.cleanNotes(dto.notes),
           endedById: endedAt && !existing.endedAt ? user.userId : undefined,
+          updatedById: user.userId,
         },
         include: sessionInclude,
       });
@@ -345,8 +358,9 @@ export class SleepService {
         householdId: user.householdId,
         birthDate: birthDate ?? null,
         napTarget: napTarget ?? null,
+        updatedById: user.userId,
       },
-      update: { birthDate, napTarget },
+      update: { birthDate, napTarget, updatedById: user.userId },
     });
     return {
       birthDate: profile.birthDate
@@ -362,6 +376,7 @@ export class SleepService {
       babyName: string;
       birthDate: Date | null;
       napTarget: number | null;
+      updatedBy?: { displayName: string } | null;
     },
     sessions: SessionRow[],
     active: SessionRow | null,
@@ -396,6 +411,7 @@ export class SleepService {
         ageLabel: age.label,
         assumedAge: age.assumed,
         napTarget: profile.napTarget,
+        updatedByName: profile.updatedBy?.displayName ?? null,
       },
       active: active ? this.map(active) : null,
       sessions: sessions.map((session) => this.map(session)),
@@ -486,16 +502,19 @@ export class SleepService {
   private async ensureProfile(householdId: string) {
     const existing = await this.prisma.sleepProfile.findUnique({
       where: { householdId },
+      include: { updatedBy: { select: { displayName: true } } },
     });
     if (existing) return existing;
     try {
       return await this.prisma.sleepProfile.create({
         data: { householdId },
+        include: { updatedBy: { select: { displayName: true } } },
       });
     } catch (error) {
       if (!this.isUnique(error)) throw error;
       const created = await this.prisma.sleepProfile.findUnique({
         where: { householdId },
+        include: { updatedBy: { select: { displayName: true } } },
       });
       if (!created) throw error;
       return created;
@@ -543,6 +562,7 @@ export class SleepService {
       notes: session.notes,
       startedByName: session.startedBy?.displayName ?? null,
       endedByName: session.endedBy?.displayName ?? null,
+      updatedByName: session.updatedBy?.displayName ?? null,
       pauses: pauses.map((pause) => ({
         id: pause.id,
         startedAt: pause.startedAt.toISOString(),

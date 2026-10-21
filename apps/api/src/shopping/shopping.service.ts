@@ -18,6 +18,10 @@ export class ShoppingService {
     const list = await this.ensureDefaultList(user);
     return this.prisma.shoppingItem.findMany({
       where: { listId: list.id },
+      include: {
+        createdBy: { select: { displayName: true } },
+        updatedBy: { select: { displayName: true } },
+      },
       orderBy: [
         { isChecked: 'asc' },
         { sortOrder: 'asc' },
@@ -35,11 +39,16 @@ export class ShoppingService {
     return this.prisma.shoppingItem.create({
       data: {
         listId: list.id,
+        createdById: user.userId,
         name: dto.name,
         qty: dto.qty ?? 1,
         unit: dto.unit,
         category: dto.category,
         sortOrder: (max._max.sortOrder ?? -1) + 1,
+      },
+      include: {
+        createdBy: { select: { displayName: true } },
+        updatedBy: { select: { displayName: true } },
       },
     });
   }
@@ -58,6 +67,11 @@ export class ShoppingService {
         category: dto.category === undefined ? undefined : dto.category,
         isChecked: dto.isChecked,
         version: { increment: 1 },
+        updatedById: user.userId,
+      },
+      include: {
+        createdBy: { select: { displayName: true } },
+        updatedBy: { select: { displayName: true } },
       },
     });
   }
