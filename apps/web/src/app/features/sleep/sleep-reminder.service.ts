@@ -84,13 +84,18 @@ export class SleepReminderService {
     this.enabled.set(true);
   }
 
-  private publish(subscription: PushSubscription): Promise<unknown> {
-    const payload = subscription.toJSON() as PushSubscriptionPayload;
-    if (!payload.endpoint || !payload.keys?.p256dh || !payload.keys?.auth) {
-      return Promise.reject(new Error('Incomplete push subscription'));
-    }
-    return firstValueFrom(this.api.post('/sleep-reminders/subscribe', payload));
+  private async publish(subscription: PushSubscription): Promise<void> {
+    const payload = pushSubscriptionPayload(subscription);
+    await firstValueFrom(this.api.post('/sleep-reminders/subscribe', payload));
   }
+}
+
+export function pushSubscriptionPayload(subscription: Pick<PushSubscription, 'toJSON'>): PushSubscriptionPayload {
+  const { endpoint, keys } = subscription.toJSON();
+  if (!endpoint || !keys?.['p256dh'] || !keys['auth']) {
+    throw new Error('Incomplete push subscription');
+  }
+  return { endpoint, keys: { p256dh: keys['p256dh'], auth: keys['auth'] } };
 }
 
 function pushErrorMessage(error: unknown): string {
