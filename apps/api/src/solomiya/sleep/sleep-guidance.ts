@@ -6,8 +6,8 @@ import {
   nextLocalMidnight,
   overlapMinutes,
   pad,
-  startOfLocalDay,
   STALE_SLEEP_MIN,
+  startOfLocalDay,
   suggestedKind,
   zonedDateKey,
   zonedParts,
@@ -69,8 +69,13 @@ export function buildSleepGuidance(input: GuidanceInput): SleepGuidance {
     input.timeZone,
     norms.totalTargetMin,
   );
-  const wakeBySlot = wakeSamples(ordered, input.timeZone, norms);
-  const durationBySlot = durationSamples(ordered, input.timeZone);
+  const recentSessions = ordered.filter(
+    (session) =>
+      session.startedAt.getTime() >=
+      input.now.getTime() - G.personalizationLookbackDays * G.dayMs,
+  );
+  const wakeBySlot = wakeSamples(recentSessions, input.timeZone, norms);
+  const durationBySlot = durationSamples(recentSessions, input.timeZone);
   const anchor = bedtimeAnchor(ordered, input.now, input.timeZone);
   const suggested = suggestedKind(input.now, input.timeZone);
   const base = {
@@ -160,7 +165,7 @@ export function buildSleepGuidance(input: GuidanceInput): SleepGuidance {
   const slot = nextSlot(input.now, ordered, input.timeZone, napTarget);
   const debtMin = norms.totalTargetMin - stats.last24hSleepMin;
   const debtAdjust =
-    ordered.length === 0 || debtMin <= G.debt.triggerMin
+    !stats.hasFullDayHistory || debtMin <= G.debt.triggerMin
       ? 0
       : -Math.min(
           G.debt.maxShortenMin,
@@ -171,7 +176,7 @@ export function buildSleepGuidance(input: GuidanceInput): SleepGuidance {
   const windowMin = clamp(
     blended.value + debtAdjust - penalty,
     G.windowClamp.min,
-    G.windowClamp.max,
+    norms.maxWakeWindowMin,
   );
   const windows = adjustedWindows(norms, wakeBySlot, debtAdjust);
   windows[slot] = windowMin;
@@ -329,8 +334,9 @@ function buildSignals(
   windowMin: number | null,
   source: string,
 ): SleepSignal[] {
-  const debt =
-    stats.sleepDebtMin > G.debt.signalBandMin
+  const debt = !stats.hasFullDayHistory
+    ? G.copy.debtIncomplete
+    : stats.sleepDebtMin > G.debt.signalBandMin
       ? `${formatMinutes(stats.sleepDebtMin)} ${G.copy.debtUnder}`
       : stats.sleepDebtMin < -G.debt.signalBandMin
         ? `${formatMinutes(Math.abs(stats.sleepDebtMin))} ${G.copy.debtOver}`
@@ -367,7 +373,7 @@ function adjustedWindows(
     clamp(
       blend(windowAt(norms, slot), samples.get(slot) ?? []).value + debtAdjust,
       G.windowClamp.min,
-      G.windowClamp.max,
+      norms.maxWakeWindowMin,
     ),
   );
 }
@@ -599,6 +605,11 @@ function computeStats(
     last24hSleepMin: Math.round(last24),
     targetSleepMin: Math.round(norms.totalTargetMin),
     sleepDebtMin: Math.round(norms.totalTargetMin - last24),
+    hasFullDayHistory: sessions.some(
+      (session) =>
+        session.startedAt <= last24Start &&
+        (session.endedAt ?? now) > last24Start,
+    ),
     weekAvgSleepMin: sample.length
       ? Math.round(average(sample.map((day) => day.sleepMin)))
       : null,
@@ -1032,6 +1043,7 @@ function normsForWeeks(weeks: number): SleepNorm {
   return {
     totalTargetMin: match.totalTargetMin,
     wakeWindowsMin: match.wakeWindowsMin,
+    maxWakeWindowMin: match.maxWakeWindowMin,
     typicalNapMin: match.typicalNapMin,
     typicalNightMin: match.typicalNightMin,
     bedtimeStartMin: G.bedtime.startMin,

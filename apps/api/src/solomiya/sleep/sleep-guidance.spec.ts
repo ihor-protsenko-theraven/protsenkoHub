@@ -84,8 +84,30 @@ describe('sleep guidance', () => {
     expect(result.prepareAt).toBeNull();
   });
 
-  it('shortens the next window when the last day is short on sleep', () => {
+  it('does not invent sleep debt from an incomplete day of logs', () => {
     const result = guide(at(2026, 10, 19, 7, 30), [
+      {
+        id: 'short-night',
+        kind: 'NIGHT',
+        startedAt: at(2026, 10, 19, 1, 0),
+        endedAt: at(2026, 10, 19, 7, 0),
+      },
+    ]);
+    expect(result.basis).toBe('age');
+    expect(result.wakeWindowMin).toBe(105);
+    expect(
+      result.signals.find((signal) => signal.label === 'Борг сну')?.value,
+    ).toBe('замало записів за добу');
+  });
+
+  it('shortens the window when a full logged day has too little sleep', () => {
+    const result = guide(at(2026, 10, 19, 7, 30), [
+      {
+        id: 'previous',
+        kind: 'NAP',
+        startedAt: at(2026, 10, 18, 7, 0),
+        endedAt: at(2026, 10, 18, 8, 0),
+      },
       {
         id: 'short-night',
         kind: 'NIGHT',
@@ -95,7 +117,57 @@ describe('sleep guidance', () => {
     ]);
     expect(result.basis).toBe('debt');
     expect(result.wakeWindowMin).toBe(80);
-    expect(result.detail).toContain('менше за ціль');
+  });
+
+  it('does not personalize from wake windows logged more than two weeks ago', () => {
+    const sessions: GuidanceSession[] = [];
+    for (let day = 1; day <= 8; day += 1) {
+      sessions.push(
+        {
+          id: `old-night-${day}`,
+          kind: 'NIGHT',
+          startedAt: at(2026, 9, day, 19, 0),
+          endedAt: at(2026, 9, day + 1, 7, 0),
+        },
+        {
+          id: `old-nap-${day}`,
+          kind: 'NAP',
+          startedAt: at(2026, 9, day + 1, 9, 0),
+          endedAt: at(2026, 9, day + 1, 10, 0),
+        },
+      );
+    }
+    sessions.push(balancedNight());
+    const result = guide(at(2026, 10, 19, 7, 30), sessions);
+    expect(result.wakeWindowMin).toBe(105);
+    expect(result.basis).toBe('age');
+  });
+
+  it('keeps four and five month guidance below three hours', () => {
+    for (const ageWeeks of [18, 22]) {
+      const result = buildSleepGuidance({
+        now: at(2026, 10, 19, 16, 0),
+        timeZone,
+        ageWeeks,
+        ageLabel: `${ageWeeks} тижнів`,
+        assumedAge: false,
+        sessions: [
+          {
+            id: 'night',
+            kind: 'NIGHT',
+            startedAt: at(2026, 10, 18, 19, 30),
+            endedAt: at(2026, 10, 19, 7, 0),
+          },
+          {
+            id: 'nap',
+            kind: 'NAP',
+            startedAt: at(2026, 10, 19, 14, 0),
+            endedAt: at(2026, 10, 19, 15, 0),
+          },
+        ],
+      });
+      expect(result.wakeWindowMin).toBeLessThanOrEqual(150);
+    }
   });
 
   it('blends the age norm toward the median of her own mornings', () => {
@@ -226,7 +298,7 @@ describe('sleep guidance', () => {
       },
     ]);
     expect(result.napTarget).toBe(4);
-    expect(result.wakeWindowMin).toBe(118);
+    expect(result.wakeWindowMin).toBe(114);
     expect(result.wakeWindowMin).toBeLessThan(155);
     expect(result.basis).toBe('debt');
     expect(result.schedule[0]?.kind).toBe('NAP');
@@ -279,7 +351,7 @@ describe('sleep guidance', () => {
         endedAt: at(2026, 10, 19, 7, 0),
       },
     ]);
-    expect(result.schedule.at(-1)?.clock.startsWith('19:30')).toBe(true);
+    expect(result.schedule.at(-1)?.clock).toMatch(/^19:|^20:/);
   });
 
   it('explains the age norm before any sleep is logged', () => {

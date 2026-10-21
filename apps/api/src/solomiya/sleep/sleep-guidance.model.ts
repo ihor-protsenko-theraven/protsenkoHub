@@ -5,6 +5,7 @@ export type AgeBand =
   | 'twoMonths'
   | 'threeMonths'
   | 'fourMonths'
+  | 'fiveMonths'
   | 'fiveToSix'
   | 'older';
 
@@ -72,6 +73,7 @@ export interface SleepStats {
   last24hSleepMin: number;
   targetSleepMin: number;
   sleepDebtMin: number;
+  hasFullDayHistory: boolean;
   weekAvgSleepMin: number | null;
   weekAvgNapCount: number | null;
   bedtimeClock: string | null;
@@ -107,6 +109,7 @@ export interface SleepGuidance {
 export interface SleepNorm {
   totalTargetMin: number;
   wakeWindowsMin: [number, number, number, number];
+  maxWakeWindowMin: number;
   typicalNapMin: number;
   typicalNightMin: number;
   bedtimeStartMin: number;
@@ -123,6 +126,7 @@ export interface AgeNormConfig {
   maxWeek: number;
   totalTargetMin: number;
   wakeWindowsMin: [number, number, number, number];
+  maxWakeWindowMin: number;
   typicalNapMin: number;
   typicalNightMin: number;
 }
