@@ -133,7 +133,6 @@
         <span class="eyebrow">НАГАДУВАННЯ</span>
         <h2 id="reminder-title">Наступний сон</h2>
         <p>На цьому пристрої: за 20 хв, за 10 хв і в орієнтовний час початку.</p>
-        @if (reminders.message()) { <p role="status">{{ reminders.message() }}</p> }
         @if (!reminders.supported) {
           <p class="field-help">Для push-сповіщень установіть PWA на головний екран і відкрийте його через HTTPS.</p>
         } @else if (reminders.config.error()) {

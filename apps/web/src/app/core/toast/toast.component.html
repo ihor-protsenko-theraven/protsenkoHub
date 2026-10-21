@@ -1,0 +1,8 @@
+<div class="toast-stack">
+  @for (message of toasts.messages(); track message.id) {
+    <div class="toast" [class.toast--error]="message.kind === 'error'" [attr.role]="message.role">
+      <span>{{ message.text }}</span>
+      <button type="button" aria-label="Закрити повідомлення" (click)="toasts.dismiss(message.id)">×</button>
+    </div>
+  }
+</div>

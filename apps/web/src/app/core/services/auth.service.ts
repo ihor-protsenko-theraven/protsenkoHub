@@ -1,10 +1,11 @@
 import { Injectable, inject, signal } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpContext } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { firstValueFrom, Observable, take, tap, timeout } from 'rxjs';
 import { SwPush } from '@angular/service-worker';
 import { API_BASE_URL } from '../configs/api.config';
 import { readPushSubscription } from '../push-subscription';
+import { EXPECTED_GUEST_SESSION } from '../toast/api-error.interceptor';
 import { AuthUser, RegisterModel } from '../models/auth.model';
 
 @Injectable({ providedIn: 'root' })
@@ -20,6 +21,7 @@ export class AuthService {
     return this.http
       .get<{ user: AuthUser }>(`${API_BASE_URL}/auth/me`, {
         withCredentials: true,
+        context: new HttpContext().set(EXPECTED_GUEST_SESSION, true),
       })
       .pipe(
         tap({
