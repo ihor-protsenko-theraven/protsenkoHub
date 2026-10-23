@@ -18,7 +18,7 @@ export class ShellComponent {
     { path: '/app/calendar', label: 'Календар', icon: '📅', description: 'Події та плани сім’ї' },
     { path: '/app/shopping', label: 'Покупки', icon: '🛒', description: 'Спільний список покупок' },
     { path: '/app/children', label: 'Діти', icon: '🧸', description: 'Задачі та нагадування по дітях' },
-    { path: '/app/sleep', label: 'Сон', icon: '🌙', description: 'Графік сну Соломії' },
+    { path: '/app/sleep', label: 'Сон', icon: '🌙', description: 'Графік сну дитини' },
     { path: '/app/contacts', label: 'Контакти', icon: '📞', description: 'Важливі люди й номери' },
     { path: '/app/family', label: 'Родина', icon: '👪', description: 'Учасники та запрошення' },
   ];

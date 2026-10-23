@@ -1,6 +1,6 @@
 # protsenkoHub
 
-Сімейний хаб: календар, покупки, задачі Соломії, трекер сну та контакти. Це npm workspace з
+Сімейний хаб: календар, покупки, задачі дітей, трекер сну та контакти. Це npm workspace з
 окремими вебзастосунком, API та спільним пакетом типів.
 
 ## Стек
@@ -95,13 +95,13 @@ protsenkoHub/
 | POST | `/api/v1/auth/login` | Логін (httpOnly cookie) |
 | GET | `/api/v1/events` | Події календаря |
 | GET/POST/PATCH/DELETE | `/api/v1/shopping/items` | Покупки |
-| GET/POST/PATCH/DELETE | `/api/v1/solomiya/tasks` | Задачі по дітях |
-| GET | `/api/v1/solomiya/sleep` | Сон Соломії: активний запис, статистика, поради |
-| POST | `/api/v1/solomiya/sleep/start` | Почати сон. Якщо він уже йде, час початку не змінюється |
-| POST | `/api/v1/solomiya/sleep/stop` | Завершити активний сон. Відкрита пауза закривається разом із ним |
-| POST | `/api/v1/solomiya/sleep/pause` | Пауза. Повторне натискання не зсуває її початок |
-| POST | `/api/v1/solomiya/sleep/resume` | Продовжити сон |
-| PATCH | `/api/v1/solomiya/sleep/pauses/:id` | Змінити початок або кінець паузи |
+| GET/POST/PATCH/DELETE | `/api/v1/children/tasks` | Задачі по дітях |
+| GET | `/api/v1/children/sleep` | Сон дитини: активний запис, статистика, поради |
+| POST | `/api/v1/children/sleep/start` | Почати сон. Якщо він уже йде, час початку не змінюється |
+| POST | `/api/v1/children/sleep/stop` | Завершити активний сон. Відкрита пауза закривається разом із ним |
+| POST | `/api/v1/children/sleep/pause` | Пауза. Повторне натискання не зсуває її початок |
+| POST | `/api/v1/children/sleep/resume` | Продовжити сон |
+| PATCH | `/api/v1/children/sleep/pauses/:id` | Змінити початок або кінець паузи |
 | GET/POST/PATCH/DELETE | `/api/v1/contacts` | Контакти |
 
 ## Нагадування про сон у PWA

@@ -216,7 +216,7 @@ model SleepProfile {
   id          String    @id @default(cuid())
   householdId String    @unique
   updatedById String?
-  babyName    String    @default("Соломія")
+  babyName    String    @default("Дитина")
   birthDate   DateTime?
   napTarget   Int?
   createdAt   DateTime  @default(now())

@@ -1,7 +1,7 @@
 <section class="page" aria-labelledby="page-title">
   <header class="page-header">
     <div>
-      <span class="eyebrow">СОЛОМІЯ</span>
+      <span class="eyebrow">{{ snapshot()?.profile?.babyName || 'ДИТИНА' }}</span>
       <h1 id="page-title">Сон</h1>
       <p class="page-subtitle">Старт сну, пауза і завершення. Лічильник лишається після перезавантаження.</p>
     </div>
@@ -11,11 +11,11 @@
   @if (error() && !formOpen()) { <p class="message message--error" role="alert">{{ error() }}</p> }
 
   @if (snapshot(); as sleep) {
-    <app-sleep-status [headline]="sleep.headline" [active]="sleep.active" [offset]="clockOffset()" />
+    <app-sleep-status [headline]="sleep.headline" [active]="sleep.active" [offset]="clockOffset()" [babyName]="sleep.profile.babyName" />
 
     <section class="panel week-card" aria-label="Тиждень життя">
       <div>
-        <span class="eyebrow">{{ sleep.profile.assumedAge ? 'Орієнтовно' : 'Зараз' }}</span>
+        <span class="eyebrow">{{ sleep.profile.assumedAge ? 'Орієнтовно' : 'Зараз' }} · {{ sleep.profile.ageLabel }}</span>
         <h2>{{ sleep.lifeWeek }}-й тиждень</h2>
       </div>
       @if (sleep.weekNote) { <p>{{ sleep.weekNote }}</p> }
@@ -68,7 +68,7 @@
           <button type="button" [attr.aria-pressed]="kind() === 'NIGHT'" (click)="chooseKind('NIGHT')">Ніч</button>
         </div>
         <details class="fold">
-          <summary>Заснула раніше</summary>
+          <summary>Дитина заснула раніше</summary>
           <label class="field">
             <span>Фактичний початок</span>
             <input type="datetime-local" [value]="backdate()" (input)="backdate.set($any($event.target).value)">
@@ -80,7 +80,7 @@
         <div class="stale">
           <p>Таймер іде надто довго і в план не потрапить, поки ви не поправите кінець. Початок запису лишається.</p>
           <label class="field">
-            <span>Прокинулась</span>
+            <span>Час пробудження</span>
             <input type="datetime-local" [value]="wakeAt()" (input)="wakeAt.set($any($event.target).value)">
           </label>
         </div>
@@ -216,7 +216,7 @@
             </label>
             <label class="field"><span>Початок *</span><input type="datetime-local" [formField]="sleepForm.startedAt"></label>
             <label class="field"><span>Кінець</span><input type="datetime-local" [formField]="sleepForm.endedAt"></label>
-            <label class="field field--wide"><span>Нотатка</span><textarea [formField]="sleepForm.notes" placeholder="Наприклад, прокинулась на годування"></textarea></label>
+            <label class="field field--wide"><span>Нотатка</span><textarea [formField]="sleepForm.notes" placeholder="Наприклад, прокидання на годування"></textarea></label>
           </div>
           @if (error()) { <p class="message message--error" role="alert">{{ error() }}</p> }
           <div class="form-actions">
@@ -341,7 +341,7 @@
     </ng-template>
 
     <details class="panel fold-panel">
-      <summary id="birth-title">Дата народження</summary>
+      <summary id="birth-title">Вік і дата народження</summary>
       <p class="field-help">
         @if (sleep.profile.assumedAge) {
           Поки дата не вказана, тиждень і норми рахуються як для 4 місяців.

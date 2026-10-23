@@ -125,7 +125,7 @@ export function buildSleepGuidance(input: GuidanceInput): SleepGuidance {
     const windows = adjustedWindows(norms, wakeBySlot, 0);
     return {
       ...base,
-      headline: `Соломія спить. Цей ${label} зазвичай триває ${formatMinutes(typical.value)}.`,
+      headline: `${input.babyName?.trim() || 'Дитина'} спить. Цей ${label} зазвичай триває ${formatMinutes(typical.value)}.`,
       detail: `Орієнтовне пробудження близько ${formatClock(expected, input.timeZone)}. ${G.copy.sleepingDetail}`,
       ...rhythm,
       nextSleepAt: null,

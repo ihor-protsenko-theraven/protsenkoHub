@@ -32,16 +32,37 @@ describe('ShoppingService household access', () => {
     await service.createItem(user, { name: 'Молоко' });
     await service.updateItem(user, 'item-1', { isChecked: true, version: 1 });
 
-    expect(create).toHaveBeenCalledWith(
-      expect.objectContaining({
-        data: expect.objectContaining({ createdById: 'parent-1' }),
-      }),
-    );
-    expect(update).toHaveBeenCalledWith(
-      expect.objectContaining({
-        data: expect.objectContaining({ updatedById: 'parent-1' }),
-      }),
-    );
+    expect(create).toHaveBeenCalledWith({
+      data: {
+        listId: 'list-1',
+        createdById: 'parent-1',
+        name: 'Молоко',
+        qty: 1,
+        unit: undefined,
+        category: undefined,
+        sortOrder: 1,
+      },
+      include: {
+        createdBy: { select: { displayName: true } },
+        updatedBy: { select: { displayName: true } },
+      },
+    });
+    expect(update).toHaveBeenCalledWith({
+      where: { id: 'item-1' },
+      data: {
+        name: undefined,
+        qty: undefined,
+        unit: undefined,
+        category: undefined,
+        isChecked: true,
+        version: { increment: 1 },
+        updatedById: 'parent-1',
+      },
+      include: {
+        createdBy: { select: { displayName: true } },
+        updatedBy: { select: { displayName: true } },
+      },
+    });
   });
 
   it('does not delete an item outside the current household', async () => {

@@ -21,7 +21,7 @@ protsenkoHub/
 │   │       ├── calendar/
 │   │       ├── contacts/
 │   │       ├── shopping/
-│   │       ├── solomiya/    задачі та сон; URL API історично solomiya
+│   │       ├── children/    задачі дітей та сон (/api/v1/children/*)
 │   │       └── prisma/
 │   └── web/                 Angular 22.2
 │       └── src/app/
@@ -42,13 +42,13 @@ protsenkoHub/
 | Вхід | `/login` | `POST /api/v1/auth/login`, `POST /api/v1/auth/register`, `GET /api/v1/auth/me` |
 | Календар | `/app/calendar` | `/api/v1/events` |
 | Покупки | `/app/shopping` | `/api/v1/shopping/items` |
-| Діти | `/app/children` | `/api/v1/solomiya/tasks` |
-| Сон | `/app/sleep` | `/api/v1/solomiya/sleep` |
+| Діти | `/app/children` | `/api/v1/children/tasks` |
+| Сон | `/app/sleep` | `/api/v1/children/sleep` |
 | Контакти | `/app/contacts` | `/api/v1/contacts` |
 
 Маршрути Angular ліниві через `loadComponent`. Оболонка `/app` закрита `authGuard`. Сторінка входу закрита `guestGuard`.
 
-Назва «Діти» — це екран задач. Сон лишається окремим трекером Соломії. Не зводьте їх в один розділ і не змінюйте API-префікс `solomiya` лише тому, що пункт меню називається інакше.
+Назва «Діти» — це екран задач (`/api/v1/children/tasks`). Сон лишається окремим трекером (`/api/v1/children/sleep`). Не зводьте їх в один розділ.
 
 ## Як зібраний екран
 

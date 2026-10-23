@@ -27,6 +27,7 @@ export interface ClosedSession extends GuidanceSession {
 }
 
 export interface GuidanceInput {
+  babyName?: string;
   now: Date;
   timeZone: string;
   ageWeeks: number;

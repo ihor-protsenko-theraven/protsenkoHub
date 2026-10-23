@@ -11,6 +11,29 @@
           <li><span><strong>{{ member.displayName }}</strong><small>{{ member.email }}</small></span><span class="badge">{{ member.role === 'ADMIN' ? 'Головний' : 'Учасник' }}</span></li>
         }</ul>
       </section>
+      <section class="panel family-card" aria-labelledby="child-title">
+        <h2 id="child-title">Дитина</h2>
+        <p>Ім’я та вік дитини автоматично підтягуються у трекер сну та розрахунок норм.</p>
+        @if (previewAgeLabel(); as age) {
+          <p><span class="badge">Вік: {{ age }}</span></p>
+        } @else {
+          <p class="field-help">Поки дату народження не вказано, у сні береться орієнтир 4 місяці.</p>
+        }
+        <form (submit)="$event.preventDefault(); saveChild()">
+          <label class="field">
+            <span>Як звати дитину</span>
+            <input type="text" placeholder="Наприклад, Марко або Олівія" [formField]="childForm.babyName">
+          </label>
+          <label class="field">
+            <span>Дата народження</span>
+            <input type="date" [formField]="childForm.birthDate">
+          </label>
+          @if (overview.child.updatedByName) {
+            <small class="field-help">Оновив: {{ overview.child.updatedByName }}</small>
+          }
+          <button class="button button--primary" type="submit" [disabled]="busy()">Зберегти дані дитини</button>
+        </form>
+      </section>
       @if (auth.user()?.role === 'ADMIN') {
         <section class="panel family-card" aria-labelledby="invite-title"><h2 id="invite-title">Запросити до родини</h2><p>Дані цієї родини будуть доступні запрошеному. Його окремі дані не переносяться.</p>
           @if (overview.members.length < 2) {

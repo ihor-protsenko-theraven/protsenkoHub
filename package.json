@@ -2,7 +2,7 @@
   "name": "protsenko-hub",
   "version": "0.1.0",
   "private": true,
-  "description": "Family hub: calendar, shopping, Solomiya tasks, contacts",
+  "description": "Family hub: calendar, shopping, children tasks, sleep, contacts",
   "workspaces": [
     "apps/*",
     "packages/*"

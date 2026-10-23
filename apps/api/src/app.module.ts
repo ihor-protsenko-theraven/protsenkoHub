@@ -5,7 +5,7 @@ import { CalendarModule } from './calendar/calendar.module';
 import { ContactsModule } from './contacts/contacts.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { ShoppingModule } from './shopping/shopping.module';
-import { SolomiyaModule } from './solomiya/solomiya.module';
+import { ChildrenModule } from './children/children.module';
 import { HealthController } from './health.controller';
 
 @Module({
@@ -15,7 +15,7 @@ import { HealthController } from './health.controller';
     AuthModule,
     CalendarModule,
     ShoppingModule,
-    SolomiyaModule,
+    ChildrenModule,
     ContactsModule,
   ],
   controllers: [HealthController],

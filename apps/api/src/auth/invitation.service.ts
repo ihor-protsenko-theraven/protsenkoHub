@@ -11,6 +11,12 @@ import * as bcrypt from 'bcrypt';
 import { createHash, randomBytes } from 'crypto';
 import { PrismaService } from '../prisma/prisma.service';
 import type { AuthUser } from '../common/types';
+import { HOUSEHOLD } from '../config/household.config';
+import { SLEEP_TRACKER } from '../children/sleep/sleep.config';
+import {
+  ageLabelFromDays,
+  calendarAgeDays,
+} from '../children/sleep/sleep-time';
 import { INVITATION } from './invitation.config';
 import type {
   CreateInvitationDto,
@@ -29,6 +35,14 @@ export class InvitationService {
       where: { id: user.householdId },
       select: {
         name: true,
+        timezone: true,
+        sleepProfile: {
+          select: {
+            babyName: true,
+            birthDate: true,
+            updatedBy: { select: { displayName: true } },
+          },
+        },
         members: {
           select: {
             id: true,
@@ -54,8 +68,28 @@ export class InvitationService {
         },
       },
     });
+    const rawName = household.sleepProfile?.babyName?.trim();
+    const childName =
+      !rawName ||
+      rawName === SLEEP_TRACKER.legacyDefaultBabyName ||
+      rawName === SLEEP_TRACKER.defaultBabyName
+        ? ''
+        : rawName;
+    const birthDate = household.sleepProfile?.birthDate
+      ? household.sleepProfile.birthDate.toISOString().slice(0, 10)
+      : null;
+    const timeZone = household.timezone || HOUSEHOLD.defaultTimeZone;
+    const days = birthDate
+      ? Math.max(0, calendarAgeDays(birthDate, new Date(), timeZone))
+      : null;
     return {
       name: household.name,
+      child: {
+        name: childName,
+        birthDate,
+        ageLabel: days !== null ? ageLabelFromDays(days) : null,
+        updatedByName: household.sleepProfile?.updatedBy?.displayName ?? null,
+      },
       members: household.members.map(({ user: account, ...member }) => ({
         ...member,
         email: account.email,

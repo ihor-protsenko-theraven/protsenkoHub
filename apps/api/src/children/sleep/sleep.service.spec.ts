@@ -4,6 +4,7 @@ import { MemberRole } from '@prisma/client';
 import type { AuthUser } from '../../common/types';
 import { PrismaService } from '../../prisma/prisma.service';
 import { HouseholdPushService } from '../household-push.service';
+import { sessionInclude } from './sleep.model';
 import { SleepService } from './sleep.service';
 
 function user(): AuthUser {
@@ -281,11 +282,10 @@ describe('SleepService saved pauses', () => {
     );
     expect(create).toHaveBeenCalledOnce();
     expect(result.session.pauses).toHaveLength(2);
-    expect(tx.sleepSession.findFirst).toHaveBeenCalledWith(
-      expect.objectContaining({
-        where: expect.objectContaining({ householdId: 'home-1' }),
-      }),
-    );
+    expect(tx.sleepSession.findFirst).toHaveBeenCalledWith({
+      where: { id: 'sleep-1', householdId: 'home-1', endedAt: { not: null } },
+      include: sessionInclude,
+    });
   });
 
   it('rejects a pause overlapping an existing pause', async () => {
@@ -307,5 +307,63 @@ describe('SleepService saved pauses', () => {
       }),
     ).rejects.toBeInstanceOf(BadRequestException);
     expect(create).not.toHaveBeenCalled();
+  });
+});
+
+describe('SleepService profile', () => {
+  it('saves child name and birth date and pulls age into sleep overview', async () => {
+    const birthDate = new Date('2025-08-23T00:00:00.000Z');
+    const upsert = vi.fn().mockResolvedValue({
+      babyName: 'Марко',
+      birthDate,
+      napTarget: null,
+      updatedBy: { displayName: 'Ігор' },
+    });
+    const prisma = {
+      household: {
+        findUnique: vi.fn().mockResolvedValue({ timeZone: 'Europe/Kyiv' }),
+      },
+      sleepProfile: {
+        upsert,
+        findUnique: vi.fn().mockResolvedValue({
+          babyName: 'Марко',
+          birthDate,
+          napTarget: null,
+          updatedBy: { displayName: 'Ігор' },
+        }),
+      },
+      activeSleep: { findUnique: vi.fn().mockResolvedValue(null) },
+      sleepSession: { findMany: vi.fn().mockResolvedValue([]) },
+    } as unknown as PrismaService;
+    const { push } = createPush(prisma);
+    const service = new SleepService(prisma, push);
+    const saved = await service.updateProfile(user(), {
+      babyName: '  Марко ',
+      birthDate: '2025-08-23',
+    });
+    const overview = await service.overview(user());
+
+    expect(upsert).toHaveBeenCalledWith({
+      where: { householdId: 'home-1' },
+      create: {
+        householdId: 'home-1',
+        babyName: 'Марко',
+        birthDate,
+        napTarget: null,
+        updatedById: 'user-1',
+      },
+      update: {
+        babyName: 'Марко',
+        birthDate,
+        napTarget: undefined,
+        updatedById: 'user-1',
+      },
+    });
+    expect(saved.babyName).toBe('Марко');
+    expect(saved.birthDate).toBe('2025-08-23');
+    expect(overview.profile.babyName).toBe('Марко');
+    expect(overview.profile.birthDate).toBe('2025-08-23');
+    expect(overview.profile.assumedAge).toBe(false);
+    expect(overview.profile.ageLabel).toContain('1 р.');
   });
 });

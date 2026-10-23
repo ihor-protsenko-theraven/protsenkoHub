@@ -24,7 +24,7 @@ import {
 } from './dto/sleep.dto';
 import { SleepService } from './sleep.service';
 
-@Controller('solomiya/sleep')
+@Controller('children/sleep')
 @UseGuards(JwtAuthGuard)
 export class SleepController {
   constructor(private readonly sleepService: SleepService) {}

@@ -51,7 +51,9 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       },
     });
     const membership = account?.activeHouseholdId
-      ? account.memberships.find((item) => item.householdId === account.activeHouseholdId)
+      ? account.memberships.find(
+          (item) => item.householdId === account.activeHouseholdId,
+        )
       : account?.memberships[0];
 
     if (!account || !membership) {

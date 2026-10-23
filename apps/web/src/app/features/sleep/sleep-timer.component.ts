@@ -78,6 +78,7 @@ export class SleepStatus {
   readonly headline = input('');
   readonly active = input<SleepSession | null>(null);
   readonly offset = input(0);
+  readonly babyName = input('Дитина');
 
   readonly spoken = computed(() => {
     this.ticker.minute();
@@ -87,7 +88,7 @@ export class SleepStatus {
     const minutes = Math.floor(asleepMs(active.startedAt, null, pauses, Date.now(), this.offset()) / SLEEP_UI.minuteMs);
     const open = pauses.some((pause) => pause.endedAt === null);
     return open
-      ? `Сон на паузі. Вже проспала ${formatMinutes(minutes)}.`
-      : `Соломія спить уже ${formatMinutes(minutes)}.`;
+      ? `Сон на паузі. Вже триває ${formatMinutes(minutes)}.`
+      : `${this.babyName() || 'Дитина'} спить уже ${formatMinutes(minutes)}.`;
   });
 }

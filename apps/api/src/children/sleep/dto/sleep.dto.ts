@@ -105,6 +105,11 @@ export class ResumeSleepDto {
 
 export class UpdateSleepProfileDto {
   @IsOptional()
+  @IsString()
+  @MaxLength(60)
+  babyName?: string | null;
+
+  @IsOptional()
   @IsDateString()
   @Matches(/^\d{4}-\d{2}-\d{2}$/)
   birthDate?: string | null;

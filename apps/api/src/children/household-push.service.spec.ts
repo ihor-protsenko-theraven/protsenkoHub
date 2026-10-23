@@ -7,7 +7,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { HOUSEHOLD_PUSH } from './household-push.config';
 import { HouseholdPushService } from './household-push.service';
 import { SleepService } from './sleep/sleep.service';
-import { SolomiyaService } from './solomiya.service';
+import { ChildrenService } from './children.service';
 
 vi.mock('web-push', () => ({
   sendNotification: vi.fn().mockResolvedValue({ statusCode: 201 }),
@@ -48,7 +48,7 @@ function otherParentDevice() {
 }
 
 function mockPrisma(overrides: Record<string, unknown>): PrismaService {
-  return Object.assign(Object.create(PrismaService.prototype), overrides);
+  return overrides as unknown as PrismaService;
 }
 
 describe('HouseholdPushService family events', () => {
@@ -232,8 +232,8 @@ describe('HouseholdPushService family events', () => {
       },
     };
     const prisma = mockPrisma({
-      $transaction: vi.fn(
-        (fn: (client: typeof activeTx) => Promise<unknown>) => fn(activeTx),
+      $transaction: vi.fn((fn: (client: typeof activeTx) => Promise<unknown>) =>
+        fn(activeTx),
       ),
       pushSubscription: { findMany, deleteMany: vi.fn() },
     });
@@ -296,7 +296,7 @@ describe('HouseholdPushService family events', () => {
       pushSubscription: { findMany, deleteMany: vi.fn() },
     });
     const push = new HouseholdPushService(prisma);
-    const tasks = new SolomiyaService(prisma, push);
+    const tasks = new ChildrenService(prisma, push);
 
     create.mockResolvedValueOnce({
       id: 'task-todo',
@@ -435,7 +435,7 @@ describe('HouseholdPushService family events', () => {
     });
     const push = new HouseholdPushService(prisma);
     const sleep = new SleepService(prisma, push);
-    const tasks = new SolomiyaService(prisma, push);
+    const tasks = new ChildrenService(prisma, push);
 
     vi.mocked(webPush.sendNotification).mockRejectedValueOnce({
       statusCode: 410,

@@ -39,7 +39,7 @@ export interface ShoppingItemDto {
   version: number;
 }
 
-export interface SolomiyaTaskDto {
+export interface ChildTaskDto {
   id: string;
   title: string;
   notes: string | null;

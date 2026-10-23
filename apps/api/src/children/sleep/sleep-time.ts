@@ -147,6 +147,11 @@ export function ageLabelFromDays(days: number): string {
   const months = Math.floor(days / 30.436875);
   const extraDays = Math.max(0, Math.round(days - months * 30.436875));
   if (months <= 0) return `${days} дн.`;
+  if (months >= 12) {
+    const years = Math.floor(months / 12);
+    const remMonths = months % 12;
+    return remMonths === 0 ? `${years} р.` : `${years} р. ${remMonths} міс.`;
+  }
   if (extraDays === 0) return `${months} міс.`;
   return `${months} міс. ${extraDays} дн.`;
 }

@@ -21,7 +21,7 @@ import {
   UpdateSleepDto,
   UpdateSleepProfileDto,
 } from './dto/sleep.dto';
-import { SLEEP_TRACKER } from './sleep.config';
+import { normalizeBabyName, SLEEP_TRACKER } from './sleep.config';
 import { buildSleepGuidance } from './sleep-guidance';
 import { sessionInclude, type SessionRow, type SleepDb } from './sleep.model';
 import {
@@ -266,7 +266,9 @@ export class SleepService {
       const startedAt = new Date(dto.startedAt);
       const endedAt = new Date(dto.endedAt);
       this.assertPauseWindow(session, startedAt, endedAt);
-      await tx.sleepPause.create({ data: { sessionId: id, startedAt, endedAt } });
+      await tx.sleepPause.create({
+        data: { sessionId: id, startedAt, endedAt },
+      });
       const fresh = await tx.sleepSession.update({
         where: { id },
         data: { updatedById: user.userId },
@@ -381,6 +383,8 @@ export class SleepService {
 
   async updateProfile(user: AuthUser, dto: UpdateSleepProfileDto) {
     if (dto.birthDate) this.assertBirth(dto.birthDate);
+    const babyName =
+      dto.babyName === undefined ? undefined : normalizeBabyName(dto.babyName);
     const birthDate =
       dto.birthDate === undefined
         ? undefined
@@ -392,13 +396,20 @@ export class SleepService {
       where: { householdId: user.householdId },
       create: {
         householdId: user.householdId,
+        babyName: babyName ?? SLEEP_TRACKER.defaultBabyName,
         birthDate: birthDate ?? null,
         napTarget: napTarget ?? null,
         updatedById: user.userId,
       },
-      update: { birthDate, napTarget, updatedById: user.userId },
+      update: {
+        ...(babyName !== undefined ? { babyName } : {}),
+        birthDate,
+        napTarget,
+        updatedById: user.userId,
+      },
     });
     return {
+      babyName: normalizeBabyName(profile.babyName),
       birthDate: profile.birthDate
         ? profile.birthDate.toISOString().slice(0, 10)
         : null,
@@ -419,7 +430,9 @@ export class SleepService {
   ) {
     const now = new Date();
     const age = this.ageOf(profile, now, timeZone);
+    const babyName = normalizeBabyName(profile.babyName);
     const guidance = buildSleepGuidance({
+      babyName,
       now,
       timeZone,
       ageWeeks: age.weeks,
@@ -442,7 +455,7 @@ export class SleepService {
       timeZone,
       historyDays: SLEEP_TRACKER.historyDays,
       profile: {
-        babyName: profile.babyName,
+        babyName,
         birthDate: age.birthDate,
         ageWeeks: age.weeks,
         ageLabel: age.label,
@@ -544,7 +557,7 @@ export class SleepService {
     if (existing) return existing;
     try {
       return await this.prisma.sleepProfile.create({
-        data: { householdId },
+        data: { householdId, babyName: SLEEP_TRACKER.defaultBabyName },
         include: { updatedBy: { select: { displayName: true } } },
       });
     } catch (error) {
@@ -653,11 +666,16 @@ export class SleepService {
     excludeId?: string,
   ) {
     this.assertInstant(startedAt, 'Початок паузи');
-    if (startedAt < session.startedAt || (session.endedAt && startedAt >= session.endedAt)) {
+    if (
+      startedAt < session.startedAt ||
+      (session.endedAt && startedAt >= session.endedAt)
+    ) {
       throw new BadRequestException('Пауза має бути всередині сну.');
     }
     if (session.endedAt && !endedAt) {
-      throw new BadRequestException('Для завершеного сну потрібен кінець паузи.');
+      throw new BadRequestException(
+        'Для завершеного сну потрібен кінець паузи.',
+      );
     }
     if (endedAt) {
       this.assertPauseEnd(startedAt, endedAt, session.startedAt);
@@ -665,11 +683,14 @@ export class SleepService {
         throw new BadRequestException('Пауза має бути всередині сну.');
       }
     }
-    if (session.pauses.some((pause) =>
-      pause.id !== excludeId &&
-      startedAt < (pause.endedAt ?? new Date()) &&
-      (endedAt ?? new Date()) > pause.startedAt
-    )) {
+    if (
+      session.pauses.some(
+        (pause) =>
+          pause.id !== excludeId &&
+          startedAt < (pause.endedAt ?? new Date()) &&
+          (endedAt ?? new Date()) > pause.startedAt,
+      )
+    ) {
       throw new BadRequestException('Пауза перетинається з іншою паузою.');
     }
   }

@@ -6,7 +6,7 @@ import { CreateTaskDto, UpdateTaskDto } from './dto/task.dto';
 import { HouseholdPushService } from './household-push.service';
 
 @Injectable()
-export class SolomiyaService {
+export class ChildrenService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly push: HouseholdPushService,
@@ -72,7 +72,10 @@ export class SolomiyaService {
         updatedBy: { select: { displayName: true } },
       },
     });
-    if (existing.status !== TaskStatus.DONE && task.status === TaskStatus.DONE) {
+    if (
+      existing.status !== TaskStatus.DONE &&
+      task.status === TaskStatus.DONE
+    ) {
       await this.safeNotify(user, task);
     }
     return task;
