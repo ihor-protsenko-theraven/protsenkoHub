@@ -3,6 +3,7 @@ import { BadRequestException, ConflictException } from '@nestjs/common';
 import { MemberRole } from '@prisma/client';
 import type { AuthUser } from '../../common/types';
 import { PrismaService } from '../../prisma/prisma.service';
+import { HouseholdPushService } from '../household-push.service';
 import { SleepService } from './sleep.service';
 
 function user(): AuthUser {
@@ -30,6 +31,12 @@ function session(startedAt: Date) {
   };
 }
 
+function createPush(prisma: PrismaService) {
+  const push = new HouseholdPushService(prisma);
+  const notify = vi.spyOn(push, 'notify').mockResolvedValue({ sent: 0 });
+  return { push, notify };
+}
+
 describe('SleepService active tracker', () => {
   it('does not replace an open sleep when start is tapped again', async () => {
     const startedAt = new Date('2026-10-19T05:00:00.000Z');
@@ -52,7 +59,8 @@ describe('SleepService active tracker', () => {
         fn(tx),
       ),
     } as unknown as PrismaService;
-    const service = new SleepService(prisma);
+    const { push, notify } = createPush(prisma);
+    const service = new SleepService(prisma, push);
 
     const result = await service.start(user(), { kind: 'NIGHT' });
 
@@ -60,6 +68,7 @@ describe('SleepService active tracker', () => {
     expect(result.session.startedAt).toBe(startedAt.toISOString());
     expect(result.session.kind).toBe('NAP');
     expect(createSession).not.toHaveBeenCalled();
+    expect(notify).not.toHaveBeenCalled();
     expect(tx.activeSleep.upsert).toHaveBeenCalledWith(
       expect.objectContaining({
         update: { sessionId: 'sleep-1' },
@@ -99,7 +108,8 @@ describe('SleepService active tracker', () => {
       ),
       household: { findUnique: vi.fn() },
     } as unknown as PrismaService;
-    const service = new SleepService(prisma);
+    const { push, notify } = createPush(prisma);
+    const service = new SleepService(prisma, push);
     const startedAt = new Date(Date.now() - 5 * 60_000).toISOString();
 
     const result = await service.start(user(), { kind: 'NAP', startedAt });
@@ -109,6 +119,11 @@ describe('SleepService active tracker', () => {
     expect(createSession).toHaveBeenCalledTimes(1);
     expect(tx.activeSleep.create).toHaveBeenCalledWith({
       data: { householdId: 'home-1', sessionId: 'sleep-2' },
+    });
+    expect(notify).toHaveBeenCalledWith(user(), {
+      type: 'sleep-started',
+      sessionId: 'sleep-2',
+      kind: 'NAP',
     });
   });
 
@@ -139,7 +154,8 @@ describe('SleepService active tracker', () => {
         fn(tx),
       ),
     } as unknown as PrismaService;
-    const service = new SleepService(prisma);
+    const { push, notify } = createPush(prisma);
+    const service = new SleepService(prisma, push);
 
     const result = await service.stop(user(), {});
 
@@ -150,6 +166,10 @@ describe('SleepService active tracker', () => {
         where: { id: 'sleep-1' },
       }),
     );
+    expect(notify).toHaveBeenCalledWith(user(), {
+      type: 'sleep-stopped',
+      sessionId: 'sleep-1',
+    });
   });
 
   it('refuses to stop when the tracker is already idle', async () => {
@@ -167,11 +187,13 @@ describe('SleepService active tracker', () => {
         fn(tx),
       ),
     } as unknown as PrismaService;
-    const service = new SleepService(prisma);
+    const { push, notify } = createPush(prisma);
+    const service = new SleepService(prisma, push);
 
     await expect(service.stop(user(), {})).rejects.toBeInstanceOf(
       ConflictException,
     );
+    expect(notify).not.toHaveBeenCalled();
   });
 
   it('keeps the same pause when pause is tapped again', async () => {
@@ -195,7 +217,8 @@ describe('SleepService active tracker', () => {
         fn(tx),
       ),
     } as unknown as PrismaService;
-    const service = new SleepService(prisma);
+    const { push } = createPush(prisma);
+    const service = new SleepService(prisma, push);
 
     const result = await service.pause(user(), {});
 
@@ -214,7 +237,13 @@ describe('SleepService saved pauses', () => {
   const existing = {
     ...session(start),
     endedAt: end,
-    pauses: [{id: 'pause-1', startedAt: new Date('2026-10-19T10:30:00.000Z'), endedAt: new Date('2026-10-19T10:45:00.000Z')}],
+    pauses: [
+      {
+        id: 'pause-1',
+        startedAt: new Date('2026-10-19T10:30:00.000Z'),
+        endedAt: new Date('2026-10-19T10:45:00.000Z'),
+      },
+    ],
   };
 
   it('adds a bounded pause to a completed household sleep', async () => {
@@ -222,28 +251,61 @@ describe('SleepService saved pauses', () => {
     const tx = {
       sleepSession: {
         findFirst: vi.fn().mockResolvedValue(existing),
-        update: vi.fn().mockResolvedValue({...existing, pauses: [...existing.pauses, {id: 'pause-2', startedAt: new Date('2026-10-19T11:00:00.000Z'), endedAt: new Date('2026-10-19T11:15:00.000Z')}]}),
+        update: vi.fn().mockResolvedValue({
+          ...existing,
+          pauses: [
+            ...existing.pauses,
+            {
+              id: 'pause-2',
+              startedAt: new Date('2026-10-19T11:00:00.000Z'),
+              endedAt: new Date('2026-10-19T11:15:00.000Z'),
+            },
+          ],
+        }),
       },
-      sleepPause: {create},
+      sleepPause: { create },
     };
-    const prisma = {$transaction: vi.fn((fn: (client: typeof tx) => Promise<unknown>) => fn(tx))} as unknown as PrismaService;
-    const result = await new SleepService(prisma).createSavedPause(user(), 'sleep-1', {
-      startedAt: '2026-10-19T11:00:00.000Z',
-      endedAt: '2026-10-19T11:15:00.000Z',
-    });
+    const prisma = {
+      $transaction: vi.fn((fn: (client: typeof tx) => Promise<unknown>) =>
+        fn(tx),
+      ),
+    } as unknown as PrismaService;
+    const { push } = createPush(prisma);
+    const result = await new SleepService(prisma, push).createSavedPause(
+      user(),
+      'sleep-1',
+      {
+        startedAt: '2026-10-19T11:00:00.000Z',
+        endedAt: '2026-10-19T11:15:00.000Z',
+      },
+    );
     expect(create).toHaveBeenCalledOnce();
     expect(result.session.pauses).toHaveLength(2);
-    expect(tx.sleepSession.findFirst).toHaveBeenCalledWith(expect.objectContaining({where: expect.objectContaining({householdId: 'home-1'})}));
+    expect(tx.sleepSession.findFirst).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({ householdId: 'home-1' }),
+      }),
+    );
   });
 
   it('rejects a pause overlapping an existing pause', async () => {
     const create = vi.fn();
-    const tx = {sleepSession: {findFirst: vi.fn().mockResolvedValue(existing)}, sleepPause: {create}};
-    const prisma = {$transaction: vi.fn((fn: (client: typeof tx) => Promise<unknown>) => fn(tx))} as unknown as PrismaService;
-    await expect(new SleepService(prisma).createSavedPause(user(), 'sleep-1', {
-      startedAt: '2026-10-19T10:40:00.000Z',
-      endedAt: '2026-10-19T11:00:00.000Z',
-    })).rejects.toBeInstanceOf(BadRequestException);
+    const tx = {
+      sleepSession: { findFirst: vi.fn().mockResolvedValue(existing) },
+      sleepPause: { create },
+    };
+    const prisma = {
+      $transaction: vi.fn((fn: (client: typeof tx) => Promise<unknown>) =>
+        fn(tx),
+      ),
+    } as unknown as PrismaService;
+    const { push } = createPush(prisma);
+    await expect(
+      new SleepService(prisma, push).createSavedPause(user(), 'sleep-1', {
+        startedAt: '2026-10-19T10:40:00.000Z',
+        endedAt: '2026-10-19T11:00:00.000Z',
+      }),
+    ).rejects.toBeInstanceOf(BadRequestException);
     expect(create).not.toHaveBeenCalled();
   });
 });

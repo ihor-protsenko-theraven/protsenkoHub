@@ -49,7 +49,7 @@ export class SleepReminderService {
       const subscription = await this.push.requestSubscription({ serverPublicKey: publicKey });
       await this.publish(subscription);
       this.remember(subscription);
-      this.toasts.success('Нагадування ввімкнено на цьому пристрої.');
+      this.toasts.success('Сповіщення ввімкнено на цьому пристрої.');
     } catch (error) {
       try { await this.push.unsubscribe(); } catch { /* No active subscription to remove. */ }
       this.endpoint = null;
@@ -71,7 +71,7 @@ export class SleepReminderService {
       if (current) await current.unsubscribe();
       this.endpoint = null;
       this.enabled.set(false);
-      this.toasts.success('Нагадування вимкнено на цьому пристрої.');
+      this.toasts.success('Сповіщення вимкнено на цьому пристрої.');
     } catch (error) {
       if (!(error instanceof HttpErrorResponse)) this.toasts.error('Не вдалося вимкнути сповіщення. Спробуйте ще раз.');
     } finally {

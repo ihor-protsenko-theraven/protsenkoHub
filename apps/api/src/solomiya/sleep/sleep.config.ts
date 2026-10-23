@@ -7,6 +7,10 @@ export const SLEEP_TRACKER = {
   minSessionMs: 60_000,
   minuteMs: 60_000,
   dayMs: 24 * 60 * 60 * 1000,
+  kindLabels: {
+    nap: 'денний сон',
+    night: 'нічний сон',
+  },
 } as const;
 
 export const ASSUMED_AGE_WEEKS = SLEEP_TRACKER.assumedAgeWeeks;

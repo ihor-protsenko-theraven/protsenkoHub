@@ -8,6 +8,8 @@ import { Prisma } from '@prisma/client';
 import { HOUSEHOLD } from '../../config/household.config';
 import type { AuthUser } from '../../common/types';
 import { PrismaService } from '../../prisma/prisma.service';
+import type { HouseholdPushEvent } from '../household-push.model';
+import { HouseholdPushService } from '../household-push.service';
 import {
   CreateSleepDto,
   CreateSavedPauseDto,
@@ -35,7 +37,10 @@ const HISTORY_MS = SLEEP_TRACKER.historyDays * SLEEP_TRACKER.dayMs;
 
 @Injectable()
 export class SleepService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly push: HouseholdPushService,
+  ) {}
 
   async overview(user: AuthUser) {
     return this.overviewForHousehold(user.householdId);
@@ -75,8 +80,11 @@ export class SleepService {
         'Активний сон не може починатися раніше ніж 16 годин тому. Додайте завершений запис.',
       );
     }
+    let result:
+      | { session: ReturnType<SleepService['map']>; resumed: true }
+      | { session: ReturnType<SleepService['map']>; resumed: false };
     try {
-      return await this.prisma.$transaction(async (tx) => {
+      result = await this.prisma.$transaction(async (tx) => {
         const current = await this.findOpen(tx, user.householdId);
         if (current) {
           await tx.activeSleep.upsert({
@@ -114,10 +122,18 @@ export class SleepService {
       if (!current) throw error;
       return { session: this.map(current), resumed: true as const };
     }
+    if (!result.resumed) {
+      await this.safeNotify(user, {
+        type: 'sleep-started',
+        sessionId: result.session.id,
+        kind: result.session.kind,
+      });
+    }
+    return result;
   }
 
   async stop(user: AuthUser, dto: StopSleepDto) {
-    return this.prisma.$transaction(async (tx) => {
+    const result = await this.prisma.$transaction(async (tx) => {
       const current = await this.findOpen(tx, user.householdId);
       if (!current) {
         throw new ConflictException('Зараз немає активного сну.');
@@ -145,6 +161,11 @@ export class SleepService {
       });
       return { session: this.map(session) };
     });
+    await this.safeNotify(user, {
+      type: 'sleep-stopped',
+      sessionId: result.session.id,
+    });
+    return result;
   }
 
   async pause(user: AuthUser, dto: PauseSleepDto) {
@@ -704,5 +725,16 @@ export class SleepService {
       error instanceof Prisma.PrismaClientKnownRequestError &&
       error.code === 'P2002'
     );
+  }
+
+  private async safeNotify(
+    user: AuthUser,
+    event: HouseholdPushEvent,
+  ): Promise<void> {
+    try {
+      await this.push.notify(user, event);
+    } catch {
+      // Push notifications are best-effort and must not fail sleep mutations.
+    }
   }
 }

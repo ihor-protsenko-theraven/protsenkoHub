@@ -3,10 +3,14 @@ import { TaskStatus } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import type { AuthUser } from '../common/types';
 import { CreateTaskDto, UpdateTaskDto } from './dto/task.dto';
+import { HouseholdPushService } from './household-push.service';
 
 @Injectable()
 export class SolomiyaService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly push: HouseholdPushService,
+  ) {}
 
   list(user: AuthUser, status?: TaskStatus) {
     return this.prisma.solomiyaTask.findMany({
@@ -22,8 +26,8 @@ export class SolomiyaService {
     });
   }
 
-  create(user: AuthUser, dto: CreateTaskDto) {
-    return this.prisma.solomiyaTask.create({
+  async create(user: AuthUser, dto: CreateTaskDto) {
+    const task = await this.prisma.solomiyaTask.create({
       data: {
         householdId: user.householdId,
         createdById: user.userId,
@@ -39,11 +43,15 @@ export class SolomiyaService {
         updatedBy: { select: { displayName: true } },
       },
     });
+    if (task.status === TaskStatus.DONE) {
+      await this.safeNotify(user, task);
+    }
+    return task;
   }
 
   async update(user: AuthUser, id: string, dto: UpdateTaskDto) {
-    await this.ensureOwned(user, id);
-    return this.prisma.solomiyaTask.update({
+    const existing = await this.ensureOwned(user, id);
+    const task = await this.prisma.solomiyaTask.update({
       where: { id },
       data: {
         title: dto.title,
@@ -64,6 +72,10 @@ export class SolomiyaService {
         updatedBy: { select: { displayName: true } },
       },
     });
+    if (existing.status !== TaskStatus.DONE && task.status === TaskStatus.DONE) {
+      await this.safeNotify(user, task);
+    }
+    return task;
   }
 
   async remove(user: AuthUser, id: string) {
@@ -80,5 +92,20 @@ export class SolomiyaService {
       throw new NotFoundException('Task not found');
     }
     return task;
+  }
+
+  private async safeNotify(
+    user: AuthUser,
+    task: { readonly id: string; readonly title: string },
+  ): Promise<void> {
+    try {
+      await this.push.notify(user, {
+        type: 'task-completed',
+        taskId: task.id,
+        title: task.title,
+      });
+    } catch {
+      // Push notifications are best-effort and must not fail task mutations.
+    }
   }
 }
