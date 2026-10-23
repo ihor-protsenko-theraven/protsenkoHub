@@ -280,39 +280,41 @@
     </app-history-panel>
 
     <ng-template #sessionCard let-session>
-      <article class="panel list-card">
+      <article class="panel list-card list-card--session">
         <div class="list-card__main">
           <h3>{{ kindLabel(session.kind) }}</h3>
           <div class="list-card__meta">
-            <span>{{ session.startedAt | date:'d MMM, HH:mm':sleep.timeZone:'uk' }}</span>
-            <span>{{ session.endedAt ? (session.endedAt | date:'HH:mm':sleep.timeZone:'uk') : 'триває' }}</span>
+            <span>
+              {{ session.startedAt | date:'d MMM, HH:mm':sleep.timeZone:'uk' }}
+              –
+              {{ session.endedAt ? (session.endedAt | date:'HH:mm':sleep.timeZone:'uk') : 'триває' }}
+            </span>
             <span class="badge">{{ session.endedAt ? 'Тривалість' : 'Вже спить' }}: {{ historyDuration(session) }}</span>
           </div>
           @if (session.notes) { <p>{{ session.notes }}</p> }
-          @if (session.endedAt) {
-            <div class="saved-pauses">
+          @if (session.endedAt && session.pauses.length) {
+            <ul class="saved-pauses" aria-label="Паузи">
               @for (pause of session.pauses; track pause.id) {
-                <div class="saved-pauses__row">
-                  <span>Пауза {{ pause.startedAt | date:'d MMM, HH:mm':sleep.timeZone:'uk' }} – {{ pause.endedAt | date:'HH:mm':sleep.timeZone:'uk' }}</span>
-                  <button class="button button--quiet" type="button" (click)="openSavedPause(session, pause)">Змінити паузу</button>
-                </div>
+                <li class="saved-pauses__row">
+                  <span>Пауза {{ pause.startedAt | date:'HH:mm':sleep.timeZone:'uk' }} – {{ pause.endedAt | date:'HH:mm':sleep.timeZone:'uk' }}</span>
+                  <button class="button button--quiet" type="button" (click)="openSavedPause(session, pause)">Змінити</button>
+                </li>
               }
-              <button class="button button--secondary" type="button" (click)="openSavedPause(session)">Додати паузу</button>
-            </div>
-            @if (savedPauseSessionId() === session.id) {
-              <form class="saved-pause-form" (submit)="$event.preventDefault(); saveSavedPause()">
-                <h4>{{ savedPauseId() ? 'Редагувати паузу' : 'Нова пауза' }}</h4>
-                <div class="field-grid">
-                  <label class="field"><span>Початок паузи</span><input type="datetime-local" [formField]="savedPauseForm.startedAt"></label>
-                  <label class="field"><span>Кінець паузи</span><input type="datetime-local" [formField]="savedPauseForm.endedAt"></label>
-                </div>
-                @if (error()) { <p class="message message--error" role="alert">{{ error() }}</p> }
-                <div class="form-actions">
-                  <button class="button button--primary" type="submit" [disabled]="busy()">Зберегти паузу</button>
-                  <button class="button button--quiet" type="button" (click)="closeSavedPause()">Скасувати</button>
-                </div>
-              </form>
-            }
+            </ul>
+          }
+          @if (savedPauseSessionId() === session.id) {
+            <form class="saved-pause-form" (submit)="$event.preventDefault(); saveSavedPause()">
+              <h4>{{ savedPauseId() ? 'Редагувати паузу' : 'Нова пауза' }}</h4>
+              <div class="field-grid">
+                <label class="field"><span>Початок паузи</span><input type="datetime-local" [formField]="savedPauseForm.startedAt"></label>
+                <label class="field"><span>Кінець паузи</span><input type="datetime-local" [formField]="savedPauseForm.endedAt"></label>
+              </div>
+              @if (error()) { <p class="message message--error" role="alert">{{ error() }}</p> }
+              <div class="form-actions">
+                <button class="button button--primary" type="submit" [disabled]="busy()">Зберегти паузу</button>
+                <button class="button button--quiet" type="button" (click)="closeSavedPause()">Скасувати</button>
+              </div>
+            </form>
           }
           <div class="record-audit">
             <span>Додав: {{ session.startedByName || 'невідомо' }}</span>
@@ -328,6 +330,9 @@
               <button class="button button--quiet" type="button" (click)="deletingId.set(null)">Ні</button>
             </div>
           } @else {
+            @if (session.endedAt && savedPauseSessionId() !== session.id) {
+              <button class="button button--quiet" type="button" (click)="openSavedPause(session)">Додати паузу</button>
+            }
             <button class="button button--secondary" type="button" (click)="edit(session)">Змінити</button>
             <button class="button button--quiet" type="button" [attr.aria-label]="'Видалити сон від ' + (session.startedAt | date:'d MMM HH:mm':sleep.timeZone:'uk')" (click)="deletingId.set(session.id)">Видалити</button>
           }

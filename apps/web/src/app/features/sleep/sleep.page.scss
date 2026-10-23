@@ -25,10 +25,15 @@
 .pause-timer{margin:0 0 6px;font-weight:650}
 .pause-list{margin:8px 0 0;padding:0;list-style:none;display:grid;gap:6px}
 .pause-list li{display:flex;justify-content:space-between;align-items:center;gap:8px}
-.saved-pauses{display:grid;gap:8px;margin-top:12px}
-.saved-pauses__row{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px}
-.saved-pause-form{display:grid;gap:12px;margin-top:12px;padding:14px;border:1px solid var(--line);border-radius:12px}
-.saved-pause-form h4{margin:0}
+.list-card--session{align-items:flex-start}
+.list-card--session .list-card__actions{padding-top:2px}
+.saved-pauses{margin:10px 0 0;padding:0;list-style:none;display:grid;gap:2px}
+.saved-pauses__row{display:flex;flex-wrap:wrap;align-items:center;gap:4px 8px;min-height:44px;color:var(--muted);font-size:.86rem}
+.saved-pauses__row .button{height:44px;min-height:44px;padding:0 10px;font-size:.85rem}
+.saved-pauses__row .button:hover:not(:disabled){transform:none}
+.saved-pause-form{display:grid;gap:12px;margin-top:12px;padding:14px;border:1px solid var(--line);border-radius:12px;background:var(--paper)}
+.saved-pause-form h4{margin:0;font-size:1rem}
+.saved-pause-form .form-actions .button{height:44px;min-height:44px}
 .adjust{display:grid;gap:8px;margin-top:8px}
 .stale{display:grid;gap:8px;padding:12px;border-radius:12px;background:#fff4ed}
 .advice{padding:18px 20px;background:#f3f7f2}
