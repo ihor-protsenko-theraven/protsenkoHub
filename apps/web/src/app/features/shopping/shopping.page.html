@@ -32,35 +32,55 @@
     </form>
   </section>
 }
-  <div class="panel toolbar"><label class="field field--search"><span>Пошук</span><input type="search"
-                                                                                         placeholder="Назва покупки"
-                                                                                         [value]="search()"
-                                                                                         (input)="search.set($any($event.target).value)"></label><label
-    class="field field--filter"><span>Статус</span><select [value]="status()"
-                                                           (change)="status.set($any($event.target).value)">
-    <option value="open">Треба купити ({{ openCount() }})</option>
-    <option value="done">Куплено ({{ doneCount() }})</option>
-    <option value="all">Усі</option>
-  </select></label><label class="field field--filter"><span>Категорія</span><select [value]="category()"
-                                                                                    (change)="category.set($any($event.target).value)">
-    <option value="">Усі категорії</option>
-    @for (name of categories(); track name) {
-      <option [value]="name">{{ name }}</option>
-    }</select></label></div>
-  <div class="section-heading"><h2>Список</h2><span>{{ filtered().length }} записів</span></div>
+  <div class="panel toolbar">
+    <label class="field field--search">
+      <span>Пошук</span>
+      <input type="search" placeholder="Назва покупки" [value]="search()" (input)="search.set($any($event.target).value)">
+    </label>
+    <label class="field field--filter">
+      <span>Категорія</span>
+      <select [value]="category()" (change)="category.set($any($event.target).value)">
+        <option value="">Усі категорії</option>
+        @for (name of categories(); track name) {
+          <option [value]="name">{{ name }}</option>
+        }
+      </select>
+    </label>
+  </div>
+  <div class="section-heading"><h2>Треба купити</h2><span>{{ openItems().length }} записів</span></div>
   @if (items.isLoading()) {
     <div class="panel state" role="status">Завантажуємо покупки…</div>
   } @else if (items.error()) {
-  <div class="panel state"><h2>Не вдалося завантажити</h2>
-    <button class="button button--secondary" type="button" (click)="items.reload()">Повторити</button>
-  </div>
-} @else if (!filtered().length) {
-  <div class="panel state"><h2>Список порожній</h2>
-    <p>{{ items.value().length ? 'Спробуйте змінити фільтри.' : 'Додайте те, що потрібно купити.' }}</p>
-    <button class="button button--secondary" type="button" (click)="createNew()">Додати покупку</button>
-  </div>
-} @else {
-  <div class="list">@for (item of filtered(); track item.id) {
+    <div class="panel state">
+      <h2>Не вдалося завантажити</h2>
+      <button class="button button--secondary" type="button" (click)="items.reload()">Повторити</button>
+    </div>
+  } @else if (!openItems().length) {
+    <div class="panel state">
+      <h2>{{ emptyState().title }}</h2>
+      <p>{{ emptyState().description }}</p>
+      <button class="button button--secondary" type="button" (click)="createNew()">Додати покупку</button>
+    </div>
+  } @else {
+    <div class="list">
+      @for (item of openItems(); track item.id) {
+        <ng-container [ngTemplateOutlet]="itemCard" [ngTemplateOutletContext]="{ $implicit: item }" />
+      }
+    </div>
+  }
+  @if (!items.isLoading() && !items.error()) {
+    <app-history-panel [count]="doneItems().length" label="Історія" empty="Купленого ще немає.">
+      <ng-template>
+        <div class="list">
+          @for (item of doneItems(); track item.id) {
+            <ng-container [ngTemplateOutlet]="itemCard" [ngTemplateOutletContext]="{ $implicit: item }" />
+          }
+        </div>
+      </ng-template>
+    </app-history-panel>
+  }
+
+  <ng-template #itemCard let-item>
     <article class="panel list-card shopping-item" [class.shopping-item--done]="item.isChecked">
       <div class="list-card__main shopping-item__main">
         <button class="check-button" type="button"
@@ -68,29 +88,31 @@
                 [attr.aria-pressed]="item.isChecked" [disabled]="busy()"
                 (click)="toggle(item)">{{ item.isChecked ? '✓' : '' }}
         </button>
-        <div><h3>{{ item.name }}</h3>
-          <div class="list-card__meta"><span>{{ item.qty }} {{ item.unit || 'шт' }}</span>@if (item.category) {
-            <span class="badge">{{ item.category }}</span>
-          }</div>
+        <div>
+          <h3>{{ item.name }}</h3>
+          <div class="list-card__meta">
+            <span>{{ item.qty }} {{ item.unit || 'шт' }}</span>
+            @if (item.category) { <span class="badge">{{ item.category }}</span> }
+          </div>
           <div class="record-audit">
             <span>Додав: {{ item.createdBy?.displayName || 'невідомо' }}</span>
             @if (item.updatedBy; as editor) { <span>Змінив: {{ editor.displayName }}</span> }
           </div>
         </div>
       </div>
-      <div class="list-card__actions">@if (deletingId() === item.id) {
-        <div class="confirm"><span>Видалити?</span>
-          <button class="button button--danger" type="button" [disabled]="busy()" (click)="remove(item.id)">Так</button>
-          <button class="button button--quiet" type="button" (click)="deletingId.set(null)">Ні</button>
-        </div>
-      } @else {
-        <button class="button button--secondary" type="button" (click)="edit(item)">Змінити</button>
-        <button class="button button--quiet" type="button" [attr.aria-label]="'Видалити ' + item.name"
-                (click)="deletingId.set(item.id)">Видалити
-        </button>
-      }</div>
+      <div class="list-card__actions">
+        @if (deletingId() === item.id) {
+          <div class="confirm">
+            <span>Видалити?</span>
+            <button class="button button--danger" type="button" [disabled]="busy()" (click)="remove(item.id)">Так</button>
+            <button class="button button--quiet" type="button" (click)="deletingId.set(null)">Ні</button>
+          </div>
+        } @else {
+          <button class="button button--secondary" type="button" (click)="edit(item)">Змінити</button>
+          <button class="button button--quiet" type="button" [attr.aria-label]="'Видалити ' + item.name" (click)="deletingId.set(item.id)">Видалити</button>
+        }
+      </div>
     </article>
-  }</div>
-}
+  </ng-template>
 </section>
 

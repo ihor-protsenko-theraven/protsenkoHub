@@ -10,6 +10,7 @@ import type { AuthUser } from '../../common/types';
 import { PrismaService } from '../../prisma/prisma.service';
 import {
   CreateSleepDto,
+  CreateSavedPauseDto,
   PauseSleepDto,
   ResumeSleepDto,
   StartSleepDto,
@@ -42,10 +43,12 @@ export class SleepService {
 
   /** Reuse the same current guidance for the push dispatcher. */
   async overviewForHousehold(householdId: string) {
-    const timeZone = await this.timeZoneOf(householdId);
-    const profile = await this.ensureProfile(householdId);
-    const active = await this.loadActive(householdId);
     const since = new Date(Date.now() - HISTORY_MS);
+    const [timeZone, profile, active] = await Promise.all([
+      this.timeZoneOf(householdId),
+      this.ensureProfile(householdId),
+      this.loadActive(householdId),
+    ]);
     const sessions = await this.prisma.sleepSession.findMany({
       where: {
         householdId,
@@ -209,15 +212,7 @@ export class SleepService {
           : dto.endedAt === null
             ? null
             : new Date(dto.endedAt);
-      this.assertInstant(startedAt, 'Початок паузи');
-      if (startedAt < pause.session.startedAt) {
-        throw new BadRequestException('Пауза не може початися раніше за сон.');
-      }
-      if (pause.session.endedAt && startedAt > pause.session.endedAt) {
-        throw new BadRequestException('Пауза має бути всередині сну.');
-      }
-      if (endedAt)
-        this.assertPauseEnd(startedAt, endedAt, pause.session.startedAt);
+      this.assertPauseWindow(pause.session, startedAt, endedAt, pause.id);
       if (endedAt === null) {
         const other = pause.session.pauses.find(
           (item) => item.id !== pause.id && item.endedAt === null,
@@ -234,6 +229,26 @@ export class SleepService {
       });
       const fresh = await tx.sleepSession.findFirstOrThrow({
         where: { id: pause.sessionId },
+        include: sessionInclude,
+      });
+      return { session: this.map(fresh) };
+    });
+  }
+
+  async createSavedPause(user: AuthUser, id: string, dto: CreateSavedPauseDto) {
+    return this.prisma.$transaction(async (tx) => {
+      const session = await tx.sleepSession.findFirst({
+        where: { id, householdId: user.householdId, endedAt: { not: null } },
+        include: sessionInclude,
+      });
+      if (!session) throw new NotFoundException('Завершений сон не знайдено.');
+      const startedAt = new Date(dto.startedAt);
+      const endedAt = new Date(dto.endedAt);
+      this.assertPauseWindow(session, startedAt, endedAt);
+      await tx.sleepPause.create({ data: { sessionId: id, startedAt, endedAt } });
+      const fresh = await tx.sleepSession.update({
+        where: { id },
+        data: { updatedById: user.userId },
         include: sessionInclude,
       });
       return { session: this.map(fresh) };
@@ -404,6 +419,7 @@ export class SleepService {
     return {
       serverNow: now.toISOString(),
       timeZone,
+      historyDays: SLEEP_TRACKER.historyDays,
       profile: {
         babyName: profile.babyName,
         birthDate: age.birthDate,
@@ -606,6 +622,34 @@ export class SleepService {
     }
     if (startedAt < sleepStart) {
       throw new BadRequestException('Пауза не може початися раніше за сон.');
+    }
+  }
+
+  private assertPauseWindow(
+    session: SessionRow,
+    startedAt: Date,
+    endedAt: Date | null,
+    excludeId?: string,
+  ) {
+    this.assertInstant(startedAt, 'Початок паузи');
+    if (startedAt < session.startedAt || (session.endedAt && startedAt >= session.endedAt)) {
+      throw new BadRequestException('Пауза має бути всередині сну.');
+    }
+    if (session.endedAt && !endedAt) {
+      throw new BadRequestException('Для завершеного сну потрібен кінець паузи.');
+    }
+    if (endedAt) {
+      this.assertPauseEnd(startedAt, endedAt, session.startedAt);
+      if (session.endedAt && endedAt > session.endedAt) {
+        throw new BadRequestException('Пауза має бути всередині сну.');
+      }
+    }
+    if (session.pauses.some((pause) =>
+      pause.id !== excludeId &&
+      startedAt < (pause.endedAt ?? new Date()) &&
+      (endedAt ?? new Date()) > pause.startedAt
+    )) {
+      throw new BadRequestException('Пауза перетинається з іншою паузою.');
     }
   }
 

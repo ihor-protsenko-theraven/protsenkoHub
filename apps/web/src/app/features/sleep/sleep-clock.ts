@@ -9,7 +9,7 @@ export function elapsedMs(startedAtIso: string, nowMs: number, clockOffsetMs: nu
 export function asleepMs(
   startedAtIso: string,
   endedAtIso: string | null,
-  pauses: PauseSpan[],
+  pauses: readonly PauseSpan[],
   nowMs: number,
   clockOffsetMs: number,
 ): number {

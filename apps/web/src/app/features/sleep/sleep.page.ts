@@ -1,4 +1,4 @@
-import {DatePipe} from '@angular/common';
+import {DatePipe, NgTemplateOutlet} from '@angular/common';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -10,19 +10,24 @@ import {
   untracked,
 } from '@angular/core';
 import {form, FormField, required} from '@angular/forms/signals';
+import {APP_LOCALE} from '../../core/configs/locale.config';
+import {HistoryPanel} from '../../shared/history-panel.component';
 import {toLocalDateTime} from '../../shared/date-time.util';
-import {asleepMs, elapsedMs, formatClockDuration, formatMinutes} from './sleep-clock';
+import {asleepMs, formatMinutes} from './sleep-clock';
 import {SLEEP_UI} from './sleep.config';
-import {SleepForm, SleepKind, sleepKindLabel, SleepOverview, SleepPause, SleepPayload, SleepSession, WeekDay,} from './sleep.model';
+import {isCurrentDaySession} from './sleep-day';
+import {SavedPauseForm, SleepForm, SleepKind, sleepKindLabel, SleepOverview, SleepPause, SleepPayload, SleepSession, WeekDay,} from './sleep.model';
 import {SleepService} from './sleep.service';
 import {SleepReminderService} from './sleep-reminder.service';
+import {SleepStatus, SleepTicker, SleepTimer} from './sleep-timer.component';
 
 const emptyForm = (): SleepForm => ({kind: 'NAP', startedAt: '', endedAt: '', notes: ''});
+const dayCount = new Intl.NumberFormat(APP_LOCALE, {style: 'unit', unit: 'day', unitDisplay: 'long'});
 
 @Component({
   selector: 'app-sleep-page',
-  imports: [DatePipe, FormField],
-  providers: [SleepService, SleepReminderService],
+  imports: [DatePipe, FormField, HistoryPanel, NgTemplateOutlet, SleepStatus, SleepTimer],
+  providers: [SleepService, SleepReminderService, SleepTicker],
   templateUrl: './sleep.page.html',
   styleUrl: './sleep.page.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -30,13 +35,12 @@ const emptyForm = (): SleepForm => ({kind: 'NAP', startedAt: '', endedAt: '', no
 export class SleepPage {
   readonly data = inject(SleepService);
   readonly reminders = inject(SleepReminderService);
+  private readonly ticker = inject(SleepTicker);
   private readonly destroyRef = inject(DestroyRef);
   readonly kindLabel = sleepKindLabel;
   readonly minutes = formatMinutes;
   readonly snapshot = signal<SleepOverview | null>(null);
   readonly clockOffset = signal(0);
-  readonly tick = signal(0);
-  readonly minuteTick = signal(0);
   readonly kind = signal<SleepKind>('NAP');
   readonly backdate = signal('');
   readonly wakeAt = signal('');
@@ -54,51 +58,55 @@ export class SleepPage {
   readonly notice = signal('');
   readonly model = signal<SleepForm>(emptyForm());
   readonly sleepForm = form(this.model, (path) => required(path.startedAt));
+  readonly savedPauseSessionId = signal<string | null>(null);
+  readonly savedPauseId = signal<string | null>(null);
+  readonly savedPauseModel = signal<SavedPauseForm>({startedAt: '', endedAt: ''});
+  readonly savedPauseForm = form(this.savedPauseModel, (path) => {
+    required(path.startedAt);
+    required(path.endedAt);
+  });
   private kindTouched = false;
   private birthEdited = false;
   private lastActiveId: string | null | undefined = undefined;
-  private lastMinute = -1;
 
-  readonly phase = computed(() => {
-    this.tick();
+  readonly tracker = computed(() => {
     const sleep = this.snapshot();
-    if (!sleep) return null;
-    const offset = this.clockOffset();
-    if (sleep.active) {
-      const pauses = sleep.active.pauses ?? [];
-      const open = pauses.find((pause) => pause.endedAt === null) ?? null;
-      const asleep = asleepMs(sleep.active.startedAt, null, pauses, Date.now(), offset);
-      return {
-        mode: open ? ('paused' as const) : ('asleep' as const),
-        timer: formatClockDuration(asleep),
-        pauseTimer: open ? formatClockDuration(elapsedMs(open.startedAt, Date.now(), offset)) : null,
-        caption: open ? 'На паузі' : sleep.active.kind === 'NIGHT' ? 'Нічний сон' : 'Денний сон',
-      };
-    }
-    if (sleep.awakeSince) {
-      return {
-        mode: 'awake' as const,
-        timer: formatClockDuration(elapsedMs(sleep.awakeSince, Date.now(), offset)),
-        pauseTimer: null,
-        caption: 'Не спить',
-      };
-    }
-    return {mode: 'empty' as const, timer: '—', pauseTimer: null, caption: 'Ще немає запису'};
+    if (!sleep?.active) return null;
+    const open = (sleep.active.pauses ?? []).find((pause) => pause.endedAt === null) ?? null;
+    if (open) return {kind: 'paused' as const, caption: 'На паузі', pauseStartedAt: open.startedAt};
+    return {
+      kind: 'asleep' as const,
+      caption: sleep.active.kind === 'NIGHT' ? 'Нічний сон' : 'Денний сон',
+      pauseStartedAt: null as string | null,
+    };
   });
 
-  readonly spoken = computed(() => {
-    this.minuteTick();
+  readonly todayLabel = computed(() => {
+    this.ticker.minute();
     const sleep = this.snapshot();
     if (!sleep) return '';
-    if (!sleep.active) return sleep.headline;
-    const pauses = sleep.active.pauses ?? [];
-    const minutes = Math.floor(
-      asleepMs(sleep.active.startedAt, null, pauses, Date.now(), this.clockOffset()) / 60000,
-    );
-    const open = pauses.some((pause) => pause.endedAt === null);
-    return open
-      ? `Сон на паузі. Вже проспала ${formatMinutes(minutes)}.`
-      : `Соломія спить уже ${formatMinutes(minutes)}.`;
+    return new Intl.DateTimeFormat(APP_LOCALE, {
+      timeZone: sleep.timeZone,
+      day: 'numeric',
+      month: 'long',
+    }).format(new Date());
+  });
+
+  readonly historyLabel = computed(() =>
+    `Історія за ${dayCount.format(this.snapshot()?.historyDays ?? SLEEP_UI.historyDays)}`,
+  );
+
+  readonly sessionsByDay = computed(() => {
+    this.ticker.minute();
+    const sleep = this.snapshot();
+    const today: SleepSession[] = [];
+    const earlier: SleepSession[] = [];
+    if (!sleep) return {today, earlier};
+    for (const session of sleep.sessions) {
+      if (isCurrentDaySession(session, sleep.timeZone)) today.push(session);
+      else earlier.push(session);
+    }
+    return {today, earlier};
   });
 
   private readonly followServer = effect(() => {
@@ -109,22 +117,15 @@ export class SleepPage {
   });
 
   constructor() {
-    const timer = setInterval(() => {
-      this.tick.update((value) => value + 1);
-      const minute = Math.floor(Date.now() / SLEEP_UI.minuteMs);
-      if (minute !== this.lastMinute) {
-        this.lastMinute = minute;
-        this.minuteTick.set(minute);
-      }
-    }, SLEEP_UI.tickMs);
-    const poll = setInterval(() => this.data.overview.reload(), SLEEP_UI.pollMs);
+    const poll = window.setInterval(() => {
+      if (document.visibilityState === 'visible') this.data.overview.reload();
+    }, SLEEP_UI.pollMs);
     const onVisible = () => {
       if (document.visibilityState === 'visible') this.data.overview.reload();
     };
     document.addEventListener('visibilitychange', onVisible);
     this.destroyRef.onDestroy(() => {
-      clearInterval(timer);
-      clearInterval(poll);
+      window.clearInterval(poll);
       document.removeEventListener('visibilitychange', onVisible);
     });
   }
@@ -145,7 +146,6 @@ export class SleepPage {
   }
 
   historyDuration(session: SleepSession): string {
-    this.minuteTick();
     const durationMs = asleepMs(
       session.startedAt,
       session.endedAt,
@@ -316,6 +316,49 @@ export class SleepPage {
     });
     this.error.set('');
     this.formOpen.set(true);
+  }
+
+  openSavedPause(session: SleepSession, pause?: SleepPause): void {
+    this.savedPauseSessionId.set(session.id);
+    this.savedPauseId.set(pause?.id ?? null);
+    this.savedPauseModel.set({
+      startedAt: pause ? toLocalDateTime(pause.startedAt) : '',
+      endedAt: pause?.endedAt ? toLocalDateTime(pause.endedAt) : '',
+    });
+    this.error.set('');
+  }
+
+  closeSavedPause(): void {
+    this.savedPauseSessionId.set(null);
+    this.savedPauseId.set(null);
+    this.error.set('');
+  }
+
+  saveSavedPause(): void {
+    const sessionId = this.savedPauseSessionId();
+    if (!sessionId) return;
+    const value = this.savedPauseModel();
+    const startedAt = new Date(value.startedAt);
+    const endedAt = new Date(value.endedAt);
+    if (!value.startedAt || !value.endedAt || !Number.isFinite(startedAt.getTime()) ||
+        !Number.isFinite(endedAt.getTime()) || endedAt <= startedAt) {
+      this.error.set('Вкажіть коректні початок і кінець паузи.');
+      return;
+    }
+    const payload = {startedAt: startedAt.toISOString(), endedAt: endedAt.toISOString()};
+    const pauseId = this.savedPauseId();
+    this.busy.set(true);
+    const request = pauseId
+      ? this.data.updatePause(pauseId, payload)
+      : this.data.createSavedPause(sessionId, payload);
+    request.subscribe({
+      next: () => {
+        this.busy.set(false);
+        this.notice.set(pauseId ? 'Паузу оновлено.' : 'Паузу додано.');
+        this.closeSavedPause();
+      },
+      error: (error: unknown) => this.fail(error, 'Не вдалося зберегти паузу.'),
+    });
   }
 
   cancel(): void {

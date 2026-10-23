@@ -1,7 +1,8 @@
-import { DatePipe } from '@angular/common';
+import { DatePipe, NgTemplateOutlet } from '@angular/common';
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { FormField, form, required } from '@angular/forms/signals';
+import { HistoryPanel } from '../../shared/history-panel.component';
 import { toLocalDateTime } from '../../shared/date-time.util';
 import {
   normalizePriority,
@@ -20,7 +21,7 @@ const emptyForm = (): TaskForm => ({ title: '', notes: '', dueAt: '', status: 'T
 
 @Component({
   selector: 'app-children-page',
-  imports: [DatePipe, FormField, RouterLink],
+  imports: [DatePipe, FormField, HistoryPanel, NgTemplateOutlet, RouterLink],
   providers: [ChildrenService],
   templateUrl: './children-page.component.html',
   styleUrl: './children-page.component.scss',
@@ -30,20 +31,37 @@ export class ChildrenPage {
   readonly data = inject(ChildrenService);
   readonly tasks = this.data.tasks;
   readonly statuses = TASK_STATUSES;
+  readonly openStatuses = TASK_STATUSES.filter((option) => option.value !== 'DONE');
   readonly priorities = TASK_PRIORITIES;
   readonly priorityLabel = taskPriorityLabel;
   readonly asPriority = normalizePriority;
   readonly search = signal('');
-  readonly status = signal<TaskStatus | 'ALL'>('ALL');
-  readonly filtered = computed(() => {
+  readonly status = signal<Exclude<TaskStatus, 'DONE'> | 'ALL'>('ALL');
+  private readonly matched = computed(() => {
     const query = this.search().trim().toLocaleLowerCase('uk');
-    return this.tasks.value()
-      .filter((task) => (this.status() === 'ALL' || task.status === this.status()) &&
-        (!query || (task.title + ' ' + (task.notes ?? '')).toLocaleLowerCase('uk').includes(query)))
-      .sort((a, b) => Number(a.status === 'DONE') - Number(b.status === 'DONE') ||
-        (a.dueAt ? new Date(a.dueAt).getTime() : Infinity) - (b.dueAt ? new Date(b.dueAt).getTime() : Infinity) ||
-        b.priority - a.priority);
+    return this.tasks.value().filter((task) =>
+      !query || (task.title + ' ' + (task.notes ?? '')).toLocaleLowerCase('uk').includes(query),
+    );
   });
+  readonly hasOpen = computed(() => this.tasks.value().some((task) => task.status !== 'DONE'));
+  readonly emptyState = computed(() => {
+    if (this.hasOpen()) return { title: 'Задач не знайдено', description: 'Змініть пошук або фільтр.' };
+    if (this.tasks.value().length) return { title: 'Відкритих задач немає', description: 'Завершені задачі лежать в історії.' };
+    return { title: 'Задач не знайдено', description: 'Додайте першу задачу для дитини.' };
+  });
+  readonly openTasks = computed(() =>
+    this.matched()
+      .filter((task) => task.status !== 'DONE' && (this.status() === 'ALL' || task.status === this.status()))
+      .sort((a, b) =>
+        (a.dueAt ? new Date(a.dueAt).getTime() : Infinity) - (b.dueAt ? new Date(b.dueAt).getTime() : Infinity) ||
+        b.priority - a.priority),
+  );
+  readonly doneTasks = computed(() =>
+    this.matched()
+      .filter((task) => task.status === 'DONE')
+      .sort((a, b) =>
+        (b.dueAt ? new Date(b.dueAt).getTime() : 0) - (a.dueAt ? new Date(a.dueAt).getTime() : 0)),
+  );
   readonly formOpen = signal(false);
   readonly editingId = signal<string | null>(null);
   readonly deletingId = signal<string | null>(null);
@@ -131,7 +149,7 @@ export class ChildrenPage {
     this.data.update(task.id, { status }).subscribe({
       next: () => {
         this.busy.set(false);
-        this.notice.set('Статус оновлено.');
+        this.notice.set(status === 'DONE' ? 'Задачу завершено. Вона в історії.' : 'Статус оновлено.');
       },
       error: () => {
         this.busy.set(false);

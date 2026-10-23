@@ -83,6 +83,14 @@ export class UpdatePauseDto {
   endedAt?: string | null;
 }
 
+export class CreateSavedPauseDto {
+  @IsDateString()
+  startedAt!: string;
+
+  @IsDateString()
+  endedAt!: string;
+}
+
 export class PauseSleepDto {
   @IsOptional()
   @IsDateString()

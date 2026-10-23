@@ -43,6 +43,12 @@ export class SleepService {
       .pipe(tap(() => this.overview.reload()));
   }
 
+  createSavedPause(id: string, payload: { startedAt: string; endedAt: string }) {
+    return this.api
+      .post<{ session: SleepSession }>(`/solomiya/sleep/${id}/pauses`, payload)
+      .pipe(tap(() => this.overview.reload()));
+  }
+
   create(payload: SleepPayload) {
     return this.api
       .post<{ session: SleepSession }>('/solomiya/sleep', payload)

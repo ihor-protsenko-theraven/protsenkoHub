@@ -92,6 +92,7 @@ export interface SleepProfile {
 export interface SleepOverview {
   serverNow: string;
   timeZone: string;
+  historyDays?: number;
   profile: SleepProfile;
   active: SleepSession | null;
   sessions: SleepSession[];
@@ -123,6 +124,11 @@ export interface SleepForm {
   startedAt: string;
   endedAt: string;
   notes: string;
+}
+
+export interface SavedPauseForm {
+  startedAt: string;
+  endedAt: string;
 }
 
 export interface SleepPayload {

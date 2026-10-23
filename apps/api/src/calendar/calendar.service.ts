@@ -61,6 +61,7 @@ export class CalendarService {
         endsAt: dto.endsAt ? new Date(dto.endsAt) : undefined,
         rrule: dto.rrule === undefined ? undefined : dto.rrule,
         memberId: dto.memberId === undefined ? undefined : dto.memberId,
+        status: dto.status,
         updatedById: user.userId,
       },
       include: {

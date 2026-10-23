@@ -1,5 +1,7 @@
+import { NgTemplateOutlet } from '@angular/common';
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { FormField, form, min, required } from '@angular/forms/signals';
+import { HistoryPanel } from '../../shared/history-panel.component';
 import { ShoppingItem, ShoppingItemForm, ShoppingItemPayload } from './shopping.model';
 import { ShoppingService } from './shopping.service';
 
@@ -7,7 +9,7 @@ const emptyForm = (): ShoppingItemForm => ({ name: '', qty: 1, unit: '', categor
 
 @Component({
   selector: 'app-shopping-page',
-  imports: [FormField],
+  imports: [FormField, HistoryPanel, NgTemplateOutlet],
   providers: [ShoppingService],
   templateUrl: './shopping.page.html',
   styleUrl: './shopping.page.scss',
@@ -17,21 +19,25 @@ export class ShoppingPage {
   readonly data = inject(ShoppingService);
   readonly items = this.data.items;
   readonly search = signal('');
-  readonly status = signal<'open' | 'done' | 'all'>('open');
   readonly categories = computed(() =>
     [...new Set(this.items.value().map((item) => item.category).filter((value): value is string => !!value))].sort(),
   );
   readonly category = signal('');
-  readonly filtered = computed(() => {
+  private readonly matched = computed(() => {
     const query = this.search().trim().toLocaleLowerCase('uk');
     return this.items.value().filter((item) =>
-      (this.status() === 'all' || item.isChecked === (this.status() === 'done')) &&
       (!this.category() || item.category === this.category()) &&
       (!query || item.name.toLocaleLowerCase('uk').includes(query)),
     );
   });
-  readonly openCount = computed(() => this.items.value().filter((item) => !item.isChecked).length);
-  readonly doneCount = computed(() => this.items.value().filter((item) => item.isChecked).length);
+  readonly hasOpen = computed(() => this.items.value().some((item) => !item.isChecked));
+  readonly emptyState = computed(() => {
+    if (this.hasOpen()) return { title: 'Нічого не знайдено', description: 'Спробуйте змінити пошук або категорію.' };
+    if (this.items.value().length) return { title: 'Усе куплене', description: 'Куплене лежить в історії. Звідти його можна повернути.' };
+    return { title: 'Список порожній', description: 'Додайте те, що потрібно купити.' };
+  });
+  readonly openItems = computed(() => this.matched().filter((item) => !item.isChecked));
+  readonly doneItems = computed(() => this.matched().filter((item) => item.isChecked));
   readonly formOpen = signal(false);
   readonly editingId = signal<string | null>(null);
   readonly deletingId = signal<string | null>(null);

@@ -1,5 +1,5 @@
 import { vi } from 'vitest';
-import { ConflictException } from '@nestjs/common';
+import { BadRequestException, ConflictException } from '@nestjs/common';
 import { MemberRole } from '@prisma/client';
 import type { AuthUser } from '../../common/types';
 import { PrismaService } from '../../prisma/prisma.service';
@@ -205,5 +205,45 @@ describe('SleepService active tracker', () => {
       pauseStarted.toISOString(),
     );
     expect(createPause).not.toHaveBeenCalled();
+  });
+});
+
+describe('SleepService saved pauses', () => {
+  const start = new Date('2026-10-19T10:00:00.000Z');
+  const end = new Date('2026-10-19T12:00:00.000Z');
+  const existing = {
+    ...session(start),
+    endedAt: end,
+    pauses: [{id: 'pause-1', startedAt: new Date('2026-10-19T10:30:00.000Z'), endedAt: new Date('2026-10-19T10:45:00.000Z')}],
+  };
+
+  it('adds a bounded pause to a completed household sleep', async () => {
+    const create = vi.fn().mockResolvedValue({});
+    const tx = {
+      sleepSession: {
+        findFirst: vi.fn().mockResolvedValue(existing),
+        update: vi.fn().mockResolvedValue({...existing, pauses: [...existing.pauses, {id: 'pause-2', startedAt: new Date('2026-10-19T11:00:00.000Z'), endedAt: new Date('2026-10-19T11:15:00.000Z')}]}),
+      },
+      sleepPause: {create},
+    };
+    const prisma = {$transaction: vi.fn((fn: (client: typeof tx) => Promise<unknown>) => fn(tx))} as unknown as PrismaService;
+    const result = await new SleepService(prisma).createSavedPause(user(), 'sleep-1', {
+      startedAt: '2026-10-19T11:00:00.000Z',
+      endedAt: '2026-10-19T11:15:00.000Z',
+    });
+    expect(create).toHaveBeenCalledOnce();
+    expect(result.session.pauses).toHaveLength(2);
+    expect(tx.sleepSession.findFirst).toHaveBeenCalledWith(expect.objectContaining({where: expect.objectContaining({householdId: 'home-1'})}));
+  });
+
+  it('rejects a pause overlapping an existing pause', async () => {
+    const create = vi.fn();
+    const tx = {sleepSession: {findFirst: vi.fn().mockResolvedValue(existing)}, sleepPause: {create}};
+    const prisma = {$transaction: vi.fn((fn: (client: typeof tx) => Promise<unknown>) => fn(tx))} as unknown as PrismaService;
+    await expect(new SleepService(prisma).createSavedPause(user(), 'sleep-1', {
+      startedAt: '2026-10-19T10:40:00.000Z',
+      endedAt: '2026-10-19T11:00:00.000Z',
+    })).rejects.toBeInstanceOf(BadRequestException);
+    expect(create).not.toHaveBeenCalled();
   });
 });

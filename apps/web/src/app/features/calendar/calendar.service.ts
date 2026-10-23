@@ -3,7 +3,7 @@ import { Injectable, inject } from '@angular/core';
 import { tap } from 'rxjs';
 import { ApiService } from '../../core/services/api.service';
 import { API_BASE_URL } from '../../core/configs/api.config';
-import { CalendarEvent, CalendarEventPayload } from './calendar.model';
+import { CalendarEvent, CalendarEventPayload, CalendarEventUpdatePayload } from './calendar.model';
 
 @Injectable()
 export class CalendarService {
@@ -17,7 +17,7 @@ export class CalendarService {
     return this.api.post<CalendarEvent>('/events', payload).pipe(tap(() => this.events.reload()));
   }
 
-  update(id: string, payload: CalendarEventPayload) {
+  update(id: string, payload: CalendarEventUpdatePayload) {
     return this.api.patch<CalendarEvent>(`/events/${id}`, payload).pipe(tap(() => this.events.reload()));
   }
 

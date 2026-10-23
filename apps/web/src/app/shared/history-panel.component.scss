@@ -1,0 +1,34 @@
+:host {
+  display: block;
+  margin-top: 18px;
+}
+
+.history-panel__toggle {
+  cursor: pointer;
+  display: flex;
+  width: 100%;
+  min-height: 44px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 0 16px;
+  list-style: none;
+  border-radius: 12px;
+  background: transparent;
+  color: var(--ink);
+  font-weight: 700;
+}
+
+.history-panel__toggle::-webkit-details-marker { display: none; }
+
+.history-panel__toggle:focus-visible { outline: 2px solid var(--forest); outline-offset: 2px; }
+
+.history-panel__count {
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.history-panel__body,
+.history-panel__empty {
+  padding: 0 16px 16px;
+}

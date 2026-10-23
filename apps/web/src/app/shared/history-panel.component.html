@@ -1,0 +1,15 @@
+<details class="panel history-panel" (toggle)="onToggle($event)">
+  <summary class="history-panel__toggle">
+    <span>{{ label() }}</span>
+    <span class="history-panel__count">{{ count() }}</span>
+  </summary>
+  @if (open()) {
+    @if (count() === 0) {
+      <p class="field-help history-panel__empty">{{ empty() }}</p>
+    } @else if (body(); as template) {
+      <div class="history-panel__body">
+        <ng-container [ngTemplateOutlet]="template" />
+      </div>
+    }
+  }
+</details>

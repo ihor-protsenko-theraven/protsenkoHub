@@ -11,7 +11,7 @@
   @if (error() && !formOpen()) { <p class="message message--error" role="alert">{{ error() }}</p> }
 
   @if (snapshot(); as sleep) {
-    <p class="sr" role="status">{{ spoken() }}</p>
+    <app-sleep-status [headline]="sleep.headline" [active]="sleep.active" [offset]="clockOffset()" />
 
     <section class="panel week-card" aria-label="Тиждень життя">
       <div>
@@ -23,10 +23,12 @@
 
     <section class="panel sleep-hero" aria-labelledby="tracker-title">
       @if (sleep.active) {
-        <span class="eyebrow">{{ phase()?.caption }}</span>
-        <h2 id="tracker-title" class="timer" aria-hidden="true">{{ phase()?.timer }}</h2>
-        @if (phase()?.pauseTimer) {
-          <p class="pause-timer">Пауза триває {{ phase()?.pauseTimer }}</p>
+        <span class="eyebrow">{{ tracker()?.caption }}</span>
+        <h2 id="tracker-title" class="timer" aria-hidden="true">
+          <app-sleep-timer mode="asleep" [startedAt]="sleep.active.startedAt" [pauses]="sleep.active.pauses" [offset]="clockOffset()" />
+        </h2>
+        @if (tracker()?.kind === 'paused') {
+          <p class="pause-timer">Пауза триває <app-sleep-timer mode="paused" [startedAt]="tracker()?.pauseStartedAt ?? null" [offset]="clockOffset()" /></p>
         }
         <p class="page-subtitle">
           Старт {{ sleep.active.startedAt | date:'HH:mm':sleep.timeZone:'uk' }}
@@ -51,10 +53,13 @@
         @if (sleep.prepareAt) {
           <p class="prepare">Готуватися з {{ sleep.prepareAt | date:'HH:mm':sleep.timeZone:'uk' }}</p>
         }
-        <p class="page-subtitle">Не спить {{ phase()?.timer }}. {{ sleep.headline }}</p>
+        <p class="page-subtitle">Не спить <app-sleep-timer mode="awake" [startedAt]="sleep.awakeSince" [offset]="clockOffset()" />. {{ sleep.headline }}</p>
       } @else {
-        <span class="eyebrow">{{ phase()?.caption }}</span>
+        <span class="eyebrow">{{ sleep.awakeSince ? 'Не спить' : 'Ще немає запису' }}</span>
         <h2 id="tracker-title" class="timer timer--text">{{ sleep.headline }}</h2>
+        @if (sleep.awakeSince) {
+          <p class="page-subtitle">Не спить <app-sleep-timer mode="awake" [startedAt]="sleep.awakeSince" [offset]="clockOffset()" /></p>
+        }
       }
 
       @if (!sleep.active) {
@@ -83,7 +88,7 @@
 
       <div class="hero-actions">
         @if (sleep.active) {
-          @if (phase()?.mode === 'paused') {
+          @if (tracker()?.kind === 'paused') {
             <button class="button button--primary" type="button" [disabled]="busy()" (click)="resume()">Продовжити</button>
             <button class="button button--secondary" type="button" [disabled]="busy()" (click)="stop(wakeAt() || undefined)">Завершити</button>
           } @else {
@@ -192,6 +197,46 @@
       <span class="badge">{{ sleep.profile.ageLabel }}</span>
     </div>
 
+    <div class="section-heading">
+      <h2>Записи за {{ todayLabel() }}</h2>
+      <button class="button button--secondary" type="button" (click)="openCreate()">Додати минулий</button>
+    </div>
+
+    @if (formOpen()) {
+      <section class="panel form-panel" aria-labelledby="sleep-form-title">
+        <div class="form-panel__header"><h2 id="sleep-form-title">{{ editingId() ? 'Редагувати сон' : 'Минулий сон' }}</h2></div>
+        <form (submit)="$event.preventDefault(); save()">
+          <div class="field-grid">
+            <label class="field">
+              <span>Тип</span>
+              <select [formField]="sleepForm.kind">
+                <option value="NAP">Денний сон</option>
+                <option value="NIGHT">Ніч</option>
+              </select>
+            </label>
+            <label class="field"><span>Початок *</span><input type="datetime-local" [formField]="sleepForm.startedAt"></label>
+            <label class="field"><span>Кінець</span><input type="datetime-local" [formField]="sleepForm.endedAt"></label>
+            <label class="field field--wide"><span>Нотатка</span><textarea [formField]="sleepForm.notes" placeholder="Наприклад, прокинулась на годування"></textarea></label>
+          </div>
+          @if (error()) { <p class="message message--error" role="alert">{{ error() }}</p> }
+          <div class="form-actions">
+            <button class="button button--primary" type="submit" [disabled]="busy()">Зберегти</button>
+            <button class="button button--quiet" type="button" (click)="cancel()">Скасувати</button>
+          </div>
+        </form>
+      </section>
+    }
+
+    @if (!sessionsByDay().today.length) {
+      <div class="panel state"><h2>Сьогодні ще немає запису</h2><p>Натисніть «Старт сну». Час лишиться після перезавантаження.</p></div>
+    } @else {
+      <div class="list">
+        @for (session of sessionsByDay().today; track session.id) {
+          <ng-container [ngTemplateOutlet]="sessionCard" [ngTemplateOutletContext]="{ $implicit: session }" />
+        }
+      </div>
+    }
+
     <details class="panel fold-panel">
       <summary>Статистика і чому така порада</summary>
       <div class="stats">
@@ -224,73 +269,71 @@
       </ol>
       <p class="field-help">{{ sleep.disclaimer }}</p>
     </details>
+    <app-history-panel [count]="sessionsByDay().earlier.length" [label]="historyLabel()" empty="Попередніх днів ще немає.">
+      <ng-template>
+        <div class="list">
+          @for (session of sessionsByDay().earlier; track session.id) {
+            <ng-container [ngTemplateOutlet]="sessionCard" [ngTemplateOutletContext]="{ $implicit: session }" />
+          }
+        </div>
+      </ng-template>
+    </app-history-panel>
 
-    <div class="section-heading">
-      <h2>Записи</h2>
-      <button class="button button--secondary" type="button" (click)="openCreate()">Додати минулий</button>
-    </div>
-
-    @if (formOpen()) {
-      <section class="panel form-panel" aria-labelledby="sleep-form-title">
-        <div class="form-panel__header"><h2 id="sleep-form-title">{{ editingId() ? 'Редагувати сон' : 'Минулий сон' }}</h2></div>
-        <form (submit)="$event.preventDefault(); save()">
-          <div class="field-grid">
-            <label class="field">
-              <span>Тип</span>
-              <select [formField]="sleepForm.kind">
-                <option value="NAP">Денний сон</option>
-                <option value="NIGHT">Ніч</option>
-              </select>
-            </label>
-            <label class="field"><span>Початок *</span><input type="datetime-local" [formField]="sleepForm.startedAt"></label>
-            <label class="field"><span>Кінець</span><input type="datetime-local" [formField]="sleepForm.endedAt"></label>
-            <label class="field field--wide"><span>Нотатка</span><textarea [formField]="sleepForm.notes" placeholder="Наприклад, прокинулась на годування"></textarea></label>
+    <ng-template #sessionCard let-session>
+      <article class="panel list-card">
+        <div class="list-card__main">
+          <h3>{{ kindLabel(session.kind) }}</h3>
+          <div class="list-card__meta">
+            <span>{{ session.startedAt | date:'d MMM, HH:mm':sleep.timeZone:'uk' }}</span>
+            <span>{{ session.endedAt ? (session.endedAt | date:'HH:mm':sleep.timeZone:'uk') : 'триває' }}</span>
+            <span class="badge">{{ session.endedAt ? 'Тривалість' : 'Вже спить' }}: {{ historyDuration(session) }}</span>
           </div>
-          @if (error()) { <p class="message message--error" role="alert">{{ error() }}</p> }
-          <div class="form-actions">
-            <button class="button button--primary" type="submit" [disabled]="busy()">Зберегти</button>
-            <button class="button button--quiet" type="button" (click)="cancel()">Скасувати</button>
-          </div>
-        </form>
-      </section>
-    }
-
-    @if (!sleep.sessions.length) {
-      <div class="panel state"><h2>Поки порожньо</h2><p>Натисніть «Старт сну». Час лишиться після перезавантаження.</p></div>
-    } @else {
-      <div class="list">
-        @for (session of sleep.sessions; track session.id) {
-          <article class="panel list-card">
-            <div class="list-card__main">
-              <h3>{{ kindLabel(session.kind) }}</h3>
-              <div class="list-card__meta">
-                <span>{{ session.startedAt | date:'d MMM, HH:mm':sleep.timeZone:'uk' }}</span>
-                <span>{{ session.endedAt ? (session.endedAt | date:'HH:mm':sleep.timeZone:'uk') : 'триває' }}</span>
-                <span class="badge">{{ session.endedAt ? 'Тривалість' : 'Вже спить' }}: {{ historyDuration(session) }}</span>
-              </div>
-              @if (session.notes) { <p>{{ session.notes }}</p> }
-              <div class="record-audit">
-                <span>Додав: {{ session.startedByName || 'невідомо' }}</span>
-                @if (session.endedByName) { <span>Завершив: {{ session.endedByName }}</span> }
-                @if (session.updatedByName) { <span>Змінив: {{ session.updatedByName }}</span> }
-              </div>
-            </div>
-            <div class="list-card__actions">
-              @if (deletingId() === session.id) {
-                <div class="confirm">
-                  <span>Видалити?</span>
-                  <button class="button button--danger" type="button" [disabled]="busy()" (click)="remove(session.id)">Так</button>
-                  <button class="button button--quiet" type="button" (click)="deletingId.set(null)">Ні</button>
+          @if (session.notes) { <p>{{ session.notes }}</p> }
+          @if (session.endedAt) {
+            <div class="saved-pauses">
+              @for (pause of session.pauses; track pause.id) {
+                <div class="saved-pauses__row">
+                  <span>Пауза {{ pause.startedAt | date:'d MMM, HH:mm':sleep.timeZone:'uk' }} – {{ pause.endedAt | date:'HH:mm':sleep.timeZone:'uk' }}</span>
+                  <button class="button button--quiet" type="button" (click)="openSavedPause(session, pause)">Змінити паузу</button>
                 </div>
-              } @else {
-                <button class="button button--secondary" type="button" (click)="edit(session)">Змінити</button>
-                <button class="button button--quiet" type="button" [attr.aria-label]="'Видалити сон від ' + (session.startedAt | date:'d MMM HH:mm':sleep.timeZone:'uk')" (click)="deletingId.set(session.id)">Видалити</button>
               }
+              <button class="button button--secondary" type="button" (click)="openSavedPause(session)">Додати паузу</button>
             </div>
-          </article>
-        }
-      </div>
-    }
+            @if (savedPauseSessionId() === session.id) {
+              <form class="saved-pause-form" (submit)="$event.preventDefault(); saveSavedPause()">
+                <h4>{{ savedPauseId() ? 'Редагувати паузу' : 'Нова пауза' }}</h4>
+                <div class="field-grid">
+                  <label class="field"><span>Початок паузи</span><input type="datetime-local" [formField]="savedPauseForm.startedAt"></label>
+                  <label class="field"><span>Кінець паузи</span><input type="datetime-local" [formField]="savedPauseForm.endedAt"></label>
+                </div>
+                @if (error()) { <p class="message message--error" role="alert">{{ error() }}</p> }
+                <div class="form-actions">
+                  <button class="button button--primary" type="submit" [disabled]="busy()">Зберегти паузу</button>
+                  <button class="button button--quiet" type="button" (click)="closeSavedPause()">Скасувати</button>
+                </div>
+              </form>
+            }
+          }
+          <div class="record-audit">
+            <span>Додав: {{ session.startedByName || 'невідомо' }}</span>
+            @if (session.endedByName) { <span>Завершив: {{ session.endedByName }}</span> }
+            @if (session.updatedByName) { <span>Змінив: {{ session.updatedByName }}</span> }
+          </div>
+        </div>
+        <div class="list-card__actions">
+          @if (deletingId() === session.id) {
+            <div class="confirm">
+              <span>Видалити?</span>
+              <button class="button button--danger" type="button" [disabled]="busy()" (click)="remove(session.id)">Так</button>
+              <button class="button button--quiet" type="button" (click)="deletingId.set(null)">Ні</button>
+            </div>
+          } @else {
+            <button class="button button--secondary" type="button" (click)="edit(session)">Змінити</button>
+            <button class="button button--quiet" type="button" [attr.aria-label]="'Видалити сон від ' + (session.startedAt | date:'d MMM HH:mm':sleep.timeZone:'uk')" (click)="deletingId.set(session.id)">Видалити</button>
+          }
+        </div>
+      </article>
+    </ng-template>
 
     <details class="panel fold-panel">
       <summary id="birth-title">Дата народження</summary>

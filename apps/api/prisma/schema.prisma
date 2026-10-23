@@ -33,6 +33,11 @@ enum SleepKind {
   NIGHT
 }
 
+enum EventStatus {
+  OPEN
+  DONE
+}
+
 model User {
   id           String         @id @default(cuid())
   email        String         @unique
@@ -120,6 +125,7 @@ model Event {
   startsAt     DateTime
   endsAt       DateTime
   rrule        String?
+  status       EventStatus @default(OPEN)
   softDeletedAt DateTime?
   createdAt    DateTime    @default(now())
   updatedAt    DateTime    @updatedAt
@@ -129,6 +135,7 @@ model Event {
   updatedBy    User? @relation("EventUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull)
 
   @@index([householdId, startsAt])
+  @@index([householdId, status, startsAt])
 }
 
 model ShoppingList {

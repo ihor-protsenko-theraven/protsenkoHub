@@ -1,15 +1,16 @@
-import { DatePipe } from '@angular/common';
+import { DatePipe, NgTemplateOutlet } from '@angular/common';
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { FormField, form, required } from '@angular/forms/signals';
+import { HistoryPanel } from '../../shared/history-panel.component';
 import { toLocalDateTime } from '../../shared/date-time.util';
-import { CalendarEvent, CalendarEventForm, CalendarEventPayload } from './calendar.model';
+import { CalendarEvent, CalendarEventForm, CalendarEventPayload, EventStatus, eventStatusLabel, eventStatusNotice } from './calendar.model';
 import { CalendarService } from './calendar.service';
 
 const emptyForm = (): CalendarEventForm => ({ title: '', notes: '', startsAt: '', endsAt: '' });
 
 @Component({
   selector: 'app-calendar-page',
-  imports: [DatePipe, FormField],
+  imports: [DatePipe, FormField, HistoryPanel, NgTemplateOutlet],
   providers: [CalendarService],
   templateUrl: './calendar.page.html',
   styleUrl: './calendar.page.scss',
@@ -18,18 +19,26 @@ const emptyForm = (): CalendarEventForm => ({ title: '', notes: '', startsAt: ''
 export class CalendarPage {
   readonly data = inject(CalendarService);
   readonly events = this.data.events;
+  readonly statusLabel = eventStatusLabel;
   readonly search = signal('');
-  readonly period = signal<'all' | 'upcoming' | 'past'>('upcoming');
-  readonly filtered = computed(() => {
+  private readonly matched = computed(() => {
     const query = this.search().trim().toLocaleLowerCase('uk');
-    const now = Date.now();
-    return this.events.value().filter((event) => {
-      const matchesText = !query || (event.title + ' ' + (event.notes ?? '')).toLocaleLowerCase('uk').includes(query);
-      const matchesPeriod = this.period() === 'all' ||
-        (this.period() === 'upcoming' ? new Date(event.endsAt).getTime() >= now : new Date(event.endsAt).getTime() < now);
-      return matchesText && matchesPeriod;
-    });
+    return this.events.value().filter((event) =>
+      !query || (event.title + ' ' + (event.notes ?? '')).toLocaleLowerCase('uk').includes(query),
+    );
   });
+  readonly hasOpen = computed(() => this.events.value().some((event) => event.status !== 'DONE'));
+  readonly emptyState = computed(() => {
+    if (this.hasOpen()) return { title: 'Подій не знайдено', description: 'Спробуйте змінити пошук.' };
+    if (this.events.value().length) return { title: 'Немає відкритих подій', description: 'Завершені події лежать в історії.' };
+    return { title: 'Подій не знайдено', description: 'Додайте першу подію для родини.' };
+  });
+  readonly openEvents = computed(() => this.matched().filter((event) => event.status !== 'DONE'));
+  readonly historyEvents = computed(() =>
+    this.matched()
+      .filter((event) => event.status === 'DONE')
+      .sort((a, b) => new Date(b.endsAt).getTime() - new Date(a.endsAt).getTime()),
+  );
   readonly formOpen = signal(false);
   readonly editingId = signal<string | null>(null);
   readonly deletingId = signal<string | null>(null);
@@ -94,6 +103,20 @@ export class CalendarPage {
       error: () => {
         this.busy.set(false);
         this.error.set('Не вдалося зберегти подію. Спробуйте ще раз.');
+      },
+    });
+  }
+
+  setStatus(event: CalendarEvent, status: EventStatus): void {
+    this.busy.set(true);
+    this.data.update(event.id, { status }).subscribe({
+      next: () => {
+        this.busy.set(false);
+        this.notice.set(eventStatusNotice(status));
+      },
+      error: () => {
+        this.busy.set(false);
+        this.error.set('Не вдалося змінити статус події.');
       },
     });
   }

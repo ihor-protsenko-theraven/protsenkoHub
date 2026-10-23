@@ -75,8 +75,8 @@
     <label class="field field--filter">
       <span>Статус</span>
       <select [value]="status()" (change)="status.set($any($event.target).value)">
-        <option value="ALL">Усі задачі</option>
-        @for (option of statuses; track option.value) {
+        <option value="ALL">Усі відкриті</option>
+        @for (option of openStatuses; track option.value) {
           <option [value]="option.value">{{ option.label }}</option>
         }
       </select>
@@ -85,7 +85,7 @@
 
   <div class="section-heading">
     <h2>Задачі</h2>
-    <span>{{ recordCount(filtered().length) }}</span>
+    <span>{{ recordCount(openTasks().length) }}</span>
   </div>
 
   @if (tasks.isLoading()) {
@@ -95,53 +95,69 @@
       <h2>Не вдалося завантажити</h2>
       <button class="button button--secondary" type="button" (click)="tasks.reload()">Повторити</button>
     </div>
-  } @else if (!filtered().length) {
+  } @else if (!openTasks().length) {
     <div class="panel state">
-      <h2>Задач не знайдено</h2>
-      <p>{{ tasks.value().length ? 'Змініть пошук або фільтр.' : 'Додайте першу задачу для дитини.' }}</p>
+      <h2>{{ emptyState().title }}</h2>
+      <p>{{ emptyState().description }}</p>
       <button class="button button--secondary" type="button" (click)="createNew()">Додати задачу</button>
     </div>
   } @else {
     <div class="list">
-      @for (task of filtered(); track task.id) {
-        <article class="panel list-card">
-          <div class="list-card__main">
-            <h3>{{ task.title }}</h3>
-            <div class="list-card__meta">
-              @if (task.dueAt) { <span>До {{ task.dueAt | date:'d MMM y, HH:mm':'':'uk' }}</span> }
-              @if (asPriority(task.priority) > 1) {
-                <span class="badge" [class.badge--warm]="asPriority(task.priority) === 2" [class.badge--urgent]="asPriority(task.priority) === 3">
-                  {{ priorityLabel(asPriority(task.priority)) }}
-                </span>
-              }
-            </div>
-            @if (task.notes) { <p>{{ task.notes }}</p> }
-            <div class="record-audit">
-              <span>Додав: {{ task.createdBy?.displayName || 'невідомо' }}</span>
-              @if (task.updatedBy; as editor) { <span>Змінив: {{ editor.displayName }}</span> }
-            </div>
-          </div>
-          <div class="list-card__actions">
-            @if (deletingId() === task.id) {
-              <div class="confirm">
-                <span>Видалити?</span>
-                <button class="button button--danger" type="button" [disabled]="busy()" (click)="remove(task.id)">Так</button>
-                <button class="button button--quiet" type="button" (click)="deletingId.set(null)">Ні</button>
-              </div>
-            } @else {
-              <label class="quick-status">
-                <select [value]="task.status" [disabled]="busy()" [attr.aria-label]="'Статус задачі ' + task.title" (change)="changeStatus(task, $any($event.target).value)">
-                  @for (option of statuses; track option.value) {
-                    <option [value]="option.value">{{ option.label }}</option>
-                  }
-                </select>
-              </label>
-              <button class="button button--secondary" type="button" (click)="edit(task)">Змінити</button>
-              <button class="button button--quiet" type="button" [attr.aria-label]="'Видалити задачу ' + task.title" (click)="deletingId.set(task.id)">Видалити</button>
-            }
-          </div>
-        </article>
+      @for (task of openTasks(); track task.id) {
+        <ng-container [ngTemplateOutlet]="taskCard" [ngTemplateOutletContext]="{ $implicit: task }" />
       }
     </div>
   }
+
+  @if (!tasks.isLoading() && !tasks.error()) {
+    <app-history-panel [count]="doneTasks().length" label="Історія" empty="Завершених задач ще немає.">
+      <ng-template>
+        <div class="list">
+          @for (task of doneTasks(); track task.id) {
+            <ng-container [ngTemplateOutlet]="taskCard" [ngTemplateOutletContext]="{ $implicit: task }" />
+          }
+        </div>
+      </ng-template>
+    </app-history-panel>
+  }
+
+  <ng-template #taskCard let-task>
+    <article class="panel list-card">
+      <div class="list-card__main">
+        <h3>{{ task.title }}</h3>
+        <div class="list-card__meta">
+          @if (task.dueAt) { <span>До {{ task.dueAt | date:'d MMM y, HH:mm':'':'uk' }}</span> }
+          @if (asPriority(task.priority) > 1) {
+            <span class="badge" [class.badge--warm]="asPriority(task.priority) === 2" [class.badge--urgent]="asPriority(task.priority) === 3">
+              {{ priorityLabel(asPriority(task.priority)) }}
+            </span>
+          }
+        </div>
+        @if (task.notes) { <p>{{ task.notes }}</p> }
+        <div class="record-audit">
+          <span>Додав: {{ task.createdBy?.displayName || 'невідомо' }}</span>
+          @if (task.updatedBy; as editor) { <span>Змінив: {{ editor.displayName }}</span> }
+        </div>
+      </div>
+      <div class="list-card__actions">
+        @if (deletingId() === task.id) {
+          <div class="confirm">
+            <span>Видалити?</span>
+            <button class="button button--danger" type="button" [disabled]="busy()" (click)="remove(task.id)">Так</button>
+            <button class="button button--quiet" type="button" (click)="deletingId.set(null)">Ні</button>
+          </div>
+        } @else {
+          <label class="quick-status">
+            <select [value]="task.status" [disabled]="busy()" [attr.aria-label]="'Статус задачі ' + task.title" (change)="changeStatus(task, $any($event.target).value)">
+              @for (option of statuses; track option.value) {
+                <option [value]="option.value">{{ option.label }}</option>
+              }
+            </select>
+          </label>
+          <button class="button button--secondary" type="button" (click)="edit(task)">Змінити</button>
+          <button class="button button--quiet" type="button" [attr.aria-label]="'Видалити задачу ' + task.title" (click)="deletingId.set(task.id)">Видалити</button>
+        }
+      </div>
+    </article>
+  </ng-template>
 </section>

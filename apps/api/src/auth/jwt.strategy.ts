@@ -34,26 +34,33 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
   async validate(payload: JwtPayload): Promise<AuthUser> {
     const account = await this.prisma.user.findUnique({
       where: { id: payload.sub },
-      select: { activeHouseholdId: true },
-    });
-    const membership = await this.prisma.membership.findFirst({
-      where: {
-        userId: payload.sub,
-        ...(account?.activeHouseholdId
-          ? { householdId: account.activeHouseholdId }
-          : {}),
+      select: {
+        email: true,
+        activeHouseholdId: true,
+        memberships: {
+          orderBy: { createdAt: 'asc' },
+          select: {
+            id: true,
+            userId: true,
+            householdId: true,
+            role: true,
+            color: true,
+            displayName: true,
+          },
+        },
       },
-      include: { user: true },
-      orderBy: { createdAt: 'asc' },
     });
+    const membership = account?.activeHouseholdId
+      ? account.memberships.find((item) => item.householdId === account.activeHouseholdId)
+      : account?.memberships[0];
 
-    if (!membership) {
+    if (!account || !membership) {
       throw new UnauthorizedException('No household membership');
     }
 
     return {
       userId: membership.userId,
-      email: membership.user.email,
+      email: account.email,
       displayName: membership.displayName,
       householdId: membership.householdId,
       membershipId: membership.id,

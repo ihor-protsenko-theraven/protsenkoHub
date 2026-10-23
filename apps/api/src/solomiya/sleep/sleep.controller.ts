@@ -13,6 +13,7 @@ import { CurrentUser } from '../../common/current-user.decorator';
 import type { AuthUser } from '../../common/types';
 import {
   CreateSleepDto,
+  CreateSavedPauseDto,
   PauseSleepDto,
   ResumeSleepDto,
   StartSleepDto,
@@ -73,6 +74,15 @@ export class SleepController {
     @Body() dto: UpdatePauseDto,
   ) {
     return this.sleepService.updatePause(user, pauseId, dto);
+  }
+
+  @Post(':id/pauses')
+  createSavedPause(
+    @CurrentUser() user: AuthUser,
+    @Param('id') id: string,
+    @Body() dto: CreateSavedPauseDto,
+  ) {
+    return this.sleepService.createSavedPause(user, id, dto);
   }
 
   @Patch(':id')

@@ -25,6 +25,10 @@
 .pause-timer{margin:0 0 6px;font-weight:650}
 .pause-list{margin:8px 0 0;padding:0;list-style:none;display:grid;gap:6px}
 .pause-list li{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.saved-pauses{display:grid;gap:8px;margin-top:12px}
+.saved-pauses__row{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px}
+.saved-pause-form{display:grid;gap:12px;margin-top:12px;padding:14px;border:1px solid var(--line);border-radius:12px}
+.saved-pause-form h4{margin:0}
 .adjust{display:grid;gap:8px;margin-top:8px}
 .stale{display:grid;gap:8px;padding:12px;border-radius:12px;background:#fff4ed}
 .advice{padding:18px 20px;background:#f3f7f2}
@@ -54,5 +58,4 @@
 .how li+li{margin-top:8px}
 .birth-row{display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end}
 .birth-row .field{flex:1;min-width:180px}
-.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
 @media(max-width:700px){.stats{grid-template-columns:1fr 1fr}.sleep-hero,.advice,.block,.how{padding:16px}.week{gap:4px}}

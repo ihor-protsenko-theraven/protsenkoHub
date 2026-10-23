@@ -36,56 +36,78 @@
     </form>
   </section>
 }
-  <div class="panel toolbar"><label class="field field--search"><span>Пошук подій</span><input type="search"
-                                                                                               placeholder="Назва або нотатки"
-                                                                                               [value]="search()"
-                                                                                               (input)="search.set($any($event.target).value)"></label><label
-    class="field field--filter"><span>Період</span><select [value]="period()"
-                                                           (change)="period.set($any($event.target).value)">
-    <option value="upcoming">Майбутні</option>
-    <option value="all">Усі</option>
-    <option value="past">Минулі</option>
-  </select></label></div>
-  <div class="section-heading"><h2>Події</h2><span>{{ filtered().length }} записів</span></div>
+  <div class="panel toolbar">
+    <label class="field field--search">
+      <span>Пошук подій</span>
+      <input type="search" placeholder="Назва або нотатки" [value]="search()" (input)="search.set($any($event.target).value)">
+    </label>
+  </div>
+  <div class="section-heading"><h2>Події</h2><span>{{ openEvents().length }} записів</span></div>
   @if (events.isLoading()) {
     <div class="panel state" role="status">Завантажуємо події…</div>
   } @else if (events.error()) {
-  <div class="panel state"><h2>Не вдалося завантажити</h2>
-    <p>Перевірте з’єднання та спробуйте ще раз.</p>
-    <button class="button button--secondary" type="button" (click)="events.reload()">Повторити</button>
-  </div>
-} @else if (!filtered().length) {
-  <div class="panel state"><h2>Подій не знайдено</h2>
-    <p>{{ events.value().length ? 'Спробуйте змінити пошук або період.' : 'Додайте першу подію для родини.' }}</p>
-    <button class="button button--secondary" type="button" (click)="createNew()">Додати подію</button>
-  </div>
-} @else {
-  <div class="list">@for (event of filtered(); track event.id) {
-    <article class="panel list-card">
-      <div class="list-card__main"><h3>{{ event.title }}</h3>
-        <div class="list-card__meta"><span
-          class="badge">{{ event.startsAt | date:'d MMM y, HH:mm':'':'uk' }}</span><span>до {{ event.endsAt | date:'d MMM y, HH:mm':'':'uk' }}</span>
+    <div class="panel state">
+      <h2>Не вдалося завантажити</h2>
+      <p>Перевірте з’єднання та спробуйте ще раз.</p>
+      <button class="button button--secondary" type="button" (click)="events.reload()">Повторити</button>
+    </div>
+  } @else if (!openEvents().length) {
+    <div class="panel state">
+      <h2>{{ emptyState().title }}</h2>
+      <p>{{ emptyState().description }}</p>
+      <button class="button button--secondary" type="button" (click)="createNew()">Додати подію</button>
+    </div>
+  } @else {
+    <div class="list">
+      @for (event of openEvents(); track event.id) {
+        <ng-container [ngTemplateOutlet]="eventCard" [ngTemplateOutletContext]="{ $implicit: event, archived: false }" />
+      }
+    </div>
+  }
+  @if (!events.isLoading() && !events.error()) {
+    <app-history-panel [count]="historyEvents().length" label="Історія" empty="Завершених подій ще немає.">
+      <ng-template>
+        <div class="list">
+          @for (event of historyEvents(); track event.id) {
+            <ng-container [ngTemplateOutlet]="eventCard" [ngTemplateOutletContext]="{ $implicit: event, archived: true }" />
+          }
         </div>
-        @if (event.notes) {
-          <p>{{ event.notes }}</p>
-        }
+      </ng-template>
+    </app-history-panel>
+  }
+
+  <ng-template #eventCard let-event let-archived="archived">
+    <article class="panel list-card">
+      <div class="list-card__main">
+        <h3>{{ event.title }}</h3>
+        <div class="list-card__meta">
+          <span class="badge">{{ event.startsAt | date:'d MMM y, HH:mm':'':'uk' }}</span>
+          <span>до {{ event.endsAt | date:'d MMM y, HH:mm':'':'uk' }}</span>
+          @if (archived) { <span class="badge">{{ statusLabel('DONE') }}</span> }
+        </div>
+        @if (event.notes) { <p>{{ event.notes }}</p> }
         <div class="record-audit">
           <span>Додав: {{ event.createdBy?.displayName || 'невідомо' }}</span>
           @if (event.updatedBy; as editor) { <span>Змінив: {{ editor.displayName }}</span> }
-        </div></div>
-      <div class="list-card__actions">@if (deletingId() === event.id) {
-        <div class="confirm"><span>Видалити?</span>
-          <button class="button button--danger" type="button" [disabled]="busy()" (click)="remove(event.id)">Так
-          </button>
-          <button class="button button--quiet" type="button" (click)="deletingId.set(null)">Ні</button>
         </div>
-      } @else {
-        <button class="button button--secondary" type="button" (click)="edit(event)">Змінити</button>
-        <button class="button button--quiet" type="button" [attr.aria-label]="'Видалити подію ' + event.title"
-                (click)="deletingId.set(event.id)">Видалити
-        </button>
-      }</div>
+      </div>
+      <div class="list-card__actions">
+        @if (deletingId() === event.id) {
+          <div class="confirm">
+            <span>Видалити?</span>
+            <button class="button button--danger" type="button" [disabled]="busy()" (click)="remove(event.id)">Так</button>
+            <button class="button button--quiet" type="button" (click)="deletingId.set(null)">Ні</button>
+          </div>
+        } @else {
+          @if (archived) {
+            <button class="button button--secondary" type="button" [disabled]="busy()" (click)="setStatus(event, 'OPEN')">Повернути</button>
+          } @else {
+            <button class="button button--secondary" type="button" [disabled]="busy()" (click)="setStatus(event, 'DONE')">Завершити</button>
+          }
+          <button class="button button--secondary" type="button" (click)="edit(event)">Змінити</button>
+          <button class="button button--quiet" type="button" [attr.aria-label]="'Видалити подію ' + event.title" (click)="deletingId.set(event.id)">Видалити</button>
+        }
+      </div>
     </article>
-  }</div>
-}
+  </ng-template>
 </section>
