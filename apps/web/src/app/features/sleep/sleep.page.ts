@@ -342,12 +342,25 @@ export class SleepPage {
   saveSavedPause(): void {
     const sessionId = this.savedPauseSessionId();
     if (!sessionId) return;
+    const overview = this.snapshot();
+    const session = overview?.active?.id === sessionId
+      ? overview.active
+      : overview?.sessions.find((item) => item.id === sessionId);
+    if (!session) {
+      this.error.set('Запис сну вже недоступний. Оновіть сторінку.');
+      return;
+    }
     const value = this.savedPauseModel();
     const startedAt = new Date(value.startedAt);
     const endedAt = new Date(value.endedAt);
     if (!value.startedAt || !value.endedAt || !Number.isFinite(startedAt.getTime()) ||
         !Number.isFinite(endedAt.getTime()) || endedAt <= startedAt) {
       this.error.set('Вкажіть коректні початок і кінець паузи.');
+      return;
+    }
+    if (startedAt < new Date(session.startedAt) ||
+        endedAt > new Date(session.endedAt ?? Date.now())) {
+      this.error.set('Пауза має бути всередині сну та вже завершитися.');
       return;
     }
     const payload = {startedAt: startedAt.toISOString(), endedAt: endedAt.toISOString()};

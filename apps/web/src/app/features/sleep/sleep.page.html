@@ -103,10 +103,15 @@
             <button class="button button--secondary" type="button" [disabled]="busy()" (click)="stop(wakeAt() || undefined)">Завершити</button>
           }
           <button class="button button--secondary" type="button" [disabled]="busy()" (click)="openStartAdjust()">Змінити початок</button>
+          <button class="button button--secondary" type="button" [disabled]="busy()" (click)="openSavedPause(sleep.active)">Додати минулу паузу</button>
         } @else {
           <button class="button button--primary" type="button" [disabled]="busy()" (click)="start()">Старт сну</button>
         }
       </div>
+
+      @if (sleep.active && savedPauseSessionId() === sleep.active.id) {
+        <ng-container [ngTemplateOutlet]="savedPauseEditor" />
+      }
 
       @if (adjust() === 'start') {
         <div class="adjust">
@@ -309,19 +314,8 @@
               }
             </ul>
           }
-          @if (savedPauseSessionId() === session.id) {
-            <form class="saved-pause-form" (submit)="$event.preventDefault(); saveSavedPause()">
-              <h4>{{ savedPauseId() ? 'Редагувати паузу' : 'Нова пауза' }}</h4>
-              <div class="field-grid">
-                <label class="field"><span>Початок паузи</span><input type="datetime-local" [formField]="savedPauseForm.startedAt"></label>
-                <label class="field"><span>Кінець паузи</span><input type="datetime-local" [formField]="savedPauseForm.endedAt"></label>
-              </div>
-              @if (error()) { <p class="message message--error" role="alert">{{ error() }}</p> }
-              <div class="form-actions">
-                <button class="button button--primary" type="submit" [disabled]="busy()">Зберегти паузу</button>
-                <button class="button button--quiet" type="button" (click)="closeSavedPause()">Скасувати</button>
-              </div>
-            </form>
+          @if (session.endedAt && savedPauseSessionId() === session.id) {
+            <ng-container [ngTemplateOutlet]="savedPauseEditor" />
           }
           <div class="record-audit">
             <span>Додав: {{ session.startedByName || 'невідомо' }}</span>
@@ -345,6 +339,21 @@
           }
         </div>
       </article>
+    </ng-template>
+
+    <ng-template #savedPauseEditor>
+      <form class="saved-pause-form" (submit)="$event.preventDefault(); saveSavedPause()">
+        <h4>{{ savedPauseId() ? 'Редагувати паузу' : 'Додати минулу паузу' }}</h4>
+        <div class="field-grid">
+          <label class="field"><span>Початок паузи</span><input type="datetime-local" [formField]="savedPauseForm.startedAt"></label>
+          <label class="field"><span>Кінець паузи</span><input type="datetime-local" [formField]="savedPauseForm.endedAt"></label>
+        </div>
+        @if (error()) { <p class="message message--error" role="alert">{{ error() }}</p> }
+        <div class="form-actions">
+          <button class="button button--primary" type="submit" [disabled]="busy()">Зберегти паузу</button>
+          <button class="button button--quiet" type="button" (click)="closeSavedPause()">Скасувати</button>
+        </div>
+      </form>
     </ng-template>
 
   } @else if (data.overview.error()) {

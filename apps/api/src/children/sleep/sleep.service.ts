@@ -263,10 +263,10 @@ export class SleepService {
   async createSavedPause(user: AuthUser, id: string, dto: CreateSavedPauseDto) {
     return this.prisma.$transaction(async (tx) => {
       const session = await tx.sleepSession.findFirst({
-        where: { id, householdId: user.householdId, endedAt: { not: null } },
+        where: { id, householdId: user.householdId },
         include: sessionInclude,
       });
-      if (!session) throw new NotFoundException('Завершений сон не знайдено.');
+      if (!session) throw new NotFoundException('Запис сну не знайдено.');
       const startedAt = new Date(dto.startedAt);
       const endedAt = new Date(dto.endedAt);
       this.assertPauseWindow(session, startedAt, endedAt);

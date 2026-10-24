@@ -247,6 +247,51 @@ describe('SleepService saved pauses', () => {
     ],
   };
 
+  it('adds an elapsed pause while the sleep is still active', async () => {
+    const active = { ...existing, endedAt: null };
+    const create = vi.fn().mockResolvedValue({});
+    const tx = {
+      sleepSession: {
+        findFirst: vi.fn().mockResolvedValue(active),
+        update: vi.fn().mockResolvedValue({
+          ...active,
+          pauses: [
+            ...active.pauses,
+            {
+              id: 'pause-2',
+              startedAt: new Date('2026-10-19T11:00:00.000Z'),
+              endedAt: new Date('2026-10-19T11:15:00.000Z'),
+            },
+          ],
+        }),
+      },
+      sleepPause: { create },
+    };
+    const prisma = {
+      $transaction: vi.fn((fn: (client: typeof tx) => Promise<unknown>) => fn(tx)),
+    } as unknown as PrismaService;
+    const { push } = createPush(prisma);
+
+    const result = await new SleepService(prisma, push).createSavedPause(user(), 'sleep-1', {
+      startedAt: '2026-10-19T11:00:00.000Z',
+      endedAt: '2026-10-19T11:15:00.000Z',
+    });
+
+    expect(tx.sleepSession.findFirst).toHaveBeenCalledWith({
+      where: { id: 'sleep-1', householdId: 'home-1' },
+      include: sessionInclude,
+    });
+    expect(create).toHaveBeenCalledWith({
+      data: {
+        sessionId: 'sleep-1',
+        startedAt: new Date('2026-10-19T11:00:00.000Z'),
+        endedAt: new Date('2026-10-19T11:15:00.000Z'),
+      },
+    });
+    expect(result.session.endedAt).toBeNull();
+    expect(result.session.pauses).toHaveLength(2);
+  });
+
   it('adds a bounded pause to a completed household sleep', async () => {
     const create = vi.fn().mockResolvedValue({});
     const tx = {
@@ -283,7 +328,7 @@ describe('SleepService saved pauses', () => {
     expect(create).toHaveBeenCalledOnce();
     expect(result.session.pauses).toHaveLength(2);
     expect(tx.sleepSession.findFirst).toHaveBeenCalledWith({
-      where: { id: 'sleep-1', householdId: 'home-1', endedAt: { not: null } },
+      where: { id: 'sleep-1', householdId: 'home-1' },
       include: sessionInclude,
     });
   });
