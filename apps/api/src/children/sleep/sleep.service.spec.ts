@@ -311,37 +311,22 @@ describe('SleepService saved pauses', () => {
 });
 
 describe('SleepService profile', () => {
-  it('saves child name and birth date and pulls age into sleep overview', async () => {
-    const birthDate = new Date('2025-08-23T00:00:00.000Z');
-    const upsert = vi.fn().mockResolvedValue({
-      babyName: 'Марко',
-      birthDate,
-      napTarget: null,
-      updatedBy: { displayName: 'Ігор' },
-    });
+  it('keeps a legacy installed PWA child update available to the migration trigger', async () => {
+    const birthDate = new Date('2026-06-15T00:00:00.000Z');
+    const upsert = vi.fn().mockResolvedValue({ napTarget: null });
     const prisma = {
       household: {
         findUnique: vi.fn().mockResolvedValue({ timeZone: 'Europe/Kyiv' }),
       },
-      sleepProfile: {
-        upsert,
-        findUnique: vi.fn().mockResolvedValue({
-          babyName: 'Марко',
-          birthDate,
-          napTarget: null,
-          updatedBy: { displayName: 'Ігор' },
-        }),
-      },
-      activeSleep: { findUnique: vi.fn().mockResolvedValue(null) },
-      sleepSession: { findMany: vi.fn().mockResolvedValue([]) },
+      sleepProfile: { upsert },
     } as unknown as PrismaService;
     const { push } = createPush(prisma);
     const service = new SleepService(prisma, push);
-    const saved = await service.updateProfile(user(), {
-      babyName: '  Марко ',
-      birthDate: '2025-08-23',
+
+    await service.updateProfile(user(), {
+      babyName: ' Марко ',
+      birthDate: '2026-06-15',
     });
-    const overview = await service.overview(user());
 
     expect(upsert).toHaveBeenCalledWith({
       where: { householdId: 'home-1' },
@@ -359,8 +344,51 @@ describe('SleepService profile', () => {
         updatedById: 'user-1',
       },
     });
-    expect(saved.babyName).toBe('Марко');
-    expect(saved.birthDate).toBe('2025-08-23');
+    await expect(
+      service.updateProfile(user(), { birthDate: '2026-02-30' }),
+    ).rejects.toBeInstanceOf(BadRequestException);
+    expect(upsert).toHaveBeenCalledOnce();
+  });
+
+  it('reads the family child for sleep guidance and keeps nap settings separate', async () => {
+    const birthDate = new Date('2025-08-23T00:00:00.000Z');
+    const upsert = vi.fn().mockResolvedValue({ napTarget: 3 });
+    const prisma = {
+      household: {
+        findUnique: vi.fn().mockResolvedValue({ timeZone: 'Europe/Kyiv' }),
+      },
+      sleepProfile: {
+        upsert,
+        findUnique: vi.fn().mockResolvedValue({ napTarget: 3 }),
+      },
+      childProfile: {
+        findUnique: vi.fn().mockResolvedValue({
+          name: 'Марко',
+          birthDate,
+          updatedBy: { displayName: 'Ігор' },
+        }),
+      },
+      activeSleep: { findUnique: vi.fn().mockResolvedValue(null) },
+      sleepSession: { findMany: vi.fn().mockResolvedValue([]) },
+    } as unknown as PrismaService;
+    const { push } = createPush(prisma);
+    const service = new SleepService(prisma, push);
+    const saved = await service.updateProfile(user(), { napTarget: 3 });
+    const overview = await service.overview(user());
+
+    expect(upsert).toHaveBeenCalledWith({
+      where: { householdId: 'home-1' },
+      create: {
+        householdId: 'home-1',
+        napTarget: 3,
+        updatedById: 'user-1',
+      },
+      update: {
+        napTarget: 3,
+        updatedById: 'user-1',
+      },
+    });
+    expect(saved.napTarget).toBe(3);
     expect(overview.profile.babyName).toBe('Марко');
     expect(overview.profile.birthDate).toBe('2025-08-23');
     expect(overview.profile.assumedAge).toBe(false);

@@ -1,0 +1,9 @@
+.home-sleep{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:end;gap:16px;margin-top:18px;padding:25px 28px;background:var(--soft);box-shadow:none}
+.home-sleep__heading{grid-column:1/-1}
+.home-sleep h2{font:normal clamp(1.4rem,2vw,1.8rem) var(--font-display);letter-spacing:-.035em;margin:5px 0 0}
+.home-sleep__body{display:flex;align-items:center;gap:28px}
+.home-sleep__body>div{display:grid;gap:2px;min-width:160px}
+.home-sleep__number{font:normal clamp(1.9rem,3vw,2.5rem) var(--font-display);letter-spacing:-.045em;color:var(--forest-dark)}
+.home-sleep__body span,.home-sleep__body p{color:var(--muted)}
+.home-sleep__body p{margin:0;line-height:1.5;max-width:390px}
+@media(max-width:700px){.home-sleep{grid-template-columns:1fr;padding:22px}.home-sleep__body{align-items:flex-start;flex-direction:column;gap:10px}.home-sleep .button{width:100%}}

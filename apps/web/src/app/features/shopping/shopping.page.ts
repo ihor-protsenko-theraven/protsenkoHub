@@ -1,8 +1,9 @@
 import { NgTemplateOutlet } from '@angular/common';
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { FormField, form, min, required } from '@angular/forms/signals';
+import { ActivatedRoute } from '@angular/router';
 import { HistoryPanel } from '../../shared/history-panel.component';
-import { ShoppingItem, ShoppingItemForm, ShoppingItemPayload } from './shopping.model';
+import { ShoppingItem, ShoppingItemForm, ShoppingItemPayload, ShoppingListForm } from './shopping.model';
 import { ShoppingService } from './shopping.service';
 
 const emptyForm = (): ShoppingItemForm => ({ name: '', qty: 1, unit: '', category: '' });
@@ -16,29 +17,45 @@ const emptyForm = (): ShoppingItemForm => ({ name: '', qty: 1, unit: '', categor
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ShoppingPage {
+  private readonly route = inject(ActivatedRoute);
   readonly data = inject(ShoppingService);
   readonly items = this.data.items;
+  readonly lists = this.data.lists;
+  readonly availableItems = computed(() => this.items.hasValue() ? this.items.value() : []);
+  readonly availableLists = computed(() => this.lists.hasValue() ? this.lists.value() : []);
   readonly search = signal('');
   readonly categories = computed(() =>
-    [...new Set(this.items.value().map((item) => item.category).filter((value): value is string => !!value))].sort(),
+    [...new Set(this.availableItems().map((item) => item.category).filter((value): value is string => !!value))].sort(),
   );
   readonly category = signal('');
   private readonly matched = computed(() => {
     const query = this.search().trim().toLocaleLowerCase('uk');
-    return this.items.value().filter((item) =>
+    return this.availableItems().filter((item) =>
       (!this.category() || item.category === this.category()) &&
       (!query || item.name.toLocaleLowerCase('uk').includes(query)),
     );
   });
-  readonly hasOpen = computed(() => this.items.value().some((item) => !item.isChecked));
-  readonly emptyState = computed(() => {
-    if (this.hasOpen()) return { title: 'Нічого не знайдено', description: 'Спробуйте змінити пошук або категорію.' };
-    if (this.items.value().length) return { title: 'Усе куплене', description: 'Куплене лежить в історії. Звідти його можна повернути.' };
-    return { title: 'Список порожній', description: 'Додайте те, що потрібно купити.' };
+  readonly namedGroups = computed(() => this.availableLists().map((list) => {
+    const all = this.availableItems().filter((item) => item.listId === list.id);
+    return {
+      ...list,
+      checked: all.filter((item) => item.isChecked).length,
+      total: all.length,
+      visible: this.matched().filter((item) => item.listId === list.id),
+    };
+  }));
+  readonly singleItems = computed(() => {
+    const namedIds = new Set(this.availableLists().map((list) => list.id));
+    return this.matched().filter((item) => !namedIds.has(item.listId) && !item.isChecked);
   });
-  readonly openItems = computed(() => this.matched().filter((item) => !item.isChecked));
-  readonly doneItems = computed(() => this.matched().filter((item) => item.isChecked));
-  readonly formOpen = signal(false);
+  readonly singleDone = computed(() => {
+    const namedIds = new Set(this.availableLists().map((list) => list.id));
+    return this.matched().filter((item) => !namedIds.has(item.listId) && item.isChecked);
+  });
+  readonly formOpen = signal(this.route.snapshot.queryParamMap.has('new'));
+  readonly listFormOpen = signal(false);
+  readonly targetListId = signal<string | null>(null);
+  readonly deletingListId = signal<string | null>(null);
   readonly editingId = signal<string | null>(null);
   readonly deletingId = signal<string | null>(null);
   readonly busy = signal(false);
@@ -49,16 +66,58 @@ export class ShoppingPage {
     required(path.name);
     min(path.qty, 0.01);
   });
+  readonly listModel = signal<ShoppingListForm>({ name: '', items: '' });
+  readonly listForm = form(this.listModel, (path) => {
+    required(path.name);
+    required(path.items);
+  });
 
-  createNew(): void {
+  createNew(listId: string | null = null): void {
     this.editingId.set(null);
+    this.targetListId.set(listId);
     this.model.set(emptyForm());
     this.error.set('');
+    this.listFormOpen.set(false);
     this.formOpen.set(true);
+  }
+
+  createNewList(): void {
+    this.listModel.set({ name: '', items: '' });
+    this.error.set('');
+    this.formOpen.set(false);
+    this.listFormOpen.set(true);
+  }
+
+  cancelList(): void {
+    this.listFormOpen.set(false);
+    this.error.set('');
+  }
+
+  saveList(): void {
+    const draft = this.listModel();
+    const items = draft.items.split(/\r?\n/).map((item) => item.trim()).filter(Boolean);
+    if (!draft.name.trim() || !items.length) {
+      this.error.set('Назвіть список і додайте хоча б одну покупку — кожну з нового рядка.');
+      return;
+    }
+    this.busy.set(true);
+    this.data.createList({ name: draft.name.trim(), items }).subscribe({
+      next: () => {
+        this.busy.set(false);
+        this.listFormOpen.set(false);
+        this.error.set('');
+        this.notice.set('Список створено для всієї родини.');
+      },
+      error: () => {
+        this.busy.set(false);
+        this.error.set('Не вдалося створити список. Спробуйте ще раз.');
+      },
+    });
   }
 
   edit(item: ShoppingItem): void {
     this.editingId.set(item.id);
+    this.targetListId.set(item.listId);
     this.model.set({
       name: item.name,
       qty: item.qty,
@@ -66,6 +125,7 @@ export class ShoppingPage {
       category: item.category ?? '',
     });
     this.error.set('');
+    this.listFormOpen.set(false);
     this.formOpen.set(true);
   }
 
@@ -83,13 +143,14 @@ export class ShoppingPage {
     }
     const payload: ShoppingItemPayload = {
       name: value.name.trim(),
+      ...(this.targetListId() && !this.editingId() ? { listId: this.targetListId()! } : {}),
       qty: value.qty,
       unit: value.unit.trim() || null,
       category: value.category.trim() || null,
     };
     this.busy.set(true);
     const id = this.editingId();
-    const item = this.items.value().find((entry) => entry.id === id);
+    const item = this.availableItems().find((entry) => entry.id === id);
     if (id && !item) {
       this.busy.set(false);
       this.error.set('Цей запис уже не доступний. Оновіть список і спробуйте ще раз.');
@@ -141,6 +202,21 @@ export class ShoppingPage {
       error: () => {
         this.busy.set(false);
         this.error.set('Не вдалося видалити покупку.');
+      },
+    });
+  }
+
+  removeList(id: string): void {
+    this.busy.set(true);
+    this.data.removeList(id).subscribe({
+      next: () => {
+        this.busy.set(false);
+        this.deletingListId.set(null);
+        this.notice.set('Список видалено.');
+      },
+      error: () => {
+        this.busy.set(false);
+        this.error.set('Не вдалося видалити список.');
       },
     });
   }

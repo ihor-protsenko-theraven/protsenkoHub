@@ -1,5 +1,5 @@
 import { HttpErrorResponse, httpResource } from '@angular/common/http';
-import { DestroyRef, Injectable, inject, signal } from '@angular/core';
+import { DestroyRef, Injectable, computed, inject, signal } from '@angular/core';
 import { SwPush } from '@angular/service-worker';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { firstValueFrom } from 'rxjs';
@@ -7,7 +7,8 @@ import { API_BASE_URL } from '../../core/configs/api.config';
 import { ApiService } from '../../core/services/api.service';
 import { readPushSubscription } from '../../core/push-subscription';
 import { ToastService } from '../../core/toast/toast.service';
-import type { PushSubscriptionPayload, SleepReminderConfig } from './sleep-reminder.model';
+import type { SleepReminderConfig } from './sleep-reminder.model';
+import { pushErrorMessage, pushSubscriptionPayload } from './sleep-reminder.util';
 
 @Injectable()
 export class SleepReminderService {
@@ -16,30 +17,40 @@ export class SleepReminderService {
   private readonly destroyRef = inject(DestroyRef);
   private readonly toasts = inject(ToastService);
   private endpoint: string | null = null;
-  readonly supported = this.push.isEnabled;
+  readonly supported = signal(
+    this.push.isEnabled && typeof PushManager !== 'undefined' && typeof Notification !== 'undefined',
+  );
   readonly config = httpResource<SleepReminderConfig>(
     () => ({ url: `${API_BASE_URL}/sleep-reminders/config`, withCredentials: true }),
     { defaultValue: { available: false, publicKey: null } },
   );
+  readonly available = computed(() => this.config.hasValue() && this.config.value().available);
   readonly enabled = signal(false);
   readonly busy = signal(false);
 
   constructor() {
-    if (!this.supported) return;
-    this.push.subscription.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((subscription) => {
-      if (subscription) {
-        this.remember(subscription);
-        return;
-      }
-      // Samsung resolves an earlier getSubscription() with null after subscribe() already succeeded.
-      if (this.endpoint) return;
-      this.enabled.set(false);
+    if (!this.supported()) return;
+    this.push.subscription.pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+      next: (subscription) => {
+        if (subscription) {
+          this.remember(subscription);
+          return;
+        }
+        // Samsung resolves an earlier getSubscription() with null after subscribe() already succeeded.
+        if (this.endpoint) return;
+        this.enabled.set(false);
+      },
+      error: () => {
+        // A browser can expose service workers without a usable push manager.
+        this.supported.set(false);
+        this.enabled.set(false);
+      },
     });
   }
 
   async enable(): Promise<void> {
-    const publicKey = this.config.value().publicKey;
-    if (!this.supported || !publicKey) {
+    const publicKey = this.config.hasValue() ? this.config.value().publicKey : null;
+    if (!this.supported() || !publicKey) {
       this.toasts.error('Сповіщення недоступні на цьому пристрої або сервері.');
       return;
     }
@@ -88,20 +99,4 @@ export class SleepReminderService {
     const payload = pushSubscriptionPayload(subscription);
     await firstValueFrom(this.api.post('/sleep-reminders/subscribe', payload));
   }
-}
-
-export function pushSubscriptionPayload(subscription: Pick<PushSubscription, 'toJSON'>): PushSubscriptionPayload {
-  const { endpoint, keys } = subscription.toJSON();
-  if (!endpoint || !keys?.['p256dh'] || !keys['auth']) {
-    throw new Error('Incomplete push subscription');
-  }
-  return { endpoint, keys: { p256dh: keys['p256dh'], auth: keys['auth'] } };
-}
-
-function pushErrorMessage(error: unknown): string {
-  if (typeof DOMException !== 'undefined' && error instanceof DOMException) {
-    if (error.name === 'NotAllowedError') return 'Сповіщення заблоковано. Дозвольте їх у налаштуваннях браузера та Android.';
-    if (error.name === 'AbortError') return 'Браузер перервав підписку на сповіщення. Спробуйте ще раз.';
-  }
-  return 'Не вдалося ввімкнути сповіщення. Перевірте дозвіл і спробуйте ще раз.';
 }

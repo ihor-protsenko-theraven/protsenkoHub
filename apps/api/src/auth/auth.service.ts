@@ -52,7 +52,7 @@ export class AuthService {
             },
           },
           shoppingLists: {
-            create: { name: 'Продукти' },
+            create: { name: 'Окремі покупки', isDefault: true },
           },
         },
         include: { members: true },

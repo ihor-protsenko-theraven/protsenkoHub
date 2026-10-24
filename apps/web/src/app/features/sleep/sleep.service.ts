@@ -65,9 +65,9 @@ export class SleepService {
     return this.api.delete<{ ok: boolean }>(`/children/sleep/${id}`).pipe(tap(() => this.overview.reload()));
   }
 
-  saveProfile(payload: { birthDate?: string | null; napTarget?: number | null }) {
+  saveProfile(payload: { napTarget: number | null }) {
     return this.api
-      .patch<{ birthDate: string | null; napTarget: number | null }>('/children/sleep/profile', payload)
+      .patch<{ napTarget: number | null }>('/children/sleep/profile', payload)
       .pipe(tap(() => this.overview.reload()));
   }
 }

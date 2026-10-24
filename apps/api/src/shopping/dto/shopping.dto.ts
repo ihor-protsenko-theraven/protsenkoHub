@@ -1,8 +1,11 @@
 import {
+  ArrayMinSize,
+  IsArray,
   IsBoolean,
   IsNumber,
   IsOptional,
   IsString,
+  MaxLength,
   Min,
   MinLength,
 } from 'class-validator';
@@ -11,6 +14,10 @@ export class CreateShoppingItemDto {
   @IsString()
   @MinLength(1)
   name!: string;
+
+  @IsOptional()
+  @IsString()
+  listId?: string;
 
   @IsOptional()
   @IsNumber()
@@ -24,6 +31,18 @@ export class CreateShoppingItemDto {
   @IsOptional()
   @IsString()
   category?: string;
+}
+
+export class CreateShoppingListDto {
+  @IsString()
+  @MinLength(1)
+  @MaxLength(80)
+  name!: string;
+
+  @IsArray()
+  @ArrayMinSize(1)
+  @IsString({ each: true })
+  items!: string[];
 }
 
 export class UpdateShoppingItemDto {

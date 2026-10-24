@@ -13,18 +13,18 @@ export class FamilyService {
   }));
 
   saveChild(payload: {
-    babyName: string | null;
-    birthDate: string | null;
+    name: string;
+    birthDate: string;
   }): Observable<{
-    babyName: string;
+    id: string;
+    name: string;
     birthDate: string | null;
-    napTarget: number | null;
   }> {
-    return this.http.patch<{
-      babyName: string;
+    return this.http.put<{
+      id: string;
+      name: string;
       birthDate: string | null;
-      napTarget: number | null;
-    }>(`${API_BASE_URL}/children/sleep/profile`, payload, {
+    }>(`${API_BASE_URL}/auth/family/child`, payload, {
       withCredentials: true,
     });
   }

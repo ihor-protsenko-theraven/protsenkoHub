@@ -3,6 +3,7 @@ node_modules
 *.angular19-backup
 dist
 .angular
+.playwright-cli/
 .env
 .env.local
 .vercel

@@ -1,0 +1,34 @@
+<section class="panel home-sleep" aria-labelledby="sleep-title">
+  <div class="home-sleep__heading">
+    <span class="eyebrow">СОН ДИТИНИ</span>
+    <h2 id="sleep-title">Як минає день</h2>
+  </div>
+  @if (sleep.overview.isLoading()) {
+    <p role="status">Завантажуємо дані про сон…</p>
+  } @else if (sleep.overview.error()) {
+    <div>
+      <p>Не вдалося завантажити дані про сон.</p>
+      <button class="button button--secondary" type="button" (click)="sleep.overview.reload()">Повторити</button>
+    </div>
+  } @else if (sleep.overview.hasValue()) {
+    @let overview = sleep.overview.value();
+    <div class="home-sleep__body">
+      <div>
+        <strong class="home-sleep__number">{{ sleepDuration(overview.stats.todaySleepMin) }}</strong>
+        <span>сну за сьогодні</span>
+      </div>
+      <p>
+        @if (overview.active) {
+          {{ overview.profile.babyName }} зараз спить. Сон почався о {{ overview.active.startedAt | date:'HH:mm':overview.timeZone:'uk' }}.
+        } @else if (overview.nextSleepAt) {
+          Наступний сон орієнтовно о {{ overview.nextSleepAt | date:'HH:mm':overview.timeZone:'uk' }}.
+        } @else if (overview.stats.todaySleepMin > 0) {
+          Усі записи сну збережені для родини.
+        } @else {
+          Записів за сьогодні ще немає. Почніть трекер, коли дитина засне.
+        }
+      </p>
+    </div>
+  }
+  <a class="button button--secondary" routerLink="/app/sleep">Відкрити сон</a>
+</section>

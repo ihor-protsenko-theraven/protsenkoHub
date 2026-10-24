@@ -1,0 +1,83 @@
+<section class="page home" aria-labelledby="page-title">
+  <header class="home-hero">
+    <div class="home-hero__content">
+      <h1 id="page-title">Привіт, {{ firstName() }}!</h1>
+      <p>Сьогоднішні плани, дитячі справи й покупки — усе поруч, щоб легше домовлятися й встигати разом.</p>
+      <a class="button button--primary" routerLink="/app/calendar" [queryParams]="{ new: '1' }">Додати подію</a>
+    </div>
+    <div class="home-hero__today" aria-label="Сьогоднішня дата">
+      <span class="home-hero__today-label">Сьогодні</span>
+      <strong>{{ now() | date:'d':'':'uk' }}</strong>
+      <span>{{ now() | date:'LLLL y':'':'uk' }}</span>
+    </div>
+  </header>
+
+  <div class="home-section-heading">
+    <div><h2>На порядку денному</h2></div>
+  </div>
+  <div class="overview-grid">
+    <a class="panel overview-tile" routerLink="/app/calendar">
+      <span class="overview-tile__value">{{ eventCount() }}</span>
+      <strong>Події попереду</strong><small>Календар</small>
+    </a>
+    <a class="panel overview-tile" routerLink="/app/children">
+      <span class="overview-tile__value">{{ taskCount() }}</span>
+      <strong>Справи дітей</strong><small>Задачі</small>
+    </a>
+    <a class="panel overview-tile" routerLink="/app/shopping">
+      <span class="overview-tile__value">{{ shoppingCount() }}</span>
+      <strong>Треба купити</strong><small>Покупки</small>
+    </a>
+  </div>
+
+  <div class="home-grid">
+    <section class="panel home-card" aria-labelledby="upcoming-title">
+      <div class="home-card__heading"><h2 id="upcoming-title">Незабаром</h2><a routerLink="/app/calendar">Усі події</a></div>
+      @if (calendar.events.isLoading()) {
+        <p class="home-card__state" role="status">Завантажуємо події…</p>
+      } @else if (calendar.events.error()) {
+        <div class="home-card__state"><p>Не вдалося завантажити події.</p><button class="button button--secondary" type="button" (click)="calendar.events.reload()">Повторити</button></div>
+      } @else if (!upcoming().length) {
+        <div class="home-card__state"><p>Поки немає запланованих подій.</p><a routerLink="/app/calendar" [queryParams]="{ new: '1' }">Додати подію</a></div>
+      } @else {
+        <ul class="home-list">
+          @for (event of upcoming().slice(0, 3); track event.id) {
+            <li><span class="home-list__date"><strong>{{ event.startsAt | date:'d':'':'uk' }}</strong><small>{{ event.startsAt | date:'LLL':'':'uk' }}</small></span><span class="home-list__body"><strong>{{ event.title }}</strong><small>{{ event.startsAt | date:'HH:mm':'':'uk' }} · {{ event.startsAt | date:'EEEE':'':'uk' }}</small></span></li>
+          }
+        </ul>
+      }
+    </section>
+    <section class="panel home-card" aria-labelledby="tasks-title">
+      <div class="home-card__heading"><h2 id="tasks-title">Справи дітей</h2><a routerLink="/app/children">Усі задачі</a></div>
+      @if (children.tasks.isLoading()) {
+        <p class="home-card__state" role="status">Завантажуємо задачі…</p>
+      } @else if (children.tasks.error()) {
+        <div class="home-card__state"><p>Не вдалося завантажити задачі.</p><button class="button button--secondary" type="button" (click)="children.tasks.reload()">Повторити</button></div>
+      } @else if (!openTasks().length) {
+        <div class="home-card__state"><p>Усі справи зроблено. Гарна нагода перепочити!</p><a routerLink="/app/children" [queryParams]="{ new: '1' }">Додати задачу</a></div>
+      } @else {
+        <ul class="home-list home-list--tasks">
+          @for (task of openTasks().slice(0, 3); track task.id) {
+            <li><span class="home-list__body"><strong>{{ task.title }}</strong><small>{{ task.dueAt ? ('До ' + (task.dueAt | date:'d MMM, HH:mm':'':'uk')) : 'Без терміну' }}</small></span></li>
+          }
+        </ul>
+      }
+    </section>
+  </div>
+
+  <app-home-sleep-card />
+
+  <section class="home-shopping panel" aria-labelledby="shopping-title">
+    <div><h2 id="shopping-title">Що потрібно купити?</h2><p>Окремі покупки й списки для походів у магазин доступні всій родині.</p></div>
+    @if (shopping.items.isLoading()) {
+      <p role="status">Завантажуємо список…</p>
+    } @else if (shopping.items.error()) {
+      <div><p>Не вдалося завантажити покупки.</p><button class="button button--secondary" type="button" (click)="shopping.items.reload()">Повторити</button></div>
+    } @else if (openShopping().length) {
+      <p>{{ shoppingPreview() }}</p>
+    } @else {
+      <p>Список порожній. Згадаєте щось потрібне — додайте сюди.</p>
+    }
+    <a class="button button--secondary" routerLink="/app/shopping" [queryParams]="{ new: '1' }">Додати покупку</a>
+  </section>
+</section>

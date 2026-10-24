@@ -104,6 +104,7 @@ export class ResumeSleepDto {
 }
 
 export class UpdateSleepProfileDto {
+  // Accepted for installed PWA versions that still edit the child in the sleep screen.
   @IsOptional()
   @IsString()
   @MaxLength(60)

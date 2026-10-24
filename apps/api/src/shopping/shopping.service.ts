@@ -1,12 +1,15 @@
 import {
+  BadRequestException,
   ConflictException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import type { AuthUser } from '../common/types';
 import {
   CreateShoppingItemDto,
+  CreateShoppingListDto,
   UpdateShoppingItemDto,
 } from './dto/shopping.dto';
 
@@ -15,9 +18,8 @@ export class ShoppingService {
   constructor(private readonly prisma: PrismaService) {}
 
   async listItems(user: AuthUser) {
-    const list = await this.ensureDefaultList(user);
     return this.prisma.shoppingItem.findMany({
-      where: { listId: list.id },
+      where: { list: { householdId: user.householdId } },
       include: {
         createdBy: { select: { displayName: true } },
         updatedBy: { select: { displayName: true } },
@@ -31,7 +33,12 @@ export class ShoppingService {
   }
 
   async createItem(user: AuthUser, dto: CreateShoppingItemDto) {
-    const list = await this.ensureDefaultList(user);
+    const list = dto.listId
+      ? await this.prisma.shoppingList.findFirst({
+          where: { id: dto.listId, householdId: user.householdId },
+        })
+      : await this.ensureDefaultList(user);
+    if (!list) throw new NotFoundException('Список покупок не знайдено.');
     const max = await this.prisma.shoppingItem.aggregate({
       where: { listId: list.id },
       _max: { sortOrder: true },
@@ -51,6 +58,47 @@ export class ShoppingService {
         updatedBy: { select: { displayName: true } },
       },
     });
+  }
+
+  listLists(user: AuthUser) {
+    return this.prisma.shoppingList.findMany({
+      where: { householdId: user.householdId, isDefault: false },
+      orderBy: { createdAt: 'desc' },
+    });
+  }
+
+  async createList(user: AuthUser, dto: CreateShoppingListDto) {
+    const name = dto.name.trim();
+    const items = dto.items.map((item) => item.trim()).filter(Boolean);
+    if (!name || !items.length || items.some((item) => item.length > 120)) {
+      throw new BadRequestException(
+        'Вкажіть назву списку та хоча б одну покупку.',
+      );
+    }
+    return this.prisma.shoppingList.create({
+      data: {
+        householdId: user.householdId,
+        name,
+        isDefault: false,
+        items: {
+          create: items.map((item, sortOrder) => ({
+            name: item,
+            sortOrder,
+            createdById: user.userId,
+          })),
+        },
+      },
+      include: { items: true },
+    });
+  }
+
+  async removeList(user: AuthUser, id: string) {
+    const list = await this.prisma.shoppingList.findFirst({
+      where: { id, householdId: user.householdId, isDefault: false },
+    });
+    if (!list) throw new NotFoundException('Список покупок не знайдено.');
+    await this.prisma.shoppingList.delete({ where: { id } });
+    return { ok: true };
   }
 
   async updateItem(user: AuthUser, id: string, dto: UpdateShoppingItemDto) {
@@ -84,15 +132,31 @@ export class ShoppingService {
 
   private async ensureDefaultList(user: AuthUser) {
     const existing = await this.prisma.shoppingList.findFirst({
-      where: { householdId: user.householdId },
-      orderBy: { createdAt: 'asc' },
+      where: { householdId: user.householdId, isDefault: true },
     });
     if (existing) {
       return existing;
     }
-    return this.prisma.shoppingList.create({
-      data: { householdId: user.householdId, name: 'Продукти' },
-    });
+    try {
+      return await this.prisma.shoppingList.create({
+        data: {
+          householdId: user.householdId,
+          name: 'Окремі покупки',
+          isDefault: true,
+        },
+      });
+    } catch (error) {
+      if (
+        !(error instanceof Prisma.PrismaClientKnownRequestError) ||
+        error.code !== 'P2002'
+      )
+        throw error;
+      const created = await this.prisma.shoppingList.findFirst({
+        where: { householdId: user.householdId, isDefault: true },
+      });
+      if (!created) throw error;
+      return created;
+    }
   }
 
   private async ensureOwnedItem(user: AuthUser, id: string) {

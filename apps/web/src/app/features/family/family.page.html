@@ -11,27 +11,24 @@
           <li><span><strong>{{ member.displayName }}</strong><small>{{ member.email }}</small></span><span class="badge">{{ member.role === 'ADMIN' ? 'Головний' : 'Учасник' }}</span></li>
         }</ul>
       </section>
-      <section class="panel family-card" aria-labelledby="child-title">
-        <h2 id="child-title">Дитина</h2>
-        <p>Ім’я та вік дитини автоматично підтягуються у трекер сну та розрахунок норм.</p>
-        @if (previewAgeLabel(); as age) {
-          <p><span class="badge">Вік: {{ age }}</span></p>
-        } @else {
-          <p class="field-help">Поки дату народження не вказано, у сні береться орієнтир 4 місяці.</p>
-        }
+      <section class="panel family-card family-card--child" aria-labelledby="child-title">
+        <span class="eyebrow">НАЙМОЛОДШИЙ У РОДИНІ</span>
+        <h2 id="child-title">{{ overview.child ? overview.child.name : 'Додайте дитину' }}</h2>
+        <p>{{ overview.child ? 'Ім’я та вік спільні для батьків і використовуються у трекері сну.' : 'Збережіть ім’я та дату народження один раз — вони з’являться у трекері сну.' }}</p>
+        @if (previewAgeLabel(); as age) { <p><span class="badge">{{ age }}</span></p> }
         <form (submit)="$event.preventDefault(); saveChild()">
           <label class="field">
-            <span>Як звати дитину</span>
-            <input type="text" placeholder="Наприклад, Марко або Олівія" [formField]="childForm.babyName">
+            <span>Ім’я дитини</span>
+            <input type="text" placeholder="Наприклад, Марко" [formField]="childForm.name">
           </label>
           <label class="field">
             <span>Дата народження</span>
             <input type="date" [formField]="childForm.birthDate">
           </label>
-          @if (overview.child.updatedByName) {
+          @if (overview.child?.updatedByName) {
             <small class="field-help">Оновив: {{ overview.child.updatedByName }}</small>
           }
-          <button class="button button--primary" type="submit" [disabled]="busy()">Зберегти дані дитини</button>
+          <button class="button button--primary" type="submit" [disabled]="busy() || !childForm().valid()">{{ overview.child ? 'Зберегти зміни' : 'Додати дитину' }}</button>
         </form>
       </section>
       @if (auth.user()?.role === 'ADMIN') {

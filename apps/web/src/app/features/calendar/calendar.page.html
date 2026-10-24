@@ -42,7 +42,7 @@
       <input type="search" placeholder="Назва або нотатки" [value]="search()" (input)="search.set($any($event.target).value)">
     </label>
   </div>
-  <div class="section-heading"><h2>Події</h2><span>{{ openEvents().length }} записів</span></div>
+  <div class="section-heading"><h2>Події</h2><span>Усього: {{ openEvents().length }}</span></div>
   @if (events.isLoading()) {
     <div class="panel state" role="status">Завантажуємо події…</div>
   } @else if (events.error()) {

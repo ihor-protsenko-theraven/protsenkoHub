@@ -1,9 +1,11 @@
 import { DatePipe, NgTemplateOutlet } from '@angular/common';
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { FormField, form, required } from '@angular/forms/signals';
+import { ActivatedRoute } from '@angular/router';
 import { HistoryPanel } from '../../shared/history-panel.component';
 import { toLocalDateTime } from '../../shared/date-time.util';
-import { CalendarEvent, CalendarEventForm, CalendarEventPayload, EventStatus, eventStatusLabel, eventStatusNotice } from './calendar.model';
+import { CalendarEvent, CalendarEventForm, CalendarEventPayload, EventStatus } from './calendar.model';
+import { eventStatusLabel, eventStatusNotice } from './calendar-status.util';
 import { CalendarService } from './calendar.service';
 
 const emptyForm = (): CalendarEventForm => ({ title: '', notes: '', startsAt: '', endsAt: '' });
@@ -17,20 +19,22 @@ const emptyForm = (): CalendarEventForm => ({ title: '', notes: '', startsAt: ''
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class CalendarPage {
+  private readonly route = inject(ActivatedRoute);
   readonly data = inject(CalendarService);
   readonly events = this.data.events;
+  readonly availableEvents = computed(() => this.events.hasValue() ? this.events.value() : []);
   readonly statusLabel = eventStatusLabel;
   readonly search = signal('');
   private readonly matched = computed(() => {
     const query = this.search().trim().toLocaleLowerCase('uk');
-    return this.events.value().filter((event) =>
+    return this.availableEvents().filter((event) =>
       !query || (event.title + ' ' + (event.notes ?? '')).toLocaleLowerCase('uk').includes(query),
     );
   });
-  readonly hasOpen = computed(() => this.events.value().some((event) => event.status !== 'DONE'));
+  readonly hasOpen = computed(() => this.availableEvents().some((event) => event.status !== 'DONE'));
   readonly emptyState = computed(() => {
     if (this.hasOpen()) return { title: 'Подій не знайдено', description: 'Спробуйте змінити пошук.' };
-    if (this.events.value().length) return { title: 'Немає відкритих подій', description: 'Завершені події лежать в історії.' };
+    if (this.availableEvents().length) return { title: 'Немає відкритих подій', description: 'Завершені події лежать в історії.' };
     return { title: 'Подій не знайдено', description: 'Додайте першу подію для родини.' };
   });
   readonly openEvents = computed(() => this.matched().filter((event) => event.status !== 'DONE'));
@@ -39,7 +43,7 @@ export class CalendarPage {
       .filter((event) => event.status === 'DONE')
       .sort((a, b) => new Date(b.endsAt).getTime() - new Date(a.endsAt).getTime()),
   );
-  readonly formOpen = signal(false);
+  readonly formOpen = signal(this.route.snapshot.queryParamMap.has('new'));
   readonly editingId = signal<string | null>(null);
   readonly deletingId = signal<string | null>(null);
   readonly busy = signal(false);

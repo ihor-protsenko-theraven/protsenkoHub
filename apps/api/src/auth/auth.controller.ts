@@ -6,6 +6,7 @@ import {
   HttpCode,
   Param,
   Post,
+  Put,
   Res,
   UseGuards,
 } from '@nestjs/common';
@@ -18,6 +19,7 @@ import { CurrentUser } from '../common/current-user.decorator';
 import type { AuthUser } from '../common/types';
 import { InvitationService } from './invitation.service';
 import { CreateInvitationDto, RegisterInvitedDto } from './dto/invitation.dto';
+import { SaveFamilyChildDto } from './dto/family-child.dto';
 
 @Controller('auth')
 export class AuthController {
@@ -30,6 +32,15 @@ export class AuthController {
   @UseGuards(JwtAuthGuard)
   family(@CurrentUser() user: AuthUser) {
     return this.invitations.family(user);
+  }
+
+  @Put('family/child')
+  @UseGuards(JwtAuthGuard)
+  saveFamilyChild(
+    @CurrentUser() user: AuthUser,
+    @Body() dto: SaveFamilyChildDto,
+  ) {
+    return this.invitations.saveFamilyChild(user, dto);
   }
 
   @Post('family/invitations')

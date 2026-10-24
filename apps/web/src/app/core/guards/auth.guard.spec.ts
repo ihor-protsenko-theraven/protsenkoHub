@@ -45,6 +45,6 @@ describe('session route guards', () => {
     });
 
     const decision = TestBed.runInInjectionContext(() => guestGuard(route, state));
-    expect(TestBed.inject(Router).serializeUrl(decision as UrlTree)).toBe('/app/calendar');
+    expect(TestBed.inject(Router).serializeUrl(decision as UrlTree)).toBe('/app/home');
   });
 });

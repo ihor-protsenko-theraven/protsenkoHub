@@ -51,13 +51,6 @@ require(path.join(root, 'scripts', 'database-env.js')).fillDatabaseEnv();
 stripMigrationBoms(root);
 
 const migrate = 'npm exec -w api -- prisma migrate deploy';
-if (runStatus(migrate, root) !== 0) {
-  const resolved = runStatus(
-    'npm exec -w api -- prisma migrate resolve --rolled-back 20261019190000_postgres_init',
-    root,
-  );
-  if (resolved !== 0) process.exit(resolved);
-  run(migrate, root);
-}
+run(migrate, root);
 
 run('node ./scripts/bootstrap-admin.js', root);

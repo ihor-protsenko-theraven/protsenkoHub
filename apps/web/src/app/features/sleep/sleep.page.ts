@@ -4,30 +4,35 @@ import {
   Component,
   computed,
   DestroyRef,
-  effect,
   inject,
+  linkedSignal,
   signal,
-  untracked,
 } from '@angular/core';
 import {form, FormField, required} from '@angular/forms/signals';
+import {RouterLink} from '@angular/router';
 import {APP_LOCALE} from '../../core/configs/locale.config';
 import {HistoryPanel} from '../../shared/history-panel.component';
 import {toLocalDateTime} from '../../shared/date-time.util';
 import {asleepMs, formatMinutes} from './sleep-clock';
 import {SLEEP_UI} from './sleep.config';
 import {isCurrentDaySession} from './sleep-day';
-import {SavedPauseForm, SleepForm, SleepKind, sleepKindLabel, SleepOverview, SleepPause, SleepPayload, SleepSession, WeekDay,} from './sleep.model';
+import {readSleepError} from './sleep-error.util';
+import {sleepKindLabel} from './sleep-kind.util';
+import {SavedPauseForm, SleepForm, SleepKind, SleepOverview, SleepPause, SleepPayload, SleepSession, WeekDay,} from './sleep.model';
+import {normalizeSleepOverview} from './sleep-overview.util';
 import {SleepService} from './sleep.service';
 import {SleepReminderService} from './sleep-reminder.service';
-import {SleepStatus, SleepTicker, SleepTimer} from './sleep-timer.component';
+import {SleepStatus} from './sleep-status.component';
+import {SleepTickerService} from './sleep-ticker.service';
+import {SleepTimer} from './sleep-timer.component';
 
 const emptyForm = (): SleepForm => ({kind: 'NAP', startedAt: '', endedAt: '', notes: ''});
 const dayCount = new Intl.NumberFormat(APP_LOCALE, {style: 'unit', unit: 'day', unitDisplay: 'long'});
 
 @Component({
   selector: 'app-sleep-page',
-  imports: [DatePipe, FormField, HistoryPanel, NgTemplateOutlet, SleepStatus, SleepTimer],
-  providers: [SleepService, SleepReminderService, SleepTicker],
+  imports: [DatePipe, FormField, HistoryPanel, NgTemplateOutlet, RouterLink, SleepStatus, SleepTimer],
+  providers: [SleepService, SleepReminderService, SleepTickerService],
   templateUrl: './sleep.page.html',
   styleUrl: './sleep.page.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -35,16 +40,32 @@ const dayCount = new Intl.NumberFormat(APP_LOCALE, {style: 'unit', unit: 'day', 
 export class SleepPage {
   readonly data = inject(SleepService);
   readonly reminders = inject(SleepReminderService);
-  private readonly ticker = inject(SleepTicker);
+  private readonly ticker = inject(SleepTickerService);
   private readonly destroyRef = inject(DestroyRef);
   readonly kindLabel = sleepKindLabel;
   readonly minutes = formatMinutes;
-  readonly snapshot = signal<SleepOverview | null>(null);
-  readonly clockOffset = signal(0);
-  readonly kind = signal<SleepKind>('NAP');
+  readonly snapshot = linkedSignal<SleepOverview | null, SleepOverview | null>({
+    source: () => this.data.overview.hasValue() ? this.data.overview.value() : null,
+    computation: (overview, previous) => overview
+      ? normalizeSleepOverview(overview)
+      : previous?.value ?? null,
+  });
+  readonly clockOffset = computed(() => {
+    const serverNow = this.snapshot()?.serverNow;
+    return serverNow ? new Date(serverNow).getTime() - Date.now() : 0;
+  });
+  readonly kind = linkedSignal<{ activeId: string | null; suggested: SleepKind }, SleepKind>({
+    source: () => ({
+      activeId: this.snapshot()?.active?.id ?? null,
+      suggested: this.snapshot()?.suggestedKind ?? 'NAP',
+    }),
+    computation: (source, previous) =>
+      previous?.source.activeId === source.activeId && previous.source.suggested === source.suggested
+        ? previous.value
+        : source.suggested,
+  });
   readonly backdate = signal('');
   readonly wakeAt = signal('');
-  readonly birthDate = signal('');
   readonly formOpen = signal(false);
   readonly adjust = signal<'start' | 'pause' | null>(null);
   readonly adjustTime = signal('');
@@ -65,9 +86,6 @@ export class SleepPage {
     required(path.startedAt);
     required(path.endedAt);
   });
-  private kindTouched = false;
-  private birthEdited = false;
-  private lastActiveId: string | null | undefined = undefined;
 
   readonly tracker = computed(() => {
     const sleep = this.snapshot();
@@ -109,13 +127,6 @@ export class SleepPage {
     return {today, earlier};
   });
 
-  private readonly followServer = effect(() => {
-    const status = this.data.overview.status();
-    if (status !== 'resolved' && status !== 'reloading' && status !== 'local') return;
-    const overview = this.data.overview.value() as SleepOverview;
-    untracked(() => this.applyOverview(overview));
-  });
-
   constructor() {
     const poll = window.setInterval(() => {
       if (document.visibilityState === 'visible') this.data.overview.reload();
@@ -131,13 +142,7 @@ export class SleepPage {
   }
 
   chooseKind(kind: SleepKind): void {
-    this.kindTouched = true;
     this.kind.set(kind);
-  }
-
-  onBirthInput(value: string): void {
-    this.birthEdited = true;
-    this.birthDate.set(value);
   }
 
   barHeight(day: WeekDay): number {
@@ -411,7 +416,7 @@ export class SleepPage {
     });
   }
 
-  readonly napChoices = [3, 4] as const;
+  readonly napChoices = SLEEP_UI.napChoices;
 
   setNaps(count: number): void {
     if (this.snapshot()?.napTarget === count) return;
@@ -426,53 +431,9 @@ export class SleepPage {
     });
   }
 
-  saveBirth(): void {
-    const value = this.birthDate().trim();
-    this.busy.set(true);
-    this.data.saveProfile({ birthDate: value || null }).subscribe({
-      next: () => {
-        this.busy.set(false);
-        this.birthEdited = false;
-        this.error.set('');
-        this.notice.set(value ? 'Дату народження збережено.' : 'Вік знову рахується як 4 місяці.');
-      },
-      error: (error: unknown) => this.fail(error, 'Не вдалося зберегти дату.'),
-    });
-  }
-
-  private applyOverview(overview: SleepOverview): void {
-    const active = overview.active
-      ? { ...overview.active, pauses: overview.active.pauses ?? [] }
-      : null;
-    this.snapshot.set({
-      ...overview,
-      active,
-      sessions: overview.sessions.map((session) => ({ ...session, pauses: session.pauses ?? [] })),
-    });
-    this.clockOffset.set(new Date(overview.serverNow).getTime() - Date.now());
-    const activeId = overview.active?.id ?? null;
-    if (activeId !== this.lastActiveId) {
-      this.kindTouched = false;
-      this.lastActiveId = activeId;
-    }
-    if (!this.kindTouched) this.kind.set(overview.suggestedKind);
-    if (!this.birthEdited) this.birthDate.set(overview.profile.birthDate ?? '');
-  }
-
   private fail(error: unknown, fallback: string): void {
     this.busy.set(false);
-    this.error.set(readError(error, fallback));
+    this.error.set(readSleepError(error, fallback));
     this.data.overview.reload();
   }
-}
-
-function readError(error: unknown, fallback: string): string {
-  if (typeof error === 'object' && error && 'error' in error) {
-    const body = (error as { error?: { message?: unknown } }).error;
-    if (typeof body?.message === 'string') return body.message;
-    if (Array.isArray(body?.message) && body.message.every((item) => typeof item === 'string')) {
-      return body.message.join(' ');
-    }
-  }
-  return fallback;
 }

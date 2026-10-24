@@ -45,7 +45,7 @@
     @for (option of categories; track option.value) {
       <option [value]="option.value">{{ option.label }}</option>
     }</select></label></div>
-  <div class="section-heading"><h2>Люди й служби</h2><span>{{ filtered().length }} записів</span></div>
+  <div class="section-heading"><h2>Люди й служби</h2><span>Усього: {{ filtered().length }}</span></div>
   @if (contacts.isLoading()) {
     <div class="panel state" role="status">Завантажуємо контакти…</div>
   } @else if (contacts.error()) {
@@ -54,7 +54,7 @@
   </div>
 } @else if (!filtered().length) {
   <div class="panel state"><h2>Контактів не знайдено</h2>
-    <p>{{ contacts.value().length ? 'Змініть пошук або категорію.' : 'Додайте перший контакт.' }}</p>
+    <p>{{ availableContacts().length ? 'Змініть пошук або категорію.' : 'Додайте перший контакт.' }}</p>
     <button class="button button--secondary" type="button" (click)="createNew()">Додати контакт</button>
   </div>
 } @else {

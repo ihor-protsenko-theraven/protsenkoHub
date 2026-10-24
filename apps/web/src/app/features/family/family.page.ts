@@ -9,6 +9,7 @@ import {
 import { DatePipe } from '@angular/common';
 import { FormField, email, form, maxLength, required } from '@angular/forms/signals';
 import { AuthService } from '../../core/services/auth.service';
+import { formatAgeFromBirthDate } from './family-age.util';
 import type { ChildProfileForm } from './family.model';
 import { FamilyService } from './family.service';
 
@@ -29,19 +30,21 @@ export class FamilyPage {
     email(path.email);
   });
   readonly childModel = linkedSignal<ChildProfileForm>(() => {
-    const child = this.family.overview.value()?.child;
+    const child = this.family.overview.hasValue() ? this.family.overview.value().child : null;
     return {
-      babyName: child?.name ?? '',
+      name: child?.name ?? '',
       birthDate: child?.birthDate ?? '',
     };
   });
   readonly childForm = form(this.childModel, (path) => {
-    maxLength(path.babyName, 60);
+    required(path.name);
+    maxLength(path.name, 60);
+    required(path.birthDate);
   });
   readonly previewAgeLabel = computed(() => {
     const birthDate = this.childModel().birthDate.trim();
     if (!birthDate) {
-      return this.family.overview.value()?.child?.ageLabel ?? null;
+      return this.family.overview.hasValue() ? this.family.overview.value().child?.ageLabel ?? null : null;
     }
     return formatAgeFromBirthDate(birthDate);
   });
@@ -52,17 +55,21 @@ export class FamilyPage {
 
   saveChild(): void {
     const draft = this.childModel();
+    if (!this.childForm().valid() || !this.previewAgeLabel()) {
+      this.error.set('Вкажіть ім’я та коректну дату народження дитини.');
+      return;
+    }
     this.busy.set(true);
     this.error.set('');
     this.family
       .saveChild({
-        babyName: draft.babyName.trim() || null,
-        birthDate: draft.birthDate.trim() || null,
+        name: draft.name.trim(),
+        birthDate: draft.birthDate.trim(),
       })
       .subscribe({
         next: () => {
           this.busy.set(false);
-          this.notice.set('Дані дитини збережено. Ім’я та вік підтягнуться у трекер сну.');
+          this.notice.set('Дані дитини збережено для всієї родини.');
           this.family.overview.reload();
         },
         error: () => {
@@ -115,21 +122,4 @@ export class FamilyPage {
       },
     });
   }
-}
-
-function formatAgeFromBirthDate(birthDate: string): string | null {
-  const parsed = new Date(`${birthDate}T00:00:00`);
-  if (Number.isNaN(parsed.getTime())) return null;
-  const days = Math.floor((Date.now() - parsed.getTime()) / 86_400_000);
-  if (days < 0) return null;
-  const months = Math.floor(days / 30.436875);
-  const extraDays = Math.max(0, Math.round(days - months * 30.436875));
-  if (months <= 0) return `${days} дн.`;
-  if (months >= 12) {
-    const years = Math.floor(months / 12);
-    const remMonths = months % 12;
-    return remMonths === 0 ? `${years} р.` : `${years} р. ${remMonths} міс.`;
-  }
-  if (extraDays === 0) return `${months} міс.`;
-  return `${months} міс. ${extraDays} дн.`;
 }

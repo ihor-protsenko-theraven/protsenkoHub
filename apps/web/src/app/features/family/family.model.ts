@@ -21,13 +21,13 @@ export interface FamilyChildProfile {
 
 export interface FamilyOverview {
   name: string;
-  child: FamilyChildProfile;
+  child: FamilyChildProfile | null;
   members: FamilyMember[];
   invitations: FamilyInvitation[];
 }
 
 export interface ChildProfileForm {
-  babyName: string;
+  name: string;
   birthDate: string;
 }
 

@@ -13,6 +13,13 @@
   @if (snapshot(); as sleep) {
     <app-sleep-status [headline]="sleep.headline" [active]="sleep.active" [offset]="clockOffset()" [babyName]="sleep.profile.babyName" />
 
+    @if (sleep.profile.assumedAge) {
+      <div class="panel child-context">
+        <p>Додайте дитину в «Родині», щоб поради про сон враховували її вік.</p>
+        <a class="button button--secondary" routerLink="/app/family">Додати дитину</a>
+      </div>
+    }
+
     <section class="panel week-card" aria-label="Тиждень життя">
       <div>
         <span class="eyebrow">{{ sleep.profile.assumedAge ? 'Орієнтовно' : 'Зараз' }} · {{ sleep.profile.ageLabel }}</span>
@@ -138,11 +145,11 @@
         <span class="eyebrow">НАГАДУВАННЯ</span>
         <h2 id="reminder-title">Наступний сон</h2>
         <p>На цьому пристрої: за 20 хв, за 10 хв і в орієнтовний час початку. Цей перемикач також повідомляє про початок і кінець сну та про завершення задачі іншим батьком.</p>
-        @if (!reminders.supported) {
+        @if (!reminders.supported()) {
           <p class="field-help">Для push-сповіщень установіть PWA на головний екран і відкрийте його через HTTPS.</p>
         } @else if (reminders.config.error()) {
           <p class="field-help">Не вдалося перевірити налаштування сповіщень.</p>
-        } @else if (!reminders.config.isLoading() && !reminders.config.value().available) {
+        } @else if (!reminders.config.isLoading() && !reminders.available()) {
           <p class="field-help">Серверні сповіщення ще не налаштовані.</p>
         }
       </div>
@@ -150,7 +157,7 @@
         <button class="button button--secondary" type="button" [disabled]="reminders.busy()" (click)="reminders.disable()">Вимкнути</button>
       } @else {
         <button class="button button--primary" type="button"
-          [disabled]="reminders.busy() || !reminders.supported || !reminders.config.value().available"
+          [disabled]="reminders.busy() || !reminders.supported() || !reminders.available()"
           (click)="reminders.enable()">Увімкнути</button>
       }
     </section>
@@ -340,23 +347,6 @@
       </article>
     </ng-template>
 
-    <details class="panel fold-panel">
-      <summary id="birth-title">Вік і дата народження</summary>
-      <p class="field-help">
-        @if (sleep.profile.assumedAge) {
-          Поки дата не вказана, тиждень і норми рахуються як для 4 місяців.
-        } @else {
-          Вік для норм: {{ sleep.profile.ageLabel }}.
-        }
-      </p>
-      <div class="birth-row">
-        <label class="field">
-          <span>Дата</span>
-          <input type="date" [value]="birthDate()" (input)="onBirthInput($any($event.target).value)">
-        </label>
-        <button class="button button--secondary" type="button" [disabled]="busy()" (click)="saveBirth()">Зберегти дату</button>
-      </div>
-    </details>
   } @else if (data.overview.error()) {
     <div class="panel state">
       <h2>Не вдалося завантажити сон</h2>

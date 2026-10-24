@@ -1,0 +1,1 @@
+export const HOME_CLOCK_REFRESH_MS = 60_000;

@@ -1,5 +1,9 @@
 import { vi } from 'vitest';
-import { ForbiddenException, ConflictException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  ConflictException,
+} from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { MemberRole } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
@@ -17,6 +21,113 @@ const parent: AuthUser = {
 };
 
 describe('InvitationService', () => {
+  it('saves the child on the authenticated household', async () => {
+    const birthDate = new Date('2026-06-15T00:00:00.000Z');
+    const upsert = vi
+      .fn()
+      .mockResolvedValue({ id: 'child-1', name: 'Марко', birthDate });
+    const legacyUpsert = vi.fn().mockResolvedValue({});
+    const transaction = {
+      childProfile: { upsert },
+      sleepProfile: { upsert: legacyUpsert },
+    };
+    const service = new InvitationService(
+      {
+        household: {
+          findUniqueOrThrow: vi
+            .fn()
+            .mockResolvedValue({ timezone: 'Europe/Kyiv' }),
+        },
+        $transaction: vi.fn(
+          (callback: (tx: typeof transaction) => Promise<unknown>) =>
+            callback(transaction),
+        ),
+      } as unknown as PrismaService,
+      {} as JwtService,
+    );
+
+    const child = await service.saveFamilyChild(parent, {
+      name: ' Марко ',
+      birthDate: '2026-06-15',
+    });
+
+    expect(upsert).toHaveBeenCalledWith({
+      where: { householdId: 'family' },
+      create: {
+        householdId: 'family',
+        name: 'Марко',
+        birthDate,
+        updatedById: 'parent',
+      },
+      update: { name: 'Марко', birthDate, updatedById: 'parent' },
+    });
+    expect(legacyUpsert).toHaveBeenCalledWith({
+      where: { householdId: 'family' },
+      create: {
+        householdId: 'family',
+        babyName: 'Марко',
+        birthDate,
+        updatedById: 'parent',
+      },
+      update: { babyName: 'Марко', birthDate, updatedById: 'parent' },
+    });
+    expect(child).toEqual({
+      id: 'child-1',
+      name: 'Марко',
+      birthDate: '2026-06-15',
+    });
+    await expect(
+      service.saveFamilyChild(parent, {
+        name: 'Марко',
+        birthDate: '2026-02-30',
+      }),
+    ).rejects.toBeInstanceOf(BadRequestException);
+  });
+
+  it('accepts a child born today in the household time zone', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-10-23T21:30:00.000Z'));
+    try {
+      const upsert = vi.fn().mockResolvedValue({
+        id: 'child-1',
+        name: 'Марко',
+        birthDate: new Date('2026-10-24T00:00:00.000Z'),
+      });
+      const transaction = {
+        childProfile: { upsert },
+        sleepProfile: { upsert: vi.fn().mockResolvedValue({}) },
+      };
+      const service = new InvitationService(
+        {
+          household: {
+            findUniqueOrThrow: vi
+              .fn()
+              .mockResolvedValue({ timezone: 'Europe/Kyiv' }),
+          },
+          $transaction: vi.fn(
+            (callback: (tx: typeof transaction) => Promise<unknown>) =>
+              callback(transaction),
+          ),
+        } as unknown as PrismaService,
+        {} as JwtService,
+      );
+
+      await service.saveFamilyChild(parent, {
+        name: 'Марко',
+        birthDate: '2026-10-24',
+      });
+      expect(upsert).toHaveBeenCalledOnce();
+      await expect(
+        service.saveFamilyChild(parent, {
+          name: 'Марко',
+          birthDate: '2026-10-25',
+        }),
+      ).rejects.toBeInstanceOf(BadRequestException);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it('creates a one-time invitation for the inviter household', async () => {
     const created: Array<{
       data: { householdId: string; email: string; tokenHash: string };

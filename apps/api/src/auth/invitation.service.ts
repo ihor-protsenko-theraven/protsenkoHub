@@ -12,12 +12,12 @@ import { createHash, randomBytes } from 'crypto';
 import { PrismaService } from '../prisma/prisma.service';
 import type { AuthUser } from '../common/types';
 import { HOUSEHOLD } from '../config/household.config';
-import { SLEEP_TRACKER } from '../children/sleep/sleep.config';
 import {
   ageLabelFromDays,
   calendarAgeDays,
 } from '../children/sleep/sleep-time';
 import { INVITATION } from './invitation.config';
+import type { SaveFamilyChildDto } from './dto/family-child.dto';
 import type {
   CreateInvitationDto,
   RegisterInvitedDto,
@@ -36,9 +36,9 @@ export class InvitationService {
       select: {
         name: true,
         timezone: true,
-        sleepProfile: {
+        childProfile: {
           select: {
-            babyName: true,
+            name: true,
             birthDate: true,
             updatedBy: { select: { displayName: true } },
           },
@@ -68,15 +68,8 @@ export class InvitationService {
         },
       },
     });
-    const rawName = household.sleepProfile?.babyName?.trim();
-    const childName =
-      !rawName ||
-      rawName === SLEEP_TRACKER.legacyDefaultBabyName ||
-      rawName === SLEEP_TRACKER.defaultBabyName
-        ? ''
-        : rawName;
-    const birthDate = household.sleepProfile?.birthDate
-      ? household.sleepProfile.birthDate.toISOString().slice(0, 10)
+    const birthDate = household.childProfile?.birthDate
+      ? household.childProfile.birthDate.toISOString().slice(0, 10)
       : null;
     const timeZone = household.timezone || HOUSEHOLD.defaultTimeZone;
     const days = birthDate
@@ -84,17 +77,78 @@ export class InvitationService {
       : null;
     return {
       name: household.name,
-      child: {
-        name: childName,
-        birthDate,
-        ageLabel: days !== null ? ageLabelFromDays(days) : null,
-        updatedByName: household.sleepProfile?.updatedBy?.displayName ?? null,
-      },
+      child: household.childProfile
+        ? {
+            name: household.childProfile.name,
+            birthDate,
+            ageLabel: days !== null ? ageLabelFromDays(days) : null,
+            updatedByName:
+              household.childProfile.updatedBy?.displayName ?? null,
+          }
+        : null,
       members: household.members.map(({ user: account, ...member }) => ({
         ...member,
         email: account.email,
       })),
       invitations: household.invitations,
+    };
+  }
+
+  async saveFamilyChild(user: AuthUser, dto: SaveFamilyChildDto) {
+    const name = dto.name.trim();
+    const birthDate = new Date(`${dto.birthDate}T00:00:00.000Z`);
+    if (
+      !name ||
+      !Number.isFinite(birthDate.getTime()) ||
+      birthDate.toISOString().slice(0, 10) !== dto.birthDate
+    ) {
+      throw new BadRequestException(
+        'Вкажіть коректні ім’я та дату народження дитини.',
+      );
+    }
+    const household = await this.prisma.household.findUniqueOrThrow({
+      where: { id: user.householdId },
+      select: { timezone: true },
+    });
+    if (
+      calendarAgeDays(
+        dto.birthDate,
+        new Date(),
+        household.timezone || HOUSEHOLD.defaultTimeZone,
+      ) < 0
+    ) {
+      throw new BadRequestException(
+        'Дата народження не може бути в майбутньому.',
+      );
+    }
+    const child = await this.prisma.$transaction(async (tx) => {
+      const saved = await tx.childProfile.upsert({
+        where: { householdId: user.householdId },
+        create: {
+          householdId: user.householdId,
+          name,
+          birthDate,
+          updatedById: user.userId,
+        },
+        update: { name, birthDate, updatedById: user.userId },
+      });
+      // An installed older PWA or a rolled-back API still reads SleepProfile.
+      await tx.sleepProfile.upsert({
+        where: { householdId: user.householdId },
+        create: {
+          householdId: user.householdId,
+          babyName: name,
+          birthDate,
+          updatedById: user.userId,
+        },
+        update: { babyName: name, birthDate, updatedById: user.userId },
+      });
+      return saved;
+    });
+    return {
+      id: child.id,
+      name: child.name,
+      birthDate: child.birthDate?.toISOString().slice(0, 10) ?? null,
     };
   }
 

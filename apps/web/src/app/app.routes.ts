@@ -19,7 +19,12 @@ export const routes: Routes = [
     loadComponent: () =>
       import('./layout/shell.component').then((m) => m.ShellComponent),
     children: [
-      { path: '', pathMatch: 'full', redirectTo: 'calendar' },
+      { path: '', pathMatch: 'full', redirectTo: 'home' },
+      {
+        path: 'home',
+        loadComponent: () =>
+          import('./features/home/home.page').then((m) => m.HomePage),
+      },
       {
         path: 'calendar',
         loadComponent: () =>
@@ -52,6 +57,6 @@ export const routes: Routes = [
       },
     ],
   },
-  { path: '', pathMatch: 'full', redirectTo: 'app/calendar' },
-  { path: '**', redirectTo: 'app/calendar' },
+  { path: '', pathMatch: 'full', redirectTo: 'app/home' },
+  { path: '**', redirectTo: 'app/home' },
 ];

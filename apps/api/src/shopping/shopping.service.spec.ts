@@ -6,6 +6,53 @@ import { PrismaService } from '../prisma/prisma.service';
 import type { AuthUser } from '../common/types';
 
 describe('ShoppingService household access', () => {
+  it('creates a named list with items for the same household', async () => {
+    const create = vi.fn().mockResolvedValue({ id: 'list-1' });
+    const prisma = { shoppingList: { create } } as unknown as PrismaService;
+    const service = new ShoppingService(prisma);
+    const member = {
+      userId: 'parent-1',
+      householdId: 'household-1',
+    } as AuthUser;
+
+    await service.createList(member, {
+      name: ' До магазину ',
+      items: [' Хліб ', 'Молоко'],
+    });
+
+    expect(create).toHaveBeenCalledWith({
+      data: {
+        householdId: 'household-1',
+        name: 'До магазину',
+        isDefault: false,
+        items: {
+          create: [
+            { name: 'Хліб', sortOrder: 0, createdById: 'parent-1' },
+            { name: 'Молоко', sortOrder: 1, createdById: 'parent-1' },
+          ],
+        },
+      },
+      include: { items: true },
+    });
+  });
+
+  it('rejects adding an item to another household list', async () => {
+    const create = vi.fn();
+    const service = new ShoppingService({
+      shoppingList: { findFirst: vi.fn().mockResolvedValue(null) },
+      shoppingItem: { create },
+    } as unknown as PrismaService);
+    const member = {
+      userId: 'parent-1',
+      householdId: 'household-1',
+    } as AuthUser;
+
+    await expect(
+      service.createItem(member, { name: 'Хліб', listId: 'other-list' }),
+    ).rejects.toBeInstanceOf(NotFoundException);
+    expect(create).not.toHaveBeenCalled();
+  });
+
   it('records the authenticated member for creation and editing', async () => {
     const user: AuthUser = {
       userId: 'parent-1',

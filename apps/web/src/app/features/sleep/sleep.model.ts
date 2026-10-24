@@ -1,17 +1,5 @@
 export type SleepKind = 'NAP' | 'NIGHT';
-
-export function sleepKindLabel(kind: SleepKind): string {
-  switch (kind) {
-    case 'NAP':
-      return 'Денний сон';
-    case 'NIGHT':
-      return 'Ніч';
-    default: {
-      const exhaustive: never = kind;
-      return exhaustive;
-    }
-  }
-}
+export type SleepClockMode = 'asleep' | 'paused' | 'awake';
 
 export interface PauseSpan {
   startedAt: string;

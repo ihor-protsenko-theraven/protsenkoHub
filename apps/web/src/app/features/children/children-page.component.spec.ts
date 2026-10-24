@@ -5,6 +5,42 @@ import {ChildrenPage} from './children-page.component';
 import {ChildrenService} from './children.service';
 
 describe('ChildrenPage', () => {
+  it('shows a retry action when the initial task request fails', async () => {
+    const reload = vi.fn();
+    TestBed.configureTestingModule({
+      imports: [ChildrenPage],
+      providers: [provideRouter([])],
+    });
+    TestBed.overrideComponent(ChildrenPage, {
+      set: {
+        providers: [{
+          provide: ChildrenService,
+          useValue: {
+            tasks: {
+              hasValue: () => false,
+              isLoading: () => false,
+              error: () => new Error('Request failed'),
+              value: () => { throw new Error('ResourceValueError'); },
+              reload,
+            },
+          },
+        }],
+      },
+    });
+
+    const fixture = TestBed.createComponent(ChildrenPage);
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    const host = fixture.nativeElement as HTMLElement;
+    expect(host.textContent).toContain('Не вдалося завантажити');
+    const retry = Array.from(host.querySelectorAll('button'))
+      .find((button) => button.textContent?.trim() === 'Повторити');
+    expect(retry).toBeTruthy();
+    retry?.click();
+    expect(reload).toHaveBeenCalledOnce();
+  });
+
   it('names the section Діти and chooses a labeled priority while creating a task', async () => {
     TestBed.configureTestingModule({
       imports: [ChildrenPage],
@@ -16,6 +52,7 @@ describe('ChildrenPage', () => {
           provide: ChildrenService,
           useValue: {
             tasks: {
+              hasValue: () => true,
               isLoading: () => false,
               error: () => undefined,
               value: () => [],

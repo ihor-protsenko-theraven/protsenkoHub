@@ -37,7 +37,7 @@ export class LoginComponent {
       ? this.auth.login(this.loginModel().email.trim(), this.loginModel().password)
       : this.auth.register({ ...this.registerModel(), email: this.registerModel().email.trim() });
     request.subscribe({
-      next: () => void this.router.navigateByUrl('/app/calendar'),
+      next: () => void this.router.navigateByUrl('/app/home'),
       error: () => { this.busy.set(false); this.error.set('Не вдалося виконати дію. Перевірте дані та спробуйте ще раз.'); },
     });
   }

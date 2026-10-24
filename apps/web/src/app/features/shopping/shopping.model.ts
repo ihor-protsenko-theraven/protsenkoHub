@@ -2,6 +2,7 @@ import type { RecordAudit } from '../../shared/record-audit.model';
 
 export interface ShoppingItem extends RecordAudit {
   id: string;
+  listId: string;
   name: string;
   qty: number;
   unit: string | null;
@@ -19,7 +20,19 @@ export interface ShoppingItemForm {
 
 export interface ShoppingItemPayload {
   name: string;
+  listId?: string;
   qty: number;
   unit?: string | null;
   category?: string | null;
+}
+
+export interface ShoppingList {
+  id: string;
+  name: string;
+  isDefault: boolean;
+}
+
+export interface ShoppingListForm {
+  name: string;
+  items: string;
 }

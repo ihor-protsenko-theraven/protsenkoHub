@@ -49,9 +49,13 @@ export class SleepService {
   /** Reuse the same current guidance for the push dispatcher. */
   async overviewForHousehold(householdId: string) {
     const since = new Date(Date.now() - HISTORY_MS);
-    const [timeZone, profile, active] = await Promise.all([
+    const [timeZone, profile, child, active] = await Promise.all([
       this.timeZoneOf(householdId),
       this.ensureProfile(householdId),
+      this.prisma.childProfile.findUnique({
+        where: { householdId },
+        include: { updatedBy: { select: { displayName: true } } },
+      }),
       this.loadActive(householdId),
     ]);
     const sessions = await this.prisma.sleepSession.findMany({
@@ -66,7 +70,7 @@ export class SleepService {
       include: sessionInclude,
       orderBy: { startedAt: 'desc' },
     });
-    return this.compose(timeZone, profile, sessions, active);
+    return this.compose(timeZone, profile, child, sessions, active);
   }
 
   async start(user: AuthUser, dto: StartSleepDto) {
@@ -382,55 +386,67 @@ export class SleepService {
   }
 
   async updateProfile(user: AuthUser, dto: UpdateSleepProfileDto) {
-    if (dto.birthDate) this.assertBirth(dto.birthDate);
     const babyName =
       dto.babyName === undefined ? undefined : normalizeBabyName(dto.babyName);
-    const birthDate =
-      dto.birthDate === undefined
-        ? undefined
-        : dto.birthDate
-          ? new Date(`${dto.birthDate}T00:00:00.000Z`)
-          : null;
+    let birthDate: Date | null | undefined;
+    if (dto.birthDate !== undefined) {
+      birthDate = dto.birthDate
+        ? new Date(`${dto.birthDate}T00:00:00.000Z`)
+        : null;
+      if (dto.birthDate) {
+        if (
+          !Number.isFinite(birthDate?.getTime()) ||
+          birthDate?.toISOString().slice(0, 10) !== dto.birthDate ||
+          calendarAgeDays(
+            dto.birthDate,
+            new Date(),
+            await this.timeZoneOf(user.householdId),
+          ) < 0
+        ) {
+          throw new BadRequestException('Некоректна дата народження.');
+        }
+      }
+    }
     const napTarget = dto.napTarget === undefined ? undefined : dto.napTarget;
     const profile = await this.prisma.sleepProfile.upsert({
       where: { householdId: user.householdId },
       create: {
         householdId: user.householdId,
-        babyName: babyName ?? SLEEP_TRACKER.defaultBabyName,
-        birthDate: birthDate ?? null,
+        ...(babyName !== undefined ? { babyName } : {}),
+        ...(birthDate !== undefined ? { birthDate } : {}),
         napTarget: napTarget ?? null,
         updatedById: user.userId,
       },
       update: {
         ...(babyName !== undefined ? { babyName } : {}),
-        birthDate,
+        ...(birthDate !== undefined ? { birthDate } : {}),
         napTarget,
         updatedById: user.userId,
       },
     });
-    return {
-      babyName: normalizeBabyName(profile.babyName),
-      birthDate: profile.birthDate
-        ? profile.birthDate.toISOString().slice(0, 10)
-        : null,
-      napTarget: profile.napTarget,
-    };
+    return { napTarget: profile.napTarget };
   }
 
   private compose(
     timeZone: string,
     profile: {
-      babyName: string;
-      birthDate: Date | null;
       napTarget: number | null;
-      updatedBy?: { displayName: string } | null;
     },
+    child: {
+      name: string;
+      birthDate: Date | null;
+      updatedBy?: { displayName: string } | null;
+    } | null,
     sessions: SessionRow[],
     active: SessionRow | null,
   ) {
     const now = new Date();
-    const age = this.ageOf(profile, now, timeZone);
-    const babyName = normalizeBabyName(profile.babyName);
+    const age = this.ageOf(
+      { birthDate: child?.birthDate ?? null },
+      now,
+      timeZone,
+    );
+    const babyName = normalizeBabyName(child?.name);
     const guidance = buildSleepGuidance({
       babyName,
       now,
@@ -461,7 +477,7 @@ export class SleepService {
         ageLabel: age.label,
         assumedAge: age.assumed,
         napTarget: profile.napTarget,
-        updatedByName: profile.updatedBy?.displayName ?? null,
+        updatedByName: child?.updatedBy?.displayName ?? null,
       },
       active: active ? this.map(active) : null,
       sessions: sessions.map((session) => this.map(session)),
@@ -557,8 +573,7 @@ export class SleepService {
     if (existing) return existing;
     try {
       return await this.prisma.sleepProfile.create({
-        data: { householdId, babyName: SLEEP_TRACKER.defaultBabyName },
-        include: { updatedBy: { select: { displayName: true } } },
+        data: { householdId },
       });
     } catch (error) {
       if (!this.isUnique(error)) throw error;
@@ -715,24 +730,6 @@ export class SleepService {
     }
     if (date.getTime() > Date.now() + CLOCK_SKEW_MS) {
       throw new BadRequestException(`${label} ще не настав.`);
-    }
-  }
-
-  private assertBirth(value: string) {
-    const date = new Date(`${value}T00:00:00.000Z`);
-    if (Number.isNaN(date.getTime())) {
-      throw new BadRequestException('Некоректна дата народження.');
-    }
-    const days = (Date.now() - date.getTime()) / SLEEP_TRACKER.dayMs;
-    if (days < 0) {
-      throw new BadRequestException(
-        'Дата народження не може бути в майбутньому.',
-      );
-    }
-    if (days > 366 * 6) {
-      throw new BadRequestException(
-        'Дата народження надто давня для цього трекера.',
-      );
     }
   }
 

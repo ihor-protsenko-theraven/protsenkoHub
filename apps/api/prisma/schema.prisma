@@ -61,6 +61,7 @@ model User {
   sleepUpdated SleepSession[] @relation("SleepUpdatedBy")
   invitationsCreated HouseholdInvitation[] @relation("InvitationCreatedBy")
   sleepProfilesUpdated SleepProfile[] @relation("SleepProfileUpdatedBy")
+  childProfilesUpdated ChildProfile[] @relation("ChildProfileUpdatedBy")
   pushSubscriptions PushSubscription[]
 }
 
@@ -76,6 +77,7 @@ model Household {
   tasks         SolomiyaTask[]
   contacts      Contact[]
   sleepProfile  SleepProfile?
+  childProfile  ChildProfile?
   sleepSessions SleepSession[]
   activeSleep   ActiveSleep?
   pushSubscriptions PushSubscription[]
@@ -142,6 +144,7 @@ model ShoppingList {
   id          String         @id @default(cuid())
   householdId String
   name        String         @default("Продукти")
+  isDefault   Boolean        @default(true)
   createdAt   DateTime       @default(now())
   updatedAt   DateTime       @updatedAt
   household   Household      @relation(fields: [householdId], references: [id], onDelete: Cascade)
@@ -216,6 +219,7 @@ model SleepProfile {
   id          String    @id @default(cuid())
   householdId String    @unique
   updatedById String?
+  // Kept through the rollout so the previous API version can read sleep profiles.
   babyName    String    @default("Дитина")
   birthDate   DateTime?
   napTarget   Int?
@@ -223,6 +227,18 @@ model SleepProfile {
   updatedAt   DateTime  @updatedAt
   household   Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
   updatedBy   User? @relation("SleepProfileUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull)
+}
+
+model ChildProfile {
+  id          String    @id @default(cuid())
+  householdId String    @unique
+  name        String
+  birthDate   DateTime?
+  updatedById String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  household   Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  updatedBy   User?     @relation("ChildProfileUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull)
 }
 
 // Open tracker lives in ActiveSleep (one row per household). SleepSession keeps

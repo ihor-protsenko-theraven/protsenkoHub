@@ -1,9 +1,9 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { FormField, email, form, required } from '@angular/forms/signals';
-import {
-  CONTACT_CATEGORIES, ContactCategory, ContactForm, ContactItem, ContactPayload, contactCategoryLabel,
-} from './contacts.model';
+import { CONTACT_CATEGORIES } from './contacts.config';
+import { ContactCategory, ContactForm, ContactItem, ContactPayload } from './contacts.model';
 import { ContactsService } from './contacts.service';
+import { contactCategoryLabel } from './contacts.util';
 
 const emptyForm = (): ContactForm => ({
   name: '', category: 'DOCTOR', phone: '', email: '', organization: '', notes: '',
@@ -20,13 +20,14 @@ const emptyForm = (): ContactForm => ({
 export class ContactsPage {
   readonly data = inject(ContactsService);
   readonly contacts = this.data.contacts;
+  readonly availableContacts = computed(() => this.contacts.hasValue() ? this.contacts.value() : []);
   readonly categories = CONTACT_CATEGORIES;
   readonly categoryLabel = contactCategoryLabel;
   readonly search = signal('');
   readonly category = signal<ContactCategory | 'ALL'>('ALL');
   readonly filtered = computed(() => {
     const query = this.search().trim().toLocaleLowerCase('uk');
-    return this.contacts.value().filter((contact) =>
+    return this.availableContacts().filter((contact) =>
       (this.category() === 'ALL' || contact.category === this.category()) &&
       (!query || [contact.name, contact.organization, contact.phone, contact.email]
         .some((part) => part?.toLocaleLowerCase('uk').includes(query))),
