@@ -23,15 +23,45 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
   ) {
     super({
       jwtFromRequest: ExtractJwt.fromExtractors([
-        cookieExtractor,
         ExtractJwt.fromAuthHeaderAsBearerToken(),
+        cookieExtractor,
       ]),
       ignoreExpiration: false,
       secretOrKey: config.getOrThrow<string>('JWT_SECRET'),
+      passReqToCallback: true,
     });
   }
 
-  async validate(payload: JwtPayload): Promise<AuthUser> {
+  async validate(request: Request, payload: JwtPayload): Promise<AuthUser> {
+    if (payload.typ === 'widget-action') {
+      const allowed =
+        (request.method === 'GET' &&
+          request.path === AUTH.widgetRoutes.snapshot) ||
+        (request.method === 'POST' &&
+          request.path === AUTH.widgetRoutes.action);
+      if (!allowed) {
+        throw new UnauthorizedException('Widget credential is out of scope');
+      }
+    } else if (payload.typ !== undefined && payload.typ !== 'mobile-access') {
+      throw new UnauthorizedException('Invalid token type');
+    }
+
+    if (payload.typ === 'mobile-access' || payload.typ === 'widget-action') {
+      const active =
+        payload.sid &&
+        (await this.prisma.mobileSession.findFirst({
+          where: {
+            id: payload.sid,
+            userId: payload.sub,
+            revokedAt: null,
+            expiresAt: { gt: new Date() },
+          },
+          select: { id: true },
+        }));
+      if (!active) {
+        throw new UnauthorizedException('Mobile session expired');
+      }
+    }
     const account = await this.prisma.user.findUnique({
       where: { id: payload.sub },
       select: {

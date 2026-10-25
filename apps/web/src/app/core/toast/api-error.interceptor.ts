@@ -1,15 +1,19 @@
-import { HttpContextToken, HttpErrorResponse, HttpInterceptorFn } from '@angular/common/http';
+import { HttpContextToken, HttpErrorResponse, HttpInterceptorFn, HttpResponse } from '@angular/common/http';
 import { inject } from '@angular/core';
-import { catchError, throwError } from 'rxjs';
+import { catchError, tap, throwError } from 'rxjs';
 import { API_BASE_URL } from '../configs/api.config';
+import { TOAST_CONFIG } from './toast.config';
 import { ToastService } from './toast.service';
 
 export const EXPECTED_GUEST_SESSION = new HttpContextToken<boolean>(() => false);
 
 export const apiErrorInterceptor: HttpInterceptorFn = (request, next) => {
   const toasts = inject(ToastService);
-  return next(request).pipe(catchError((error: unknown) => {
+  return next(request).pipe(tap((event) => {
+    if (request.url.startsWith(API_BASE_URL) && event instanceof HttpResponse) toasts.dismissConnectivityError();
+  }), catchError((error: unknown) => {
     if (error instanceof HttpErrorResponse && request.url.startsWith(API_BASE_URL)) {
+      if (error.status !== 0) toasts.dismissConnectivityError();
       const expectedGuest = request.context.get(EXPECTED_GUEST_SESSION) && error.status === 401;
       if (!expectedGuest) toasts.error(apiErrorMessage(error));
     }
@@ -18,7 +22,7 @@ export const apiErrorInterceptor: HttpInterceptorFn = (request, next) => {
 };
 
 function apiErrorMessage(error: HttpErrorResponse): string {
-  if (error.status === 0) return 'Немає зв’язку із сервером. Перевірте інтернет і спробуйте ще раз.';
+  if (error.status === 0) return TOAST_CONFIG.connectivityErrorMessage;
   if (error.status >= 500) return 'Сервер тимчасово недоступний. Спробуйте ще раз пізніше.';
   if (error.status === 401) return 'Потрібно увійти або перевірити дані входу.';
   const detail = error.error?.message;

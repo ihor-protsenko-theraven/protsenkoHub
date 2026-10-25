@@ -20,6 +20,11 @@ export class ToastService {
     this.currentMessages.update((messages) => messages.filter((message) => message.id !== id));
   }
 
+  dismissConnectivityError(): void {
+    this.currentMessages.update((messages) => messages.filter((message) =>
+      message.kind !== 'error' || message.text !== TOAST_CONFIG.connectivityErrorMessage));
+  }
+
   private show(text: string, kind: ToastMessage['kind']): void {
     if (this.currentMessages().some((message) => message.text === text && message.kind === kind)) return;
     const id = ++this.nextId;

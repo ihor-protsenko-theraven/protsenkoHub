@@ -1,4 +1,4 @@
-import {DatePipe, NgTemplateOutlet} from '@angular/common';
+import {NgTemplateOutlet} from '@angular/common';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -10,6 +10,7 @@ import {
 } from '@angular/core';
 import {form, FormField, required} from '@angular/forms/signals';
 import {RouterLink} from '@angular/router';
+import {Capacitor} from '@capacitor/core';
 import {APP_LOCALE} from '../../core/configs/locale.config';
 import {HistoryPanel} from '../../shared/history-panel.component';
 import {toLocalDateTime} from '../../shared/date-time.util';
@@ -25,19 +26,21 @@ import {SleepReminderService} from './sleep-reminder.service';
 import {SleepStatus} from './sleep-status.component';
 import {SleepTickerService} from './sleep-ticker.service';
 import {SleepTimer} from './sleep-timer.component';
+import {SleepTimePipe} from './sleep-time.pipe';
 
 const emptyForm = (): SleepForm => ({kind: 'NAP', startedAt: '', endedAt: '', notes: ''});
 const dayCount = new Intl.NumberFormat(APP_LOCALE, {style: 'unit', unit: 'day', unitDisplay: 'long'});
 
 @Component({
   selector: 'app-sleep-page',
-  imports: [DatePipe, FormField, HistoryPanel, NgTemplateOutlet, RouterLink, SleepStatus, SleepTimer],
+  imports: [FormField, HistoryPanel, NgTemplateOutlet, RouterLink, SleepStatus, SleepTimePipe, SleepTimer],
   providers: [SleepService, SleepReminderService, SleepTickerService],
   templateUrl: './sleep.page.html',
   styleUrl: './sleep.page.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class SleepPage {
+  readonly nativePlatform = Capacitor.isNativePlatform();
   readonly data = inject(SleepService);
   readonly reminders = inject(SleepReminderService);
   private readonly ticker = inject(SleepTickerService);
@@ -128,11 +131,18 @@ export class SleepPage {
   });
 
   constructor() {
+    void this.data.syncWidget();
     const poll = window.setInterval(() => {
-      if (document.visibilityState === 'visible') this.data.overview.reload();
+      if (document.visibilityState === 'visible') {
+        this.data.overview.reload();
+        void this.data.syncWidget();
+      }
     }, SLEEP_UI.pollMs);
     const onVisible = () => {
-      if (document.visibilityState === 'visible') this.data.overview.reload();
+      if (document.visibilityState === 'visible') {
+        this.data.overview.reload();
+        void this.data.syncWidget();
+      }
     };
     document.addEventListener('visibilitychange', onVisible);
     this.destroyRef.onDestroy(() => {
@@ -179,8 +189,8 @@ export class SleepPage {
         this.error.set('');
         this.notice.set(
           result.resumed
-            ? 'Сон уже йшов. Таймер лишився з початкового часу.'
-            : 'Сон розпочато. Час збережено для всієї родини.',
+            ? 'Сон уже триває. Час початку не змінено.'
+            : 'Сон розпочато.',
         );
       },
       error: (error: unknown) => this.fail(error, 'Не вдалося почати сон.'),
@@ -211,7 +221,7 @@ export class SleepPage {
       next: (result) => {
         this.busy.set(false);
         this.error.set('');
-        this.notice.set(result.alreadyPaused ? 'Пауза вже йде.' : 'Сон на паузі. Лічильник сну зупинено.');
+        this.notice.set(result.alreadyPaused ? 'Пауза вже триває.' : 'Сон на паузі.');
       },
       error: (error: unknown) => this.fail(error, 'Не вдалося поставити паузу.'),
     });

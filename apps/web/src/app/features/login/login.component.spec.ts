@@ -10,7 +10,7 @@ describe('LoginComponent', () => {
       imports: [LoginComponent],
       providers: [
         provideRouter([]),
-        { provide: AuthService, useValue: { login: () => of(null), register: () => of(null) } },
+        { provide: AuthService, useValue: { login: () => of(null), register: () => of(null), consumePostLoginRoute: () => '/app/home' } },
       ],
     });
     const fixture = TestBed.createComponent(LoginComponent);

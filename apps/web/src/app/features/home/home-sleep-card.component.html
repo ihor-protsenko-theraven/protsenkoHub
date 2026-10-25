@@ -1,7 +1,6 @@
 <section class="panel home-sleep" aria-labelledby="sleep-title">
   <div class="home-sleep__heading">
-    <span class="eyebrow">СОН ДИТИНИ</span>
-    <h2 id="sleep-title">Як минає день</h2>
+    <h2 id="sleep-title">Сон дитини</h2>
   </div>
   @if (sleep.overview.isLoading()) {
     <p role="status">Завантажуємо дані про сон…</p>
@@ -15,17 +14,17 @@
     <div class="home-sleep__body">
       <div>
         <strong class="home-sleep__number">{{ sleepDuration(overview.stats.todaySleepMin) }}</strong>
-        <span>сну за сьогодні</span>
+        <span>сну сьогодні</span>
       </div>
       <p>
         @if (overview.active) {
-          {{ overview.profile.babyName }} зараз спить. Сон почався о {{ overview.active.startedAt | date:'HH:mm':overview.timeZone:'uk' }}.
+          {{ overview.profile.babyName }} спить. Початок о {{ overview.active.startedAt | sleepTime:overview.timeZone }}.
         } @else if (overview.nextSleepAt) {
-          Наступний сон орієнтовно о {{ overview.nextSleepAt | date:'HH:mm':overview.timeZone:'uk' }}.
+          Наступний сон близько {{ overview.nextSleepAt | sleepTime:overview.timeZone }}.
         } @else if (overview.stats.todaySleepMin > 0) {
-          Усі записи сну збережені для родини.
+          Сьогоднішній сон записано.
         } @else {
-          Записів за сьогодні ще немає. Почніть трекер, коли дитина засне.
+          Поки немає записів сну.
         }
       </p>
     </div>

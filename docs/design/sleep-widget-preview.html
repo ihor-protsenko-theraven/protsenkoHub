@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="uk">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Макет віджетів сну — protsenkoHub</title>
+  <style>
+    :root {
+      --paper: #f7f3f8;
+      --ink: #342b3c;
+      --muted: #6d6174;
+      --card: #302d36;
+      --lavender: #b5a9ff;
+      --white: #f7f6fa;
+      --soft: #efedf5;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: var(--paper);
+      color: var(--ink);
+      font-family: 'Segoe UI', system-ui, sans-serif;
+    }
+    main { width: 1120px; min-height: 655px; margin: auto; padding: 44px 54px 48px; }
+    .heading { display: flex; align-items: end; justify-content: space-between; gap: 40px; }
+    h1 { margin: 0; font: 600 36px/1.05 Georgia, serif; letter-spacing: -.04em; }
+    .subtitle { margin: 11px 0 0; font-size: 16px; color: var(--muted); }
+    .note { width: 250px; margin: 0; color: var(--muted); font-size: 13px; line-height: 1.45; text-align: right; }
+    .grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 24px; margin-top: 48px; }
+    .case-title { margin: 0 0 13px 4px; font-weight: 700; font-size: 14px; }
+    .widget {
+      width: 224px;
+      height: 224px;
+      padding: 16px 15px 13px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      background: var(--card);
+      color: var(--white);
+      border-radius: 34px;
+      box-shadow: 0 16px 32px rgba(48, 32, 60, .18), inset 0 1px rgba(255,255,255,.05);
+    }
+    .name {
+      max-width: 100%;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      padding: 5px 15px;
+      border-radius: 100px;
+      background: var(--soft);
+      color: #564c5c;
+      font-size: 13px;
+      line-height: 17px;
+    }
+    .state { margin-top: 14px; font-size: 15px; font-weight: 700; line-height: 19px; }
+    .value { margin-top: 4px; color: var(--lavender); font-size: 30px; font-weight: 750; line-height: 37px; letter-spacing: -.045em; font-variant-numeric: tabular-nums; }
+    .value.smaller { font-size: 18px; letter-spacing: 0; line-height: 37px; }
+    .action {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 7px;
+      min-width: 112px;
+      height: 36px;
+      margin-top: 6px;
+      padding: 0 13px;
+      border: 1px solid rgba(181,169,255,.46);
+      border-radius: 18px;
+      background: rgba(181,169,255,.16);
+      color: #d6ccff;
+      font-size: 13px;
+      font-weight: 750;
+    }
+    .action.secondary { border-color: rgba(247,246,250,.22); background: rgba(247,246,250,.07); color: var(--white); }
+    .action svg { width: 13px; height: 13px; fill: currentColor; flex: 0 0 auto; }
+    .updated { margin-top: auto; color: #c7c4d1; font-size: 10px; line-height: 13px; }
+    .caption { max-width: 224px; margin: 13px 4px 0; color: var(--muted); font-size: 12px; line-height: 1.4; }
+    .footer { margin-top: 36px; border-top: 1px solid #e6dae9; padding-top: 14px; color: var(--muted); font-size: 13px; }
+  </style>
+</head>
+<body>
+  <main>
+    <div class="heading">
+      <div>
+        <h1>Сон на головному екрані</h1>
+        <p class="subtitle">Компактний віджет для iPhone та Android</p>
+      </div>
+      <p class="note">Макет наступного етапу. Фактичний вигляд і розміри перевіримо на пристроях.</p>
+    </div>
+    <div class="grid">
+      <section>
+        <h2 class="case-title">Сон триває</h2>
+        <div class="widget">
+          <span class="name">Соломія</span>
+          <span class="state">Зараз спить</span>
+          <strong class="value">02:14</strong>
+          <span class="action"><svg viewBox="0 0 16 16" aria-hidden="true"><rect x="2" y="1" width="4" height="14" rx="1"/><rect x="10" y="1" width="4" height="14" rx="1"/></svg>Пауза</span>
+          <span class="updated">Дані на 17:02 · торкніться картки, щоб відкрити</span>
+        </div>
+        <p class="caption">Одна пряма дія. Картка відкриває екран сну.</p>
+      </section>
+      <section>
+        <h2 class="case-title">Сон на паузі</h2>
+        <div class="widget">
+          <span class="name">Соломія</span>
+          <span class="state">Пауза сну</span>
+          <strong class="value">02:14</strong>
+          <span class="action"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 1.7c0-.7.8-1.1 1.4-.8l10 6.3a1 1 0 0 1 0 1.6l-10 6.3A.9.9 0 0 1 3 14.3z"/></svg>Продовжити</span>
+          <span class="updated">Дані на 17:02 · тривалість зафіксована</span>
+        </div>
+        <p class="caption">Час сну не збільшується під час паузи.</p>
+      </section>
+      <section>
+        <h2 class="case-title">Наступний сон</h2>
+        <div class="widget">
+          <span class="name">Соломія</span>
+          <span class="state">Наступний сон</span>
+          <strong class="value">17:02</strong>
+          <span class="action secondary">Відкрити сон ›</span>
+          <span class="updated">Дані на 16:41 · прогноз може змінитися</span>
+        </div>
+        <p class="caption">Початок сну відкривається в застосунку для вибору типу.</p>
+      </section>
+      <section>
+        <h2 class="case-title">Дані застаріли</h2>
+        <div class="widget">
+          <span class="name">Соломія</span>
+          <span class="state">Перевірте стан сну</span>
+          <strong class="value smaller">Потрібне оновлення</strong>
+          <span class="action secondary">Відкрити сон ›</span>
+          <span class="updated">Застаріло · дані на 15:12</span>
+        </div>
+        <p class="caption">Віджет не виконує дію зі старого запису.</p>
+      </section>
+    </div>
+    <p class="footer">protsenkoHub · концепт інтерфейсу, жовтень 2026</p>
+  </main>
+</body>
+</html>

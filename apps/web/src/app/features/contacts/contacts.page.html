@@ -1,9 +1,9 @@
 <section class="page" aria-labelledby="page-title">
   <header class="page-header">
-    <div><span class="eyebrow">ВАЖЛИВІ ЛЮДИ</span>
+    <div>
       <h1 id="page-title">Контакти</h1>
-      <p class="page-subtitle">Швидкий доступ до потрібних людей і номерів.</p></div>
-    <button class="button button--primary" type="button" (click)="createNew()">+ Додати контакт</button>
+    </div>
+    <button class="button button--primary" type="button" (click)="createNew()">Додати контакт</button>
   </header>
   @if (notice()) {
     <p class="message message--success" role="status">{{ notice() }}</p>
@@ -29,14 +29,13 @@
         <p class="message message--error" role="alert">{{ error() }}</p>
       }
       <div class="form-actions">
-        <button class="button button--primary" type="submit" [disabled]="busy()">Зберегти</button>
+        <button class="button button--primary" type="submit" [disabled]="busy()">{{ editingId() ? 'Зберегти зміни' : 'Додати контакт' }}</button>
         <button class="button button--quiet" type="button" (click)="cancel()">Скасувати</button>
       </div>
     </form>
   </section>
 }
   <div class="panel toolbar"><label class="field field--search"><span>Пошук контактів</span><input type="search"
-                                                                                                   placeholder="Ім’я, організація, телефон або email"
                                                                                                    [value]="search()"
                                                                                                    (input)="search.set($any($event.target).value)"></label><label
     class="field field--filter"><span>Категорія</span><select [value]="category()"
@@ -45,7 +44,9 @@
     @for (option of categories; track option.value) {
       <option [value]="option.value">{{ option.label }}</option>
     }</select></label></div>
-  <div class="section-heading"><h2>Люди й служби</h2><span>Усього: {{ filtered().length }}</span></div>
+  <div class="section-heading"><h2>Люди й служби</h2>
+    @if (contacts.hasValue() && !contacts.isLoading() && !contacts.error()) { <span>Показано: {{ filtered().length }}</span> }
+  </div>
   @if (contacts.isLoading()) {
     <div class="panel state" role="status">Завантажуємо контакти…</div>
   } @else if (contacts.error()) {
@@ -53,9 +54,9 @@
     <button class="button button--secondary" type="button" (click)="contacts.reload()">Повторити</button>
   </div>
 } @else if (!filtered().length) {
-  <div class="panel state"><h2>Контактів не знайдено</h2>
-    <p>{{ availableContacts().length ? 'Змініть пошук або категорію.' : 'Додайте перший контакт.' }}</p>
-    <button class="button button--secondary" type="button" (click)="createNew()">Додати контакт</button>
+  <div class="panel state"><h2>{{ availableContacts().length ? 'Нічого не знайдено' : 'Контактів поки немає' }}</h2>
+    @if (availableContacts().length) { <p>Змініть пошук або категорію.</p> }
+    @else { <button class="button button--secondary" type="button" (click)="createNew()">Додати контакт</button> }
   </div>
 } @else {
   <div class="list">@for (contact of filtered(); track contact.id) {
@@ -73,10 +74,12 @@
         @if (contact.notes) {
           <p>{{ contact.notes }}</p>
         }
-        <div class="record-audit">
-          <span>Додав: {{ contact.createdBy?.displayName || 'невідомо' }}</span>
-          @if (contact.updatedBy; as editor) { <span>Змінив: {{ editor.displayName }}</span> }
-        </div></div>
+        @if (contact.createdBy?.displayName || contact.updatedBy?.displayName) {
+          <div class="record-audit">
+            @if (contact.createdBy?.displayName; as creator) { <span>Додав: {{ creator }}</span> }
+            @if (contact.updatedBy?.displayName; as editor) { <span>Змінив: {{ editor }}</span> }
+          </div>
+        }</div>
       <div class="list-card__actions">@if (deletingId() === contact.id) {
         <div class="confirm"><span>Видалити?</span>
           <button class="button button--danger" type="button" [disabled]="busy()" (click)="remove(contact.id)">Так

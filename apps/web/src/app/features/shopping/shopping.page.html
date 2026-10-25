@@ -1,11 +1,11 @@
 <section class="page shopping" aria-labelledby="page-title">
   <header class="page-header shopping-header">
-    <div><span class="eyebrow">СПІЛЬНІ ПОКУПКИ</span><h1 id="page-title">Покупки</h1><p class="page-subtitle">Одна річ або цілий похід у магазин — усе в спільному просторі.</p></div>
+    <div><h1 id="page-title">Покупки</h1></div>
   </header>
 
   <div class="shopping-actions" aria-label="Додати покупку">
-    <button class="shopping-action shopping-action--single" type="button" (click)="createNew()"><span class="shopping-action__mark" aria-hidden="true">+</span><span><strong>Окрема покупка</strong><small>Наприклад, купити холодильник</small></span></button>
-    <button class="shopping-action shopping-action--list" type="button" (click)="createNewList()"><span class="shopping-action__mark" aria-hidden="true">≡</span><span><strong>Новий список</strong><small>Хліб, молоко й усе для магазину</small></span></button>
+    <button class="shopping-action shopping-action--single" type="button" (click)="createNew()"><span class="shopping-action__mark" aria-hidden="true">+</span><strong>Додати покупку</strong></button>
+    <button class="shopping-action shopping-action--list" type="button" (click)="createNewList()"><span class="shopping-action__mark" aria-hidden="true">≡</span><strong>Створити список</strong></button>
   </div>
 
   @if (notice()) { <p class="message message--success" role="status">{{ notice() }}</p> }
@@ -16,10 +16,10 @@
       <div class="form-panel__header"><h2 id="shopping-form-title">{{ editingId() ? 'Змінити покупку' : targetListId() ? 'Додати до списку' : 'Окрема покупка' }}</h2></div>
       <form (submit)="$event.preventDefault(); save()">
         <div class="field-grid">
-          <label class="field field--wide"><span>Що купити</span><input [formField]="itemForm.name" placeholder="Назва покупки"></label>
+          <label class="field field--wide"><span>Що купити</span><input [formField]="itemForm.name"></label>
           <label class="field"><span>Кількість</span><input type="number" step="any" [formField]="itemForm.qty"></label>
           <label class="field"><span>Одиниця</span><input [formField]="itemForm.unit" placeholder="шт, кг, л"></label>
-          <label class="field field--wide"><span>Категорія</span><input [formField]="itemForm.category" placeholder="За потреби"></label>
+          <label class="field field--wide"><span>Категорія</span><input [formField]="itemForm.category"></label>
         </div>
         @if (error()) { <p class="message message--error" role="alert">{{ error() }}</p> }
         <div class="form-actions"><button class="button button--primary" type="submit" [disabled]="busy()">{{ editingId() ? 'Зберегти зміни' : 'Додати покупку' }}</button><button class="button button--quiet" type="button" (click)="cancel()">Скасувати</button></div>
@@ -29,11 +29,10 @@
 
   @if (listFormOpen()) {
     <section class="panel form-panel shopping-list-form" aria-labelledby="list-form-title">
-      <div class="form-panel__header"><h2 id="list-form-title">Новий список покупок</h2></div>
-      <p>Назвіть похід і запишіть покупки — кожну з нового рядка. Позиції можна доповнити пізніше.</p>
+      <div class="form-panel__header"><h2 id="list-form-title">Новий список</h2></div>
       <form (submit)="$event.preventDefault(); saveList()">
-        <label class="field"><span>Назва списку</span><input [formField]="listForm.name" placeholder="Наприклад, До магазину в суботу"></label>
-        <label class="field"><span>Що потрібно купити</span><textarea [formField]="listForm.items" rows="5" placeholder="Хліб&#10;Молоко&#10;Яблука"></textarea></label>
+        <label class="field"><span>Назва списку</span><input [formField]="listForm.name" placeholder="Наприклад, На вихідні"></label>
+        <label class="field"><span>Покупки — по одній у рядку</span><textarea [formField]="listForm.items" rows="5" placeholder="Хліб&#10;Молоко&#10;Яблука"></textarea></label>
         @if (error()) { <p class="message message--error" role="alert">{{ error() }}</p> }
         <div class="form-actions"><button class="button button--primary" type="submit" [disabled]="busy()">Створити список</button><button class="button button--quiet" type="button" (click)="cancelList()">Скасувати</button></div>
       </form>
@@ -50,13 +49,15 @@
   } @else if (items.isLoading() || lists.isLoading()) {
     <div class="panel state" role="status">Завантажуємо покупки…</div>
   } @else {
-    <div class="section-heading"><h2>Окремі покупки</h2><span>{{ singleItems().length }}</span></div>
-    @if (singleItems().length) {
-      <div class="list shopping-singles">@for (item of singleItems(); track item.id) { <ng-container [ngTemplateOutlet]="itemCard" [ngTemplateOutletContext]="{ $implicit: item }" /> }</div>
-    } @else if (!namedGroups().length && !availableItems().length) {
-      <div class="panel state"><h2>Поки нічого купувати</h2><p>Додайте одну річ або створіть список для наступного походу.</p></div>
-    } @else {
-      <p class="shopping-empty">{{ search() || category() ? 'За цим пошуком немає окремих покупок.' : 'Окремих покупок немає.' }}</p>
+    @if (singleItems().length || !namedGroups().length) {
+      <div class="section-heading"><h2>Окремі покупки</h2><span>{{ singleItems().length }}</span></div>
+      @if (singleItems().length) {
+        <div class="list shopping-singles">@for (item of singleItems(); track item.id) { <ng-container [ngTemplateOutlet]="itemCard" [ngTemplateOutletContext]="{ $implicit: item }" /> }</div>
+      } @else if (!availableItems().length) {
+        <div class="panel state"><h2>Покупок ще немає</h2></div>
+      } @else {
+        <p class="shopping-empty">{{ search() || category() ? 'Нічого не знайдено.' : 'Окремих покупок немає.' }}</p>
+      }
     }
 
     @if (namedGroups().length) {
@@ -64,10 +65,10 @@
       <div class="shopping-groups">
         @for (group of namedGroups(); track group.id) {
           <section class="panel shopping-group" [attr.aria-labelledby]="'list-' + group.id">
-            <div class="shopping-group__top"><div><span class="eyebrow">СПИСОК ПОКУПОК</span><h3 [id]="'list-' + group.id">{{ group.name }}</h3><p>{{ group.checked }} з {{ group.total }} куплено</p></div><button class="button button--secondary" type="button" (click)="createNew(group.id)">Додати позицію</button></div>
+            <div class="shopping-group__top"><div><h3 [id]="'list-' + group.id">{{ group.name }}</h3>@if (group.total) { <p>{{ group.checked }}/{{ group.total }} куплено</p> }</div><button class="button button--secondary" type="button" (click)="createNew(group.id)">Додати позицію</button></div>
             @if (group.visible.length) {
               <div class="list shopping-group__items">@for (item of group.visible; track item.id) { <ng-container [ngTemplateOutlet]="itemCard" [ngTemplateOutletContext]="{ $implicit: item }" /> }</div>
-            } @else { <p class="shopping-empty">{{ search() || category() ? 'За цим пошуком нічого немає.' : 'Список порожній. Додайте позицію.' }}</p> }
+            } @else { <p class="shopping-empty">{{ search() || category() ? 'Нічого не знайдено.' : 'Список порожній.' }}</p> }
             <div class="shopping-group__footer">
               @if (deletingListId() === group.id) { <div class="confirm"><span>Видалити весь список?</span><button class="button button--danger" type="button" [disabled]="busy()" (click)="removeList(group.id)">Так, видалити</button><button class="button button--quiet" type="button" (click)="deletingListId.set(null)">Ні</button></div> }
               @else { <button class="button button--quiet" type="button" (click)="deletingListId.set(group.id)">Видалити список</button> }
@@ -82,7 +83,14 @@
 
   <ng-template #itemCard let-item>
     <article class="panel list-card shopping-item" [class.shopping-item--done]="item.isChecked">
-      <div class="list-card__main shopping-item__main"><button class="check-button" type="button" [attr.aria-label]="(item.isChecked ? 'Повернути до списку: ' : 'Позначити як куплене: ') + item.name" [attr.aria-pressed]="item.isChecked" [disabled]="busy()" (click)="toggle(item)">{{ item.isChecked ? '✓' : '' }}</button><div><h3>{{ item.name }}</h3><div class="list-card__meta"><span>{{ item.qty }} {{ item.unit || 'шт' }}</span>@if (item.category) { <span class="badge">{{ item.category }}</span> }</div><div class="record-audit"><span>Додав: {{ item.createdBy?.displayName || 'невідомо' }}</span>@if (item.updatedBy; as editor) { <span>Змінив: {{ editor.displayName }}</span> }</div></div></div>
+      <div class="list-card__main shopping-item__main"><button class="check-button" type="button" [attr.aria-label]="(item.isChecked ? 'Повернути до списку: ' : 'Позначити як куплене: ') + item.name" [attr.aria-pressed]="item.isChecked" [disabled]="busy()" (click)="toggle(item)">{{ item.isChecked ? '✓' : '' }}</button><div><h3>{{ item.name }}</h3><div class="list-card__meta"><span>{{ item.qty }} {{ item.unit || 'шт' }}</span>@if (item.category) { <span class="badge">{{ item.category }}</span> }</div>
+        @if (item.createdBy?.displayName?.trim() || item.updatedBy?.displayName?.trim()) {
+          <div class="record-audit">
+            @if (item.createdBy?.displayName?.trim(); as creator) { <span>Додав: {{ creator }}</span> }
+            @if (item.updatedBy?.displayName?.trim(); as editor) { <span>Змінив: {{ editor }}</span> }
+          </div>
+        }
+      </div></div>
       <div class="list-card__actions">
         @if (deletingId() === item.id) { <div class="confirm"><span>Видалити?</span><button class="button button--danger" type="button" [disabled]="busy()" (click)="remove(item.id)">Так</button><button class="button button--quiet" type="button" (click)="deletingId.set(null)">Ні</button></div> }
         @else { <button class="button button--secondary" type="button" (click)="edit(item)">Змінити</button><button class="button button--quiet" type="button" [attr.aria-label]="'Видалити ' + item.name" (click)="deletingId.set(item.id)">Видалити</button> }

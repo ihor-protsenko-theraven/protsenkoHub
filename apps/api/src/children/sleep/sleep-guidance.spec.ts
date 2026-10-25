@@ -76,6 +76,28 @@ describe('sleep guidance', () => {
     expect(result.headline).toContain('гарне вікно');
   });
 
+  it('adds a backfilled nap to the total for its calendar day', () => {
+    const now = at(2026, 10, 19, 18, 0);
+    const before = guide(now, [balancedNight()]);
+    const after = guide(now, [
+      balancedNight(),
+      {
+        id: 'saved-earlier-today',
+        kind: 'NAP',
+        startedAt: at(2026, 10, 19, 10, 0),
+        endedAt: at(2026, 10, 19, 11, 30),
+      },
+    ]);
+
+    expect(before.stats.todaySleepMin).toBe(420);
+    expect(after.stats.todaySleepMin).toBe(510);
+    expect(after.stats.todayNapMin).toBe(90);
+    expect(after.stats.todayNapCount).toBe(1);
+    expect(after.week.find((day) => day.date === '2026-10-19')?.sleepMin).toBe(
+      after.stats.todaySleepMin,
+    );
+  });
+
   it('recommends putting her down once the window has passed', () => {
     const result = guide(at(2026, 10, 19, 9, 20), [balancedNight()]);
     expect(result.headline).toContain('вкласти зараз');

@@ -1,12 +1,10 @@
 <main class="auth-layout">
   <div class="auth-intro"><img class="auth-mark" src="/icons/logo-full.png" width="220" height="214" alt="protsenkoHub" />
     <h1>Для всього,<br>що робить нас родиною.</h1>
-    <p>Плани на тиждень, потрібні покупки, дитячі справи й важливі контакти — в одному спільному просторі.</p>
-    <div class="auth-feature">Менше дрібниць у голові. Більше часу разом.</div>
+    <p>Плани, покупки, справи дітей і контакти — разом.</p>
   </div>
   <section class="auth-card panel" aria-labelledby="auth-title">
     <h2 id="auth-title">Вітаємо вдома</h2>
-    <p class="auth-card__lead">Увійдіть до свого сімейного простору.</p>
     <div ngTabs class="auth-tabs">
       <div ngTabList [(selectedTab)]="mode" class="auth-tab-list" aria-label="Спосіб доступу">
         <button ngTab value="login" type="button">Увійти</button>
@@ -29,7 +27,7 @@
       </div>
       <div ngTabPanel value="register">
         <ng-template ngTabContent>
-          <p class="auth-card__hint">Новий акаунт створить окрему родину. Щоб приєднатися до вже створеної, відкрийте запрошення від її учасника.</p>
+          <p class="auth-card__hint">Новий акаунт створить окрему родину. Щоб приєднатися до наявної, відкрийте запрошення.</p>
           <form (submit)="$event.preventDefault(); submit('register')"><label class="field"><span>Ваше ім’я</span><input
             autocomplete="name" [formField]="registerForm.displayName"></label><label
             class="field"><span>Назва сім’ї</span><input [formField]="registerForm.householdName"></label><label
@@ -41,7 +39,7 @@
             <p class="message message--error" role="alert">{{ error() }}</p>
           }
             <button class="button button--primary auth-submit" type="submit"
-                    [disabled]="busy()">{{ busy() ? 'Зачекайте…' : 'Створити простір' }}
+                    [disabled]="busy()">{{ busy() ? 'Зачекайте…' : 'Створити акаунт' }}
             </button>
           </form>
         </ng-template>

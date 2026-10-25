@@ -1,12 +1,12 @@
-import { DatePipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { formatMinutes } from '../sleep/sleep-clock';
+import { SleepTimePipe } from '../sleep/sleep-time.pipe';
 import { SleepService } from '../sleep/sleep.service';
 
 @Component({
   selector: 'app-home-sleep-card',
-  imports: [DatePipe, RouterLink],
+  imports: [RouterLink, SleepTimePipe],
   providers: [SleepService],
   templateUrl: './home-sleep-card.component.html',
   styleUrl: './home-sleep-card.component.scss',

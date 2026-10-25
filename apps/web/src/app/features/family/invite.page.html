@@ -1,26 +1,26 @@
 <main class="invite-layout"><section class="panel invite-card" aria-labelledby="invite-title">
-  <span class="eyebrow">ЗАПРОШЕННЯ ДО РОДИНИ</span><h1 id="invite-title">Спільний простір</h1>
+  <h1 id="invite-title">Запрошення до родини</h1>
   @if (loading()) { <p role="status">Перевіряємо запрошення…</p> }
   @else if (preview(); as invitation) {
-    <p>Вас запрошено до родини <strong>{{ invitation.householdName }}</strong>. Календар, покупки, задачі та сон цієї родини стануть спільними.</p>
-    <p>Адреса запрошення: <strong>{{ invitation.email }}</strong></p>
+    <p>Вас запрошено до родини <strong>{{ invitation.householdName }}</strong>. Ви побачите її календар, покупки, задачі та сон.</p>
+    <p>Запрошення для <strong>{{ invitation.email }}</strong></p>
     @if (auth.user(); as user) {
-      <p>Ви увійшли як {{ user.email }}.</p>
       @if (user.email.toLowerCase() === invitation.email.toLowerCase()) {
         <button class="button button--primary" type="button" [disabled]="busy()" (click)="accept()">Приєднатися до родини</button>
       } @else {
-        <p class="message message--error">Увійдіть з адресою {{ invitation.email }}. Вийдіть із поточного акаунта й відкрийте це посилання знову.</p>
+        <p class="message message--error" role="alert">Ви увійшли як {{ user.email }}. Вийдіть і відкрийте запрошення знову для {{ invitation.email }}.</p>
         <button class="button button--secondary" type="button" (click)="auth.logout()">Вийти</button>
       }
     } @else if (auth.ready()) {
-      <div class="invite-modes"><button class="button" type="button" [class.button--primary]="mode() === 'register'" [class.button--secondary]="mode() !== 'register'" (click)="mode.set('register')">Новий акаунт</button><button class="button" type="button" [class.button--primary]="mode() === 'login'" [class.button--secondary]="mode() !== 'login'" (click)="mode.set('login')">У мене є акаунт</button></div>
+      <div class="invite-modes"><button class="button" type="button" [class.button--primary]="mode() === 'register'" [class.button--secondary]="mode() !== 'register'" (click)="mode.set('register')">Новий акаунт</button><button class="button" type="button" [class.button--primary]="mode() === 'login'" [class.button--secondary]="mode() !== 'login'" (click)="mode.set('login')">Маю акаунт</button></div>
       @if (mode() === 'register') {
         <form (submit)="$event.preventDefault(); register()"><label class="field"><span>Ваше ім’я</span><input autocomplete="name" [formField]="registerForm.displayName"></label><label class="field"><span>Пароль</span><input type="password" autocomplete="new-password" [formField]="registerForm.password"></label><button class="button button--primary" type="submit" [disabled]="busy() || !registerForm().valid()">Створити акаунт і приєднатися</button></form>
       } @else {
-        <form (submit)="$event.preventDefault(); login()"><label class="field"><span>Пароль від {{ invitation.email }}</span><input type="password" autocomplete="current-password" [formField]="loginForm.password"></label><button class="button button--primary" type="submit" [disabled]="busy() || !loginForm().valid()">Увійти й приєднатися</button></form>
-        <p class="field-help">Якщо у вас уже є своя родина, її записи залишаться окремо. Зараз відкриється родина, з якої надійшло запрошення.</p>
+        <form (submit)="$event.preventDefault(); login()"><label class="field"><span>Пароль</span><input type="password" autocomplete="current-password" [formField]="loginForm.password"></label><button class="button button--primary" type="submit" [disabled]="busy() || !loginForm().valid()">Увійти й приєднатися</button></form>
+        <p class="field-help">Записи вашої поточної родини залишаться окремо.</p>
       }
     }
   }
   @if (error()) { <p class="message message--error" role="alert">{{ error() }}</p> }
+  @if (canRetryPreview()) { <button class="button button--secondary" type="button" (click)="loadPreview()">Повторити</button> }
 </section></main>

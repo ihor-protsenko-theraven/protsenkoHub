@@ -43,11 +43,11 @@ export class ChildrenPage {
       !query || (task.title + ' ' + (task.notes ?? '')).toLocaleLowerCase('uk').includes(query),
     );
   });
-  readonly hasOpen = computed(() => this.availableTasks().some((task) => task.status !== 'DONE'));
   readonly emptyState = computed(() => {
-    if (this.hasOpen()) return { title: 'Задач не знайдено', description: 'Змініть пошук або фільтр.' };
-    if (this.availableTasks().length) return { title: 'Відкритих задач немає', description: 'Завершені задачі лежать в історії.' };
-    return { title: 'Задач не знайдено', description: 'Додайте першу задачу для дитини.' };
+    if (!this.availableTasks().length) return { title: 'Ще немає задач', description: '' };
+    if (this.search().trim()) return { title: 'Відкритих задач не знайдено', description: 'Очистіть пошук або змініть запит.' };
+    if (this.status() !== 'ALL') return { title: 'Відкритих задач не знайдено', description: 'Виберіть інший статус.' };
+    return { title: 'Усі задачі завершено', description: 'Перегляньте історію нижче.' };
   });
   readonly openTasks = computed(() =>
     this.matched()
@@ -137,7 +137,7 @@ export class ChildrenPage {
     this.data.update(task.id, { status }).subscribe({
       next: () => {
         this.busy.set(false);
-        this.notice.set(status === 'DONE' ? 'Задачу завершено. Вона в історії.' : 'Статус оновлено.');
+        this.notice.set(status === 'DONE' ? 'Задачу завершено.' : 'Статус оновлено.');
       },
       error: () => {
         this.busy.set(false);

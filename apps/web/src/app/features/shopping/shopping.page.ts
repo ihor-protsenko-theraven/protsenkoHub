@@ -97,7 +97,7 @@ export class ShoppingPage {
     const draft = this.listModel();
     const items = draft.items.split(/\r?\n/).map((item) => item.trim()).filter(Boolean);
     if (!draft.name.trim() || !items.length) {
-      this.error.set('Назвіть список і додайте хоча б одну покупку — кожну з нового рядка.');
+      this.error.set('Вкажіть назву й хоча б одну покупку.');
       return;
     }
     this.busy.set(true);
@@ -106,11 +106,11 @@ export class ShoppingPage {
         this.busy.set(false);
         this.listFormOpen.set(false);
         this.error.set('');
-        this.notice.set('Список створено для всієї родини.');
+        this.notice.set('Список створено.');
       },
       error: () => {
         this.busy.set(false);
-        this.error.set('Не вдалося створити список. Спробуйте ще раз.');
+        this.error.set('Список не створено. Спробуйте ще раз.');
       },
     });
   }
@@ -138,7 +138,7 @@ export class ShoppingPage {
   save(): void {
     const value = this.model();
     if (!value.name.trim() || !Number.isFinite(value.qty) || value.qty <= 0) {
-      this.error.set('Вкажіть назву та кількість більше нуля.');
+      this.error.set('Вкажіть назву й кількість понад нуль.');
       return;
     }
     const payload: ShoppingItemPayload = {
@@ -153,7 +153,7 @@ export class ShoppingPage {
     const item = this.availableItems().find((entry) => entry.id === id);
     if (id && !item) {
       this.busy.set(false);
-      this.error.set('Цей запис уже не доступний. Оновіть список і спробуйте ще раз.');
+      this.error.set('Покупка недоступна. Перевірте список.');
       this.items.reload();
       return;
     }
@@ -170,8 +170,8 @@ export class ShoppingPage {
         this.busy.set(false);
         if (response.status === 409) this.items.reload();
         this.error.set(response.status === 409
-          ? 'Список змінився на іншому пристрої. Дані оновлено — перевірте запис і повторіть.'
-          : 'Не вдалося зберегти покупку.');
+          ? 'Покупку змінено на іншому пристрої. Перевірте й повторіть.'
+          : 'Покупку не збережено. Спробуйте ще раз.');
       },
     });
   }
@@ -181,12 +181,14 @@ export class ShoppingPage {
     this.data.update(item.id, { isChecked: !item.isChecked, version: item.version }).subscribe({
       next: () => {
         this.busy.set(false);
-        this.notice.set(item.isChecked ? 'Повернуто до списку покупок.' : 'Позначено як куплене.');
+        this.notice.set(item.isChecked ? 'Повернуто до списку.' : 'Позначено як куплене.');
       },
       error: (response: { status?: number }) => {
         this.busy.set(false);
         if (response.status === 409) this.items.reload();
-        this.error.set('Не вдалося змінити статус. Список оновлено, спробуйте ще раз.');
+        this.error.set(response.status === 409
+          ? 'Покупку змінено на іншому пристрої. Перевірте й повторіть.'
+          : 'Не вдалося оновити покупку. Спробуйте ще раз.');
       },
     });
   }

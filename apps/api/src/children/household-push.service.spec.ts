@@ -205,6 +205,7 @@ describe('HouseholdPushService family events', () => {
         findUnique: vi.fn().mockResolvedValue({
           session: {
             id: 'sleep-active',
+            revision: 0,
             kind: 'NAP',
             startedAt,
             endedAt: null,
@@ -219,8 +220,10 @@ describe('HouseholdPushService family events', () => {
       },
       sleepSession: {
         findFirst: vi.fn(),
+        updateMany: vi.fn().mockResolvedValue({ count: 1 }),
         update: vi.fn().mockResolvedValue({
           id: 'sleep-active',
+          revision: 1,
           kind: 'NAP',
           startedAt,
           endedAt,

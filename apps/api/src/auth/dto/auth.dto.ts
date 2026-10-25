@@ -25,3 +25,9 @@ export class LoginDto {
   @MinLength(8)
   password!: string;
 }
+
+export class MobileRefreshDto {
+  @IsString()
+  @MinLength(1)
+  refreshToken!: string;
+}

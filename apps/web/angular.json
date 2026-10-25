@@ -59,6 +59,10 @@
               ],
               "outputHashing": "all"
             },
+            "mobile": {
+              "outputPath": "dist/mobile",
+              "serviceWorker": false
+            },
             "development": {
               "optimization": false,
               "extractLicenses": false,

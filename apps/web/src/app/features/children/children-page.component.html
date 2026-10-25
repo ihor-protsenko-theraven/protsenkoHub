@@ -1,13 +1,11 @@
 <section class="page" aria-labelledby="page-title">
   <header class="page-header">
     <div>
-      <span class="eyebrow">СПРАВИ ДІТЕЙ</span>
       <h1 id="page-title">Діти</h1>
-      <p class="page-subtitle">Задачі й нагадування по дітях: що зробити, до якого терміну і наскільки це терміново.</p>
     </div>
     <div class="page-actions">
       <a class="button button--secondary" routerLink="/app/sleep">Трекер сну</a>
-      <button class="button button--primary" type="button" (click)="createNew()">+ Додати задачу</button>
+      <button class="button button--primary" type="button" (click)="createNew()">Додати задачу</button>
     </div>
   </header>
 
@@ -22,8 +20,8 @@
       <form (submit)="$event.preventDefault(); save()">
         <div class="field-grid">
           <label class="field field--wide">
-            <span>Назва *</span>
-            <input [formField]="taskForm.title" placeholder="Що потрібно зробити?">
+            <span>Назва задачі *</span>
+            <input [formField]="taskForm.title">
           </label>
           <div class="field field--wide">
             <span id="priority-label">Пріоритет</span>
@@ -55,12 +53,12 @@
           </label>
           <label class="field field--wide">
             <span>Нотатки</span>
-            <textarea [formField]="taskForm.notes" placeholder="Додаткові деталі"></textarea>
+            <textarea [formField]="taskForm.notes"></textarea>
           </label>
         </div>
         @if (error()) { <p class="message message--error" role="alert">{{ error() }}</p> }
         <div class="form-actions">
-          <button class="button button--primary" type="submit" [disabled]="busy()">Зберегти</button>
+          <button class="button button--primary" type="submit" [disabled]="busy()">{{ editingId() ? 'Зберегти зміни' : 'Додати задачу' }}</button>
           <button class="button button--quiet" type="button" (click)="cancel()">Скасувати</button>
         </div>
       </form>
@@ -69,7 +67,7 @@
 
   <div class="panel toolbar">
     <label class="field field--search">
-      <span>Пошук задач</span>
+      <span>Пошук</span>
       <input type="search" placeholder="Назва або нотатки" [value]="search()" (input)="search.set($any($event.target).value)">
     </label>
     <label class="field field--filter">
@@ -85,7 +83,9 @@
 
   <div class="section-heading">
     <h2>Задачі</h2>
-    <span>Усього: {{ openTasks().length }}</span>
+    @if (tasks.hasValue() && !tasks.isLoading() && !tasks.error()) {
+      <span>Показано: {{ openTasks().length }}</span>
+    }
   </div>
 
   @if (tasks.isLoading()) {
@@ -98,8 +98,10 @@
   } @else if (!openTasks().length) {
     <div class="panel state">
       <h2>{{ emptyState().title }}</h2>
-      <p>{{ emptyState().description }}</p>
-      <button class="button button--secondary" type="button" (click)="createNew()">Додати задачу</button>
+      @if (emptyState().description) { <p>{{ emptyState().description }}</p> }
+      @if (!availableTasks().length) {
+        <button class="button button--secondary" type="button" (click)="createNew()">Додати задачу</button>
+      }
     </div>
   } @else {
     <div class="list">
@@ -110,7 +112,7 @@
   }
 
   @if (!tasks.isLoading() && !tasks.error()) {
-    <app-history-panel [count]="doneTasks().length" label="Історія" empty="Завершених задач ще немає.">
+    <app-history-panel [count]="doneTasks().length" label="Історія" empty="Завершених задач немає.">
       <ng-template>
         <div class="list">
           @for (task of doneTasks(); track task.id) {
@@ -134,10 +136,12 @@
           }
         </div>
         @if (task.notes) { <p>{{ task.notes }}</p> }
-        <div class="record-audit">
-          <span>Додав: {{ task.createdBy?.displayName || 'невідомо' }}</span>
-          @if (task.updatedBy; as editor) { <span>Змінив: {{ editor.displayName }}</span> }
-        </div>
+        @if (task.createdBy?.displayName || task.updatedBy?.displayName) {
+          <div class="record-audit">
+            @if (task.createdBy?.displayName; as creator) { <span>Додав: {{ creator }}</span> }
+            @if (task.updatedBy?.displayName; as editor) { <span>Змінив: {{ editor }}</span> }
+          </div>
+        }
       </div>
       <div class="list-card__actions">
         @if (deletingId() === task.id) {

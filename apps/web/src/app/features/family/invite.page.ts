@@ -1,3 +1,4 @@
+import { HttpErrorResponse } from '@angular/common/http';
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { FormField, form, minLength, required } from '@angular/forms/signals';
@@ -24,6 +25,7 @@ export class InvitePage {
   readonly loading = signal(true);
   readonly busy = signal(false);
   readonly error = signal('');
+  readonly canRetryPreview = signal(false);
   readonly mode = signal<'login' | 'register'>('register');
   readonly loginModel = signal({ password: '' });
   readonly registerModel = signal({ displayName: '', password: '' });
@@ -31,11 +33,28 @@ export class InvitePage {
   readonly registerForm = form(this.registerModel, (path) => { required(path.displayName); minLength(path.displayName, 2); required(path.password); minLength(path.password, 8); });
 
   constructor() {
+    this.loadPreview();
+    if (!this.auth.ready()) this.auth.bootstrap().subscribe({ error: () => undefined });
+  }
+
+  loadPreview(): void {
+    this.loading.set(true);
+    this.error.set('');
+    this.canRetryPreview.set(false);
     this.family.preview(this.token).subscribe({
       next: (preview) => { this.preview.set(preview); this.loading.set(false); },
-      error: () => { this.error.set('Запрошення недійсне або термін його дії минув.'); this.loading.set(false); },
+      error: (error: unknown) => {
+        if (error instanceof HttpErrorResponse && [400, 404, 410].includes(error.status)) {
+          this.error.set('Запрошення недійсне або термін його дії минув.');
+        } else {
+          this.error.set(error instanceof HttpErrorResponse && error.status === 0
+            ? 'Немає зв’язку з сервером. Перевірте інтернет і повторіть.'
+            : 'Не вдалося перевірити запрошення. Спробуйте ще раз.');
+          this.canRetryPreview.set(true);
+        }
+        this.loading.set(false);
+      },
     });
-    if (!this.auth.ready()) this.auth.bootstrap().subscribe({ error: () => undefined });
   }
 
   accept(): void {

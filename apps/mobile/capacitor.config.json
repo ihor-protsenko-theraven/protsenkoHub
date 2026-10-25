@@ -1,0 +1,5 @@
+{
+  "appId": "com.protsenko.hub",
+  "appName": "protsenkoHub",
+  "webDir": "../web/dist/mobile/browser"
+}

@@ -31,14 +31,19 @@ export class LoginComponent {
   submit(mode: 'login' | 'register'): void {
     this.error.set('');
     const valid = mode === 'login' ? this.loginForm().valid() : this.registerForm().valid();
-    if (!valid) { this.error.set('Заповніть усі поля коректно. Пароль має містити щонайменше 8 символів.'); return; }
+    if (!valid) { this.error.set('Перевірте поля. Пароль має містити від 8 символів.'); return; }
     this.busy.set(true);
     const request = mode === 'login'
       ? this.auth.login(this.loginModel().email.trim(), this.loginModel().password)
       : this.auth.register({ ...this.registerModel(), email: this.registerModel().email.trim() });
     request.subscribe({
-      next: () => void this.router.navigateByUrl('/app/home'),
-      error: () => { this.busy.set(false); this.error.set('Не вдалося виконати дію. Перевірте дані та спробуйте ще раз.'); },
+      next: () => void this.router.navigateByUrl(this.auth.consumePostLoginRoute()),
+      error: () => {
+        this.busy.set(false);
+        this.error.set(mode === 'login'
+          ? 'Не вдалося увійти. Спробуйте ще раз.'
+          : 'Не вдалося створити акаунт. Спробуйте ще раз.');
+      },
     });
   }
 }

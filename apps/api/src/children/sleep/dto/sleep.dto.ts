@@ -2,6 +2,7 @@ import {
   IsDateString,
   IsIn,
   IsInt,
+  IsNotEmpty,
   IsOptional,
   IsString,
   Matches,
@@ -9,6 +10,7 @@ import {
   MaxLength,
   Min,
 } from 'class-validator';
+import { SLEEP_WIDGET } from '../sleep-widget.config';
 
 const KINDS = ['NAP', 'NIGHT'] as const;
 
@@ -101,6 +103,19 @@ export class ResumeSleepDto {
   @IsOptional()
   @IsDateString()
   endedAt?: string;
+}
+
+export class WidgetSleepActionDto {
+  @IsIn(SLEEP_WIDGET.actions)
+  action!: (typeof SLEEP_WIDGET.actions)[number];
+
+  @IsString()
+  @IsNotEmpty()
+  expectedSessionId!: string;
+
+  @IsInt()
+  @Min(0)
+  expectedRevision!: number;
 }
 
 export class UpdateSleepProfileDto {

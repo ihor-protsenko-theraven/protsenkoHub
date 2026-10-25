@@ -8,6 +8,8 @@ import { routes } from './app.routes';
 import { apiErrorInterceptor } from './core/toast/api-error.interceptor';
 import { AppErrorHandler } from './core/toast/app-error.handler';
 import { ToastService } from './core/toast/toast.service';
+import { isNativeApp } from './core/configs/native-platform.config';
+import { nativeApiInterceptor } from './core/services/native-api.interceptor';
 
 registerLocaleData(localeUk);
 
@@ -18,7 +20,7 @@ export const appConfig: ApplicationConfig = {
     { provide: ErrorHandler, useClass: AppErrorHandler },
     provideBrowserGlobalErrorListeners(),
     provideRouter(routes),
-    provideHttpClient(withFetch(), withInterceptors([apiErrorInterceptor])),
-    provideServiceWorker('ngsw-worker.js', { enabled: !isDevMode() }),
+    provideHttpClient(withFetch(), withInterceptors([apiErrorInterceptor, nativeApiInterceptor])),
+    provideServiceWorker('ngsw-worker.js', { enabled: !isDevMode() && !isNativeApp() }),
   ],
 };

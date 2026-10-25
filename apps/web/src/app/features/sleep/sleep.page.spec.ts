@@ -24,7 +24,7 @@ describe('SleepPage', () => {
       set: {
         providers: [
           SleepTickerService,
-          { provide: SleepService, useValue: { overview: {
+          { provide: SleepService, useValue: { widgetSyncError: signal(''), syncWidget: vi.fn(), overview: {
             status, error, hasValue: () => false, value: () => undefined, reload,
           } } },
           { provide: SleepReminderService, useValue: {} },
@@ -75,7 +75,7 @@ describe('SleepPage', () => {
       set: {
         providers: [
           SleepTickerService,
-          { provide: SleepService, useValue: { overview: {
+          { provide: SleepService, useValue: { widgetSyncError: signal(''), syncWidget: vi.fn(), overview: {
             hasValue: () => true, value: () => overview, reload,
           }, createSavedPause } },
           { provide: SleepReminderService, useValue: {

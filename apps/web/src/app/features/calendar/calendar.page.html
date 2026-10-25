@@ -1,9 +1,7 @@
 <section class="page" aria-labelledby="page-title">
   <header class="page-header">
-    <div><span class="eyebrow">СІМЕЙНІ ПЛАНИ</span>
-      <h1 id="page-title">Календар</h1>
-      <p class="page-subtitle">Усі важливі події в одному місці.</p></div>
-    <button class="button button--primary" type="button" (click)="createNew()">+ Додати подію</button>
+    <div><h1 id="page-title">Календар</h1></div>
+    <button class="button button--primary" type="button" (click)="createNew()">Додати подію</button>
   </header>
   @if (notice()) {
     <p class="message message--success" role="status">{{ notice() }}</p>
@@ -21,8 +19,7 @@
                                                           [formField]="eventForm.startsAt"></label>
         <label class="field"><span>Завершення *</span><input type="datetime-local"
                                                              [formField]="eventForm.endsAt"></label>
-        <label class="field field--wide"><span>Нотатки</span><textarea [formField]="eventForm.notes"
-                                                                       placeholder="Що потрібно пам’ятати?"></textarea></label>
+        <label class="field field--wide"><span>Нотатки</span><textarea [formField]="eventForm.notes"></textarea></label>
       </div>
       @if (error()) {
         <p class="message message--error" role="alert">{{ error() }}</p>
@@ -42,20 +39,21 @@
       <input type="search" placeholder="Назва або нотатки" [value]="search()" (input)="search.set($any($event.target).value)">
     </label>
   </div>
-  <div class="section-heading"><h2>Події</h2><span>Усього: {{ openEvents().length }}</span></div>
   @if (events.isLoading()) {
     <div class="panel state" role="status">Завантажуємо події…</div>
   } @else if (events.error()) {
     <div class="panel state">
-      <h2>Не вдалося завантажити</h2>
-      <p>Перевірте з’єднання та спробуйте ще раз.</p>
+      <h2>Не вдалося завантажити події</h2>
       <button class="button button--secondary" type="button" (click)="events.reload()">Повторити</button>
     </div>
   } @else if (!openEvents().length) {
     <div class="panel state">
-      <h2>{{ emptyState().title }}</h2>
-      <p>{{ emptyState().description }}</p>
-      <button class="button button--secondary" type="button" (click)="createNew()">Додати подію</button>
+      <h2>{{ emptyTitle() }}</h2>
+      @if (search().trim()) {
+        <button class="button button--secondary" type="button" (click)="search.set('')">Очистити пошук</button>
+      } @else {
+        <button class="button button--secondary" type="button" (click)="createNew()">Додати подію</button>
+      }
     </div>
   } @else {
     <div class="list">
@@ -86,10 +84,12 @@
           @if (archived) { <span class="badge">{{ statusLabel('DONE') }}</span> }
         </div>
         @if (event.notes) { <p>{{ event.notes }}</p> }
-        <div class="record-audit">
-          <span>Додав: {{ event.createdBy?.displayName || 'невідомо' }}</span>
-          @if (event.updatedBy; as editor) { <span>Змінив: {{ editor.displayName }}</span> }
-        </div>
+        @if (event.createdBy?.displayName?.trim() || event.updatedBy?.displayName?.trim()) {
+          <div class="record-audit">
+            @if (event.createdBy?.displayName?.trim(); as creator) { <span>Додав: {{ creator }}</span> }
+            @if (event.updatedBy?.displayName?.trim(); as editor) { <span>Змінив: {{ editor }}</span> }
+          </div>
+        }
       </div>
       <div class="list-card__actions">
         @if (deletingId() === event.id) {

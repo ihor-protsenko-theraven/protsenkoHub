@@ -31,11 +31,10 @@ export class CalendarPage {
       !query || (event.title + ' ' + (event.notes ?? '')).toLocaleLowerCase('uk').includes(query),
     );
   });
-  readonly hasOpen = computed(() => this.availableEvents().some((event) => event.status !== 'DONE'));
-  readonly emptyState = computed(() => {
-    if (this.hasOpen()) return { title: 'Подій не знайдено', description: 'Спробуйте змінити пошук.' };
-    if (this.availableEvents().length) return { title: 'Немає відкритих подій', description: 'Завершені події лежать в історії.' };
-    return { title: 'Подій не знайдено', description: 'Додайте першу подію для родини.' };
+  readonly emptyTitle = computed(() => {
+    if (this.search().trim()) return 'Запланованих подій не знайдено';
+    if (this.availableEvents().length) return 'Запланованих подій немає';
+    return 'Календар порожній';
   });
   readonly openEvents = computed(() => this.matched().filter((event) => event.status !== 'DONE'));
   readonly historyEvents = computed(() =>
@@ -106,7 +105,7 @@ export class CalendarPage {
       },
       error: () => {
         this.busy.set(false);
-        this.error.set('Не вдалося зберегти подію. Спробуйте ще раз.');
+        this.error.set('Подію не збережено. Спробуйте ще раз.');
       },
     });
   }

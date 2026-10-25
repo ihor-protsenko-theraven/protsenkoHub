@@ -6,6 +6,29 @@ import { ToastService } from './toast.service';
 import { EXPECTED_GUEST_SESSION, apiErrorInterceptor } from './api-error.interceptor';
 
 describe('global toast messages', () => {
+  it('removes a stale connection error after the API responds again', () => {
+    TestBed.configureTestingModule({
+      providers: [
+        ToastService,
+        provideHttpClient(withInterceptors([apiErrorInterceptor])),
+        provideHttpClientTesting(),
+      ],
+    });
+    const http = TestBed.inject(HttpTestingController);
+    const toasts = TestBed.inject(ToastService);
+    const requests = TestBed.inject(HttpClient);
+
+    requests.get('/api/v1/children/sleep').subscribe({ error: () => undefined });
+    http.expectOne('/api/v1/children/sleep').error(new ProgressEvent('error'));
+    expect(toasts.messages()[0]?.text).toContain('Немає зв’язку із сервером');
+
+    toasts.error('Інша помилка');
+    requests.get('/api/v1/children/sleep').subscribe();
+    http.expectOne('/api/v1/children/sleep').flush({});
+    expect(toasts.messages().map((message) => message.text)).toEqual(['Інша помилка']);
+    http.verify();
+  });
+
   it('renders API errors in the root toast host and ignores an expected guest session', () => {
     TestBed.configureTestingModule({
       imports: [ToastComponent],

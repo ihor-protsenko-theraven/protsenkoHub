@@ -22,6 +22,7 @@ function user(): AuthUser {
 function session(startedAt: Date) {
   return {
     id: 'sleep-1',
+    revision: 0,
     kind: 'NAP' as const,
     startedAt,
     endedAt: null,
@@ -139,6 +140,7 @@ describe('SleepService active tracker', () => {
       },
       sleepSession: {
         findFirst: vi.fn(),
+        updateMany: vi.fn().mockResolvedValue({ count: 1 }),
         update: vi
           .fn()
           .mockImplementation(({ data }: { data: { endedAt: Date } }) =>
@@ -162,6 +164,18 @@ describe('SleepService active tracker', () => {
 
     expect(result.session.startedAt).toBe(startedAt.toISOString());
     expect(result.session.endedAt).not.toBeNull();
+    expect(tx.sleepSession.updateMany).toHaveBeenCalledWith({
+      where: {
+        id: 'sleep-1',
+        householdId: 'home-1',
+        endedAt: null,
+        revision: 0,
+      },
+      data: {
+        revision: { increment: 1 },
+        updatedById: 'user-1',
+      },
+    });
     expect(tx.sleepSession.update).toHaveBeenCalledWith(
       expect.objectContaining({
         where: { id: 'sleep-1' },
@@ -253,6 +267,7 @@ describe('SleepService saved pauses', () => {
     const tx = {
       sleepSession: {
         findFirst: vi.fn().mockResolvedValue(active),
+        updateMany: vi.fn().mockResolvedValue({ count: 1 }),
         update: vi.fn().mockResolvedValue({
           ...active,
           pauses: [
@@ -268,14 +283,20 @@ describe('SleepService saved pauses', () => {
       sleepPause: { create },
     };
     const prisma = {
-      $transaction: vi.fn((fn: (client: typeof tx) => Promise<unknown>) => fn(tx)),
+      $transaction: vi.fn((fn: (client: typeof tx) => Promise<unknown>) =>
+        fn(tx),
+      ),
     } as unknown as PrismaService;
     const { push } = createPush(prisma);
 
-    const result = await new SleepService(prisma, push).createSavedPause(user(), 'sleep-1', {
-      startedAt: '2026-10-19T11:00:00.000Z',
-      endedAt: '2026-10-19T11:15:00.000Z',
-    });
+    const result = await new SleepService(prisma, push).createSavedPause(
+      user(),
+      'sleep-1',
+      {
+        startedAt: '2026-10-19T11:00:00.000Z',
+        endedAt: '2026-10-19T11:15:00.000Z',
+      },
+    );
 
     expect(tx.sleepSession.findFirst).toHaveBeenCalledWith({
       where: { id: 'sleep-1', householdId: 'home-1' },
@@ -288,6 +309,7 @@ describe('SleepService saved pauses', () => {
         endedAt: new Date('2026-10-19T11:15:00.000Z'),
       },
     });
+    expect(tx.sleepSession.updateMany).toHaveBeenCalledOnce();
     expect(result.session.endedAt).toBeNull();
     expect(result.session.pauses).toHaveLength(2);
   });
@@ -438,5 +460,70 @@ describe('SleepService profile', () => {
     expect(overview.profile.birthDate).toBe('2025-08-23');
     expect(overview.profile.assumedAge).toBe(false);
     expect(overview.profile.ageLabel).toContain('1 р.');
+  });
+});
+
+describe('SleepService widget snapshot', () => {
+  it('reads only the authenticated household for each parent', async () => {
+    const households = {
+      'home-1': { name: 'Олена', timeZone: 'Europe/Kyiv' },
+      'home-2': { name: 'Марко', timeZone: 'Europe/Warsaw' },
+    };
+    const household = (id: string) => households[id as keyof typeof households];
+    const findChild = vi.fn(({ where }: { where: { householdId: string } }) =>
+      Promise.resolve({
+        name: household(where.householdId).name,
+        birthDate: null,
+        updatedBy: null,
+      }),
+    );
+    const sessionHouseholds: string[] = [];
+    const findSessions = vi.fn(
+      ({ where }: { where: { householdId: string } }) => {
+        sessionHouseholds.push(where.householdId);
+        return Promise.resolve([]);
+      },
+    );
+    const prisma = {
+      household: {
+        findUnique: vi.fn(({ where }: { where: { id: string } }) =>
+          Promise.resolve({
+            timezone: household(where.id).timeZone,
+          }),
+        ),
+      },
+      sleepProfile: {
+        findUnique: vi.fn().mockResolvedValue({ napTarget: null }),
+      },
+      childProfile: { findUnique: findChild },
+      activeSleep: { findUnique: vi.fn().mockResolvedValue(null) },
+      sleepSession: { findMany: findSessions },
+    } as unknown as PrismaService;
+    const { push } = createPush(prisma);
+    const service = new SleepService(prisma, push);
+
+    const first = await service.widgetSnapshot(user());
+    const second = await service.widgetSnapshot({
+      ...user(),
+      householdId: 'home-2',
+    });
+
+    expect(first.childName).toBe('Олена');
+    expect(first.timeZone).toBe('Europe/Kyiv');
+    expect(second.childName).toBe('Марко');
+    expect(second.timeZone).toBe('Europe/Warsaw');
+    expect(findChild).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({
+        where: { householdId: 'home-1' },
+      }),
+    );
+    expect(findChild).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({
+        where: { householdId: 'home-2' },
+      }),
+    );
+    expect(sessionHouseholds).toEqual(['home-1', 'home-1', 'home-2', 'home-2']);
   });
 });

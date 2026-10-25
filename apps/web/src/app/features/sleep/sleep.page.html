@@ -3,30 +3,22 @@
     <div>
       <span class="eyebrow">{{ snapshot()?.profile?.babyName || 'ДИТИНА' }}</span>
       <h1 id="page-title">Сон</h1>
-      <p class="page-subtitle">Старт сну, пауза і завершення. Лічильник лишається після перезавантаження.</p>
     </div>
   </header>
 
   @if (notice()) { <p class="message message--success" role="status">{{ notice() }}</p> }
   @if (error() && !formOpen()) { <p class="message message--error" role="alert">{{ error() }}</p> }
+  @if (data.widgetSyncError()) { <p class="message message--error" role="status">{{ data.widgetSyncError() }}</p> }
 
   @if (snapshot(); as sleep) {
     <app-sleep-status [headline]="sleep.headline" [active]="sleep.active" [offset]="clockOffset()" [babyName]="sleep.profile.babyName" />
 
     @if (sleep.profile.assumedAge) {
       <div class="panel child-context">
-        <p>Додайте дитину в «Родині», щоб поради про сон враховували її вік.</p>
+        <p>Укажіть дату народження для точніших порад.</p>
         <a class="button button--secondary" routerLink="/app/family">Додати дитину</a>
       </div>
     }
-
-    <section class="panel week-card" aria-label="Тиждень життя">
-      <div>
-        <span class="eyebrow">{{ sleep.profile.assumedAge ? 'Орієнтовно' : 'Зараз' }} · {{ sleep.profile.ageLabel }}</span>
-        <h2>{{ sleep.lifeWeek }}-й тиждень</h2>
-      </div>
-      @if (sleep.weekNote) { <p>{{ sleep.weekNote }}</p> }
-    </section>
 
     <section class="panel sleep-hero" aria-labelledby="tracker-title">
       @if (sleep.active) {
@@ -38,7 +30,7 @@
           <p class="pause-timer">Пауза триває <app-sleep-timer mode="paused" [startedAt]="tracker()?.pauseStartedAt ?? null" [offset]="clockOffset()" /></p>
         }
         <p class="page-subtitle">
-          Старт {{ sleep.active.startedAt | date:'HH:mm':sleep.timeZone:'uk' }}
+          Старт {{ sleep.active.startedAt | sleepTime:sleep.timeZone }}
           @if (sleep.active.startedByName) { · Почав: {{ sleep.active.startedByName }} }
         </p>
         @if (sleep.active.pauses.length) {
@@ -46,8 +38,8 @@
             @for (pause of sleep.active.pauses; track pause.id) {
               <li>
                 <span>
-                  Пауза {{ pause.startedAt | date:'HH:mm':sleep.timeZone:'uk' }}
-                  @if (pause.endedAt) { – {{ pause.endedAt | date:'HH:mm':sleep.timeZone:'uk' }} } @else { · зараз }
+                  Пауза {{ pause.startedAt | sleepTime:sleep.timeZone }}
+                  @if (pause.endedAt) { – {{ pause.endedAt | sleepTime:sleep.timeZone }} } @else { · зараз }
                 </span>
                 <button type="button" class="button button--quiet" (click)="openPauseAdjust(pause)">Змінити</button>
               </li>
@@ -56,11 +48,11 @@
         }
       } @else if (sleep.nextSleepAt) {
         <span class="eyebrow">Наступний сон</span>
-        <h2 id="tracker-title" class="timer">{{ sleep.nextSleepAt | date:'HH:mm':sleep.timeZone:'uk' }}</h2>
+        <h2 id="tracker-title" class="timer">{{ sleep.nextSleepAt | sleepTime:sleep.timeZone }}</h2>
         @if (sleep.prepareAt) {
-          <p class="prepare">Готуватися з {{ sleep.prepareAt | date:'HH:mm':sleep.timeZone:'uk' }}</p>
+          <p class="prepare">Готуватися з {{ sleep.prepareAt | sleepTime:sleep.timeZone }}</p>
         }
-        <p class="page-subtitle">Не спить <app-sleep-timer mode="awake" [startedAt]="sleep.awakeSince" [offset]="clockOffset()" />. {{ sleep.headline }}</p>
+        <p class="page-subtitle">Не спить <app-sleep-timer mode="awake" [startedAt]="sleep.awakeSince" [offset]="clockOffset()" /></p>
       } @else {
         <span class="eyebrow">{{ sleep.awakeSince ? 'Не спить' : 'Ще немає запису' }}</span>
         <h2 id="tracker-title" class="timer timer--text">{{ sleep.headline }}</h2>
@@ -85,7 +77,7 @@
 
       @if (sleep.activeStale) {
         <div class="stale">
-          <p>Таймер іде надто довго і в план не потрапить, поки ви не поправите кінець. Початок запису лишається.</p>
+          <p>Сон триває незвично довго. Уточніть час пробудження, щоб врахувати його в плані.</p>
           <label class="field">
             <span>Час пробудження</span>
             <input type="datetime-local" [value]="wakeAt()" (input)="wakeAt.set($any($event.target).value)">
@@ -102,12 +94,20 @@
             <button class="button button--primary" type="button" [disabled]="busy()" (click)="pause()">Пауза</button>
             <button class="button button--secondary" type="button" [disabled]="busy()" (click)="stop(wakeAt() || undefined)">Завершити</button>
           }
-          <button class="button button--secondary" type="button" [disabled]="busy()" (click)="openStartAdjust()">Змінити початок</button>
-          <button class="button button--secondary" type="button" [disabled]="busy()" (click)="openSavedPause(sleep.active)">Додати минулу паузу</button>
         } @else {
           <button class="button button--primary" type="button" [disabled]="busy()" (click)="start()">Старт сну</button>
         }
       </div>
+
+      @if (sleep.active) {
+        <details class="fold">
+          <summary>Виправити запис</summary>
+          <div class="hero-actions">
+            <button class="button button--secondary" type="button" [disabled]="busy()" (click)="openStartAdjust()">Змінити початок</button>
+            <button class="button button--secondary" type="button" [disabled]="busy()" (click)="openSavedPause(sleep.active)">Додати минулу паузу</button>
+          </div>
+        </details>
+      }
 
       @if (sleep.active && savedPauseSessionId() === sleep.active.id) {
         <ng-container [ngTemplateOutlet]="savedPauseEditor" />
@@ -145,11 +145,11 @@
       }
     </section>
 
+    @if (!nativePlatform) {
     <section class="panel reminder-card" aria-labelledby="reminder-title">
       <div>
-        <span class="eyebrow">НАГАДУВАННЯ</span>
-        <h2 id="reminder-title">Наступний сон</h2>
-        <p>На цьому пристрої: за 20 хв, за 10 хв і в орієнтовний час початку. Цей перемикач також повідомляє про початок і кінець сну та про завершення задачі іншим батьком.</p>
+        <h2 id="reminder-title">Сповіщення</h2>
+        <p>Про наступний сон за 20 і 10 хвилин та в запланований час. Також про зміни другого з батьків.</p>
         @if (!reminders.supported()) {
           <p class="field-help">Для push-сповіщень установіть PWA на головний екран і відкрийте його через HTTPS.</p>
         } @else if (reminders.config.error()) {
@@ -166,6 +166,7 @@
           (click)="reminders.enable()">Увімкнути</button>
       }
     </section>
+    }
 
     <section class="panel block" aria-labelledby="today-title">
       <div class="section-heading"><h2 id="today-title">Сьогодні</h2><span>{{ minutes(sleep.stats.todaySleepMin) }}</span></div>
@@ -190,7 +191,7 @@
       @if (sleep.scheduleNote) { <p class="field-help">{{ sleep.scheduleNote }}</p> }
       @if (sleep.detail && sleep.active) { <p class="field-help">{{ sleep.detail }}</p> }
       @if (!sleep.schedule.length) {
-        <p class="field-help">Після пробудження тут з’явиться наступний сон і ніч.</p>
+        <p class="field-help">{{ sleep.activeStale ? 'Уточніть час пробудження для плану.' : 'План з’явиться після пробудження.' }}</p>
       } @else {
         <div class="schedule">
           @for (item of sleep.schedule; track item.label + item.clock; let first = $first) {
@@ -206,7 +207,6 @@
     <div class="chips">
       <span class="badge">24 год: {{ minutes(sleep.stats.last24hSleepMin) }} / {{ minutes(sleep.stats.targetSleepMin) }}</span>
       <span class="badge">Денних сьогодні: {{ sleep.stats.todayNapCount }}</span>
-      <span class="badge">{{ sleep.profile.ageLabel }}</span>
     </div>
 
     <div class="section-heading">
@@ -240,7 +240,7 @@
     }
 
     @if (!sessionsByDay().today.length) {
-      <div class="panel state"><h2>Сьогодні ще немає запису</h2><p>Натисніть «Старт сну». Час лишиться після перезавантаження.</p></div>
+      <div class="panel state"><h2>Сьогодні ще немає записів</h2><p>Коли дитина засне, натисніть «Старт сну».</p></div>
     } @else {
       <div class="list">
         @for (session of sessionsByDay().today; track session.id) {
@@ -250,7 +250,10 @@
     }
 
     <details class="panel fold-panel">
-      <summary>Статистика і чому така порада</summary>
+      <summary>Статистика й поради</summary>
+      @if (sleep.nextSleepAt && sleep.headline) { <p class="field-help">{{ sleep.headline }}</p> }
+      <p class="field-help">{{ sleep.lifeWeek }}-й тиждень · {{ sleep.profile.ageLabel }}{{ sleep.profile.assumedAge ? ' (орієнтовно)' : '' }}</p>
+      @if (sleep.weekNote) { <p class="field-help">{{ sleep.weekNote }}</p> }
       <div class="stats">
         <article class="stat">
           <span>Середнє</span>
@@ -297,9 +300,9 @@
           <h3>{{ kindLabel(session.kind) }}</h3>
           <div class="list-card__meta">
             <span>
-              {{ session.startedAt | date:'d MMM, HH:mm':sleep.timeZone:'uk' }}
+              {{ session.startedAt | sleepTime:sleep.timeZone:'dateTime' }}
               –
-              {{ session.endedAt ? (session.endedAt | date:'HH:mm':sleep.timeZone:'uk') : 'триває' }}
+              {{ session.endedAt ? (session.endedAt | sleepTime:sleep.timeZone) : 'триває' }}
             </span>
             <span class="badge">{{ session.endedAt ? 'Тривалість' : 'Вже спить' }}: {{ historyDuration(session) }}</span>
           </div>
@@ -308,7 +311,7 @@
             <ul class="saved-pauses" aria-label="Паузи">
               @for (pause of session.pauses; track pause.id) {
                 <li class="saved-pauses__row">
-                  <span>Пауза {{ pause.startedAt | date:'HH:mm':sleep.timeZone:'uk' }} – {{ pause.endedAt | date:'HH:mm':sleep.timeZone:'uk' }}</span>
+                  <span>Пауза {{ pause.startedAt | sleepTime:sleep.timeZone }} – {{ pause.endedAt | sleepTime:sleep.timeZone }}</span>
                   <button class="button button--quiet" type="button" (click)="openSavedPause(session, pause)">Змінити</button>
                 </li>
               }
@@ -317,11 +320,13 @@
           @if (session.endedAt && savedPauseSessionId() === session.id) {
             <ng-container [ngTemplateOutlet]="savedPauseEditor" />
           }
-          <div class="record-audit">
-            <span>Додав: {{ session.startedByName || 'невідомо' }}</span>
-            @if (session.endedByName) { <span>Завершив: {{ session.endedByName }}</span> }
-            @if (session.updatedByName) { <span>Змінив: {{ session.updatedByName }}</span> }
-          </div>
+          @if (session.startedByName || session.endedByName || session.updatedByName) {
+            <div class="record-audit">
+              @if (session.startedByName) { <span>Додав: {{ session.startedByName }}</span> }
+              @if (session.endedByName) { <span>Завершив: {{ session.endedByName }}</span> }
+              @if (session.updatedByName) { <span>Змінив: {{ session.updatedByName }}</span> }
+            </div>
+          }
         </div>
         <div class="list-card__actions">
           @if (deletingId() === session.id) {
@@ -335,7 +340,7 @@
               <button class="button button--quiet" type="button" (click)="openSavedPause(session)">Додати паузу</button>
             }
             <button class="button button--secondary" type="button" (click)="edit(session)">Змінити</button>
-            <button class="button button--quiet" type="button" [attr.aria-label]="'Видалити сон від ' + (session.startedAt | date:'d MMM HH:mm':sleep.timeZone:'uk')" (click)="deletingId.set(session.id)">Видалити</button>
+            <button class="button button--quiet" type="button" [attr.aria-label]="'Видалити сон від ' + (session.startedAt | sleepTime:sleep.timeZone:'dateTime')" (click)="deletingId.set(session.id)">Видалити</button>
           }
         </div>
       </article>

@@ -17,13 +17,13 @@ export class ShellComponent {
   readonly moreOpen = signal(false);
   readonly today = new Intl.DateTimeFormat(APP_LOCALE, { dateStyle: 'full' }).format(new Date());
   readonly nav: readonly NavItem[] = [
-    { path: '/app/home', label: 'Головна', icon: 'home', description: 'Усе важливе на сьогодні' },
-    { path: '/app/calendar', label: 'Календар', icon: 'calendar', description: 'Події та плани сім’ї' },
-    { path: '/app/shopping', label: 'Покупки', icon: 'shopping', description: 'Спільний список покупок' },
-    { path: '/app/children', label: 'Діти', icon: 'children', description: 'Задачі та нагадування по дітях' },
-    { path: '/app/sleep', label: 'Сон', icon: 'sleep', description: 'Графік сну дитини' },
-    { path: '/app/contacts', label: 'Контакти', icon: 'contacts', description: 'Важливі люди й номери' },
-    { path: '/app/family', label: 'Родина', icon: 'family', description: 'Учасники та запрошення' },
+    { path: '/app/home', label: 'Головна', icon: 'home' },
+    { path: '/app/calendar', label: 'Календар', icon: 'calendar' },
+    { path: '/app/shopping', label: 'Покупки', icon: 'shopping' },
+    { path: '/app/children', label: 'Діти', icon: 'children' },
+    { path: '/app/sleep', label: 'Сон', icon: 'sleep' },
+    { path: '/app/contacts', label: 'Контакти', icon: 'contacts' },
+    { path: '/app/family', label: 'Родина', icon: 'family' },
   ];
   readonly primaryNav = this.nav.slice(0, 5);
   readonly secondaryNav = this.nav.slice(5);

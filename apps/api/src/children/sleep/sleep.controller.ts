@@ -3,6 +3,7 @@ import {
   Controller,
   Delete,
   Get,
+  Header,
   Param,
   Patch,
   Post,
@@ -21,6 +22,7 @@ import {
   UpdatePauseDto,
   UpdateSleepDto,
   UpdateSleepProfileDto,
+  WidgetSleepActionDto,
 } from './dto/sleep.dto';
 import { SleepService } from './sleep.service';
 
@@ -32,6 +34,21 @@ export class SleepController {
   @Get()
   overview(@CurrentUser() user: AuthUser) {
     return this.sleepService.overview(user);
+  }
+
+  @Get('widget')
+  @Header('Cache-Control', 'private, no-store')
+  widgetSnapshot(@CurrentUser() user: AuthUser) {
+    return this.sleepService.widgetSnapshot(user);
+  }
+
+  @Post('widget/action')
+  @Header('Cache-Control', 'private, no-store')
+  widgetAction(
+    @CurrentUser() user: AuthUser,
+    @Body() dto: WidgetSleepActionDto,
+  ) {
+    return this.sleepService.widgetAction(user, dto);
   }
 
   @Post('start')

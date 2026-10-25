@@ -1,5 +1,5 @@
 <section class="page">
-  <header class="page-header"><div><span class="eyebrow">СПІЛЬНИЙ ПРОСТІР</span><h1>Родина</h1><p class="page-subtitle">Учасники бачать спільні події, покупки, задачі та сон.</p></div></header>
+  <header class="page-header"><div><h1>Родина</h1></div></header>
   @if (family.overview.isLoading()) {
     <div class="panel state"><p>Завантажуємо родину…</p></div>
   } @else if (family.overview.error()) {
@@ -12,9 +12,8 @@
         }</ul>
       </section>
       <section class="panel family-card family-card--child" aria-labelledby="child-title">
-        <span class="eyebrow">НАЙМОЛОДШИЙ У РОДИНІ</span>
-        <h2 id="child-title">{{ overview.child ? overview.child.name : 'Додайте дитину' }}</h2>
-        <p>{{ overview.child ? 'Ім’я та вік спільні для батьків і використовуються у трекері сну.' : 'Збережіть ім’я та дату народження один раз — вони з’являться у трекері сну.' }}</p>
+        <h2 id="child-title">{{ overview.child ? overview.child.name : 'Дитина' }}</h2>
+        @if (!overview.child) { <p>Ім’я та вік з’являться у трекері сну.</p> }
         @if (previewAgeLabel(); as age) { <p><span class="badge">{{ age }}</span></p> }
         <form (submit)="$event.preventDefault(); saveChild()">
           <label class="field">
@@ -32,12 +31,27 @@
         </form>
       </section>
       @if (auth.user()?.role === 'ADMIN') {
-        <section class="panel family-card" aria-labelledby="invite-title"><h2 id="invite-title">Запросити до родини</h2><p>Дані цієї родини будуть доступні запрошеному. Його окремі дані не переносяться.</p>
+        <section class="panel family-card" aria-labelledby="invite-title"><h2 id="invite-title">Запрошення</h2>
           @if (overview.members.length < 2) {
+            <p>Запрошений побачить спільні дані родини. Його попередні записи залишаться окремо.</p>
             <form (submit)="$event.preventDefault(); invite()"><label class="field"><span>Електронна пошта</span><input type="email" autocomplete="email" [formField]="inviteForm.email"></label><button class="button button--primary" type="submit" [disabled]="busy() || !inviteForm().valid()">Створити запрошення</button></form>
           } @else { <p>У родині вже є два учасники.</p> }
           @if (link()) { <div class="invite-link"><label class="field"><span>Одноразове посилання</span><input readonly [value]="link()" (focus)="$any($event.target).select()"></label><button class="button button--secondary" type="button" (click)="copy()">Копіювати</button></div> }
-          @if (overview.invitations.length) { <h3>Очікують підтвердження</h3><ul class="family-list">@for (invitation of overview.invitations; track invitation.id) { <li><span><strong>{{ invitation.email }}</strong><small>Діє до {{ invitation.expiresAt | date:'d MMM, HH:mm':undefined:'uk' }}</small><small>Додав: {{ invitation.createdBy?.displayName || 'невідомо' }}</small></span><button class="button button--quiet" type="button" [disabled]="busy()" (click)="revoke(invitation.id)">Скасувати</button></li> }</ul> }
+          @if (overview.invitations.length) {
+            <h3>Очікують підтвердження</h3>
+            <ul class="family-list">
+              @for (invitation of overview.invitations; track invitation.id) {
+                <li>
+                  <span>
+                    <strong>{{ invitation.email }}</strong>
+                    <small>Діє до {{ invitation.expiresAt | date:'d MMM, HH:mm':undefined:'uk' }}</small>
+                    @if (invitation.createdBy?.displayName; as creator) { <small>Додав: {{ creator }}</small> }
+                  </span>
+                  <button class="button button--quiet" type="button" [disabled]="busy()" (click)="revoke(invitation.id)">Скасувати</button>
+                </li>
+              }
+            </ul>
+          }
         </section>
       }
     </div>

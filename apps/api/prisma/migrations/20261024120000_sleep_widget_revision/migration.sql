@@ -1,0 +1,1 @@
+ALTER TABLE "SleepSession" ADD COLUMN "revision" INTEGER NOT NULL DEFAULT 0;

@@ -2,7 +2,7 @@
   <header class="home-hero">
     <div class="home-hero__content">
       <h1 id="page-title">Привіт, {{ firstName() }}!</h1>
-      <p>Сьогоднішні плани, дитячі справи й покупки — усе поруч, щоб легше домовлятися й встигати разом.</p>
+      <p>Події, справи дітей і покупки — на одному екрані.</p>
       <a class="button button--primary" routerLink="/app/calendar" [queryParams]="{ new: '1' }">Додати подію</a>
     </div>
     <div class="home-hero__today" aria-label="Сьогоднішня дата">
@@ -13,20 +13,20 @@
   </header>
 
   <div class="home-section-heading">
-    <div><h2>На порядку денному</h2></div>
+    <div><h2>Огляд</h2></div>
   </div>
   <div class="overview-grid">
     <a class="panel overview-tile" routerLink="/app/calendar">
       <span class="overview-tile__value">{{ eventCount() }}</span>
-      <strong>Події попереду</strong><small>Календар</small>
+      <strong>Майбутні події</strong>
     </a>
     <a class="panel overview-tile" routerLink="/app/children">
       <span class="overview-tile__value">{{ taskCount() }}</span>
-      <strong>Справи дітей</strong><small>Задачі</small>
+      <strong>Справи дітей</strong>
     </a>
     <a class="panel overview-tile" routerLink="/app/shopping">
       <span class="overview-tile__value">{{ shoppingCount() }}</span>
-      <strong>Треба купити</strong><small>Покупки</small>
+      <strong>Треба купити</strong>
     </a>
   </div>
 
@@ -38,7 +38,7 @@
       } @else if (calendar.events.error()) {
         <div class="home-card__state"><p>Не вдалося завантажити події.</p><button class="button button--secondary" type="button" (click)="calendar.events.reload()">Повторити</button></div>
       } @else if (!upcoming().length) {
-        <div class="home-card__state"><p>Поки немає запланованих подій.</p><a routerLink="/app/calendar" [queryParams]="{ new: '1' }">Додати подію</a></div>
+        <div class="home-card__state"><p>Найближчих подій немає.</p><a routerLink="/app/calendar" [queryParams]="{ new: '1' }">Додати подію</a></div>
       } @else {
         <ul class="home-list">
           @for (event of upcoming().slice(0, 3); track event.id) {
@@ -54,7 +54,7 @@
       } @else if (children.tasks.error()) {
         <div class="home-card__state"><p>Не вдалося завантажити задачі.</p><button class="button button--secondary" type="button" (click)="children.tasks.reload()">Повторити</button></div>
       } @else if (!openTasks().length) {
-        <div class="home-card__state"><p>Усі справи зроблено. Гарна нагода перепочити!</p><a routerLink="/app/children" [queryParams]="{ new: '1' }">Додати задачу</a></div>
+        <div class="home-card__state"><p>Зараз немає справ.</p><a routerLink="/app/children" [queryParams]="{ new: '1' }">Додати задачу</a></div>
       } @else {
         <ul class="home-list home-list--tasks">
           @for (task of openTasks().slice(0, 3); track task.id) {
@@ -68,7 +68,7 @@
   <app-home-sleep-card />
 
   <section class="home-shopping panel" aria-labelledby="shopping-title">
-    <div><h2 id="shopping-title">Що потрібно купити?</h2><p>Окремі покупки й списки для походів у магазин доступні всій родині.</p></div>
+    <h2 id="shopping-title">Що купити</h2>
     @if (shopping.items.isLoading()) {
       <p role="status">Завантажуємо список…</p>
     } @else if (shopping.items.error()) {
@@ -76,7 +76,7 @@
     } @else if (openShopping().length) {
       <p>{{ shoppingPreview() }}</p>
     } @else {
-      <p>Список порожній. Згадаєте щось потрібне — додайте сюди.</p>
+      <p>Покупок на зараз немає.</p>
     }
     <a class="button button--secondary" routerLink="/app/shopping" [queryParams]="{ new: '1' }">Додати покупку</a>
   </section>

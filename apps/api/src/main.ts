@@ -28,6 +28,7 @@ async function bootstrap() {
   ]
     .filter((host): host is string => Boolean(host))
     .map((host) => (host.startsWith('http') ? host : `https://${host}`));
+  const capacitorOrigins = ['capacitor://localhost', 'https://localhost'];
 
   app.setGlobalPrefix('api/v1');
   app.use(cookieParser());
@@ -40,7 +41,7 @@ async function bootstrap() {
     }),
   );
   app.enableCors({
-    origin: [configured, ...vercelHosts],
+    origin: [configured, ...vercelHosts, ...capacitorOrigins],
     credentials: true,
   });
 

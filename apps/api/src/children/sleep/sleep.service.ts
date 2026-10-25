@@ -20,10 +20,13 @@ import {
   UpdatePauseDto,
   UpdateSleepDto,
   UpdateSleepProfileDto,
+  WidgetSleepActionDto,
 } from './dto/sleep.dto';
 import { normalizeBabyName, SLEEP_TRACKER } from './sleep.config';
 import { buildSleepGuidance } from './sleep-guidance';
 import { sessionInclude, type SessionRow, type SleepDb } from './sleep.model';
+import { toSleepWidgetSnapshot } from './sleep-widget';
+import type { SleepWidgetSnapshot } from './sleep-widget.model';
 import {
   ageLabelFromDays,
   ASSUMED_AGE_WEEKS,
@@ -44,6 +47,48 @@ export class SleepService {
 
   async overview(user: AuthUser) {
     return this.overviewForHousehold(user.householdId);
+  }
+
+  async widgetSnapshot(user: AuthUser): Promise<SleepWidgetSnapshot> {
+    const overview = await this.overviewForHousehold(user.householdId);
+    return toSleepWidgetSnapshot(overview);
+  }
+
+  async widgetAction(user: AuthUser, dto: WidgetSleepActionDto) {
+    await this.prisma.$transaction(async (tx) => {
+      const current = await this.findOpen(tx, user.householdId);
+      if (
+        !current ||
+        current.id !== dto.expectedSessionId ||
+        current.revision !== dto.expectedRevision
+      ) {
+        throw new ConflictException('Стан сну змінився. Оновіть віджет.');
+      }
+
+      const openPause = current.pauses.find((pause) => pause.endedAt === null);
+      if (
+        (dto.action === 'pause' && openPause) ||
+        (dto.action === 'resume' && !openPause)
+      ) {
+        throw new ConflictException('Стан сну змінився. Оновіть віджет.');
+      }
+
+      const now = new Date();
+      if (dto.action === 'pause') this.assertPauseStart(current, now);
+      else this.assertPauseEnd(openPause!.startedAt, now, current.startedAt);
+      await this.claimActiveRevision(tx, current, user);
+      if (dto.action === 'pause') {
+        await tx.sleepPause.create({
+          data: { sessionId: current.id, startedAt: now },
+        });
+      } else {
+        await tx.sleepPause.update({
+          where: { id: openPause!.id },
+          data: { endedAt: now },
+        });
+      }
+    });
+    return { snapshot: await this.widgetSnapshot(user) };
   }
 
   /** Reuse the same current guidance for the push dispatcher. */
@@ -144,6 +189,7 @@ export class SleepService {
       }
       const endedAt = dto.endedAt ? new Date(dto.endedAt) : new Date();
       this.assertRange(current.startedAt, endedAt);
+      await this.claimActiveRevision(tx, current, user);
       if (current.pauses.some((pause) => pause.endedAt === null)) {
         await tx.sleepPause.updateMany({
           where: { sessionId: current.id, endedAt: null },
@@ -182,6 +228,7 @@ export class SleepService {
       }
       const startedAt = dto.startedAt ? new Date(dto.startedAt) : new Date();
       this.assertPauseStart(current, startedAt);
+      await this.claimActiveRevision(tx, current, user);
       await tx.sleepPause.create({
         data: { sessionId: current.id, startedAt },
       });
@@ -205,6 +252,7 @@ export class SleepService {
       if (!open) throw new ConflictException('Паузи зараз немає.');
       const endedAt = dto.endedAt ? new Date(dto.endedAt) : new Date();
       this.assertPauseEnd(open.startedAt, endedAt, current.startedAt);
+      await this.claimActiveRevision(tx, current, user);
       await tx.sleepPause.update({
         where: { id: open.id },
         data: { endedAt },
@@ -244,13 +292,19 @@ export class SleepService {
         );
         if (other) throw new ConflictException('Уже є інша відкрита пауза.');
       }
+      if (pause.session.endedAt === null) {
+        await this.claimActiveRevision(tx, pause.session, user);
+      }
       await tx.sleepPause.update({
         where: { id },
         data: { startedAt, endedAt },
       });
       await tx.sleepSession.update({
         where: { id: pause.sessionId },
-        data: { updatedById: user.userId },
+        data: {
+          updatedById: user.userId,
+          revision: pause.session.endedAt ? { increment: 1 } : undefined,
+        },
       });
       const fresh = await tx.sleepSession.findFirstOrThrow({
         where: { id: pause.sessionId },
@@ -270,12 +324,18 @@ export class SleepService {
       const startedAt = new Date(dto.startedAt);
       const endedAt = new Date(dto.endedAt);
       this.assertPauseWindow(session, startedAt, endedAt);
+      if (session.endedAt === null) {
+        await this.claimActiveRevision(tx, session, user);
+      }
       await tx.sleepPause.create({
         data: { sessionId: id, startedAt, endedAt },
       });
       const fresh = await tx.sleepSession.update({
         where: { id },
-        data: { updatedById: user.userId },
+        data: {
+          updatedById: user.userId,
+          revision: session.endedAt ? { increment: 1 } : undefined,
+        },
         include: sessionInclude,
       });
       return { session: this.map(fresh) };
@@ -348,6 +408,9 @@ export class SleepService {
           throw new ConflictException('Уже є інший активний сон.');
         }
       }
+      if (existing.endedAt === null) {
+        await this.claimActiveRevision(tx, existing, user);
+      }
       const session = await tx.sleepSession.update({
         where: { id },
         data: {
@@ -358,6 +421,7 @@ export class SleepService {
             dto.notes === undefined ? undefined : this.cleanNotes(dto.notes),
           endedById: endedAt && !existing.endedAt ? user.userId : undefined,
           updatedById: user.userId,
+          revision: existing.endedAt ? { increment: 1 } : undefined,
         },
         include: sessionInclude,
       });
@@ -377,12 +441,18 @@ export class SleepService {
   }
 
   async remove(user: AuthUser, id: string) {
-    const existing = await this.prisma.sleepSession.findFirst({
-      where: { id, householdId: user.householdId },
+    return this.prisma.$transaction(async (tx) => {
+      const existing = await tx.sleepSession.findFirst({
+        where: { id, householdId: user.householdId },
+        include: sessionInclude,
+      });
+      if (!existing) throw new NotFoundException('Запис сну не знайдено.');
+      if (existing.endedAt === null) {
+        await this.claimActiveRevision(tx, existing, user);
+      }
+      await tx.sleepSession.delete({ where: { id } });
+      return { ok: true };
     });
-    if (!existing) throw new NotFoundException('Запис сну не знайдено.');
-    await this.prisma.sleepSession.delete({ where: { id } });
-    return { ok: true };
   }
 
   async updateProfile(user: AuthUser, dto: UpdateSleepProfileDto) {
@@ -510,7 +580,10 @@ export class SleepService {
         if (stale.startedAt < current.startedAt) {
           await tx.sleepSession.update({
             where: { id: stale.id },
-            data: { endedAt: current.startedAt },
+            data: {
+              endedAt: current.startedAt,
+              revision: { increment: 1 },
+            },
           });
         }
       }
@@ -621,6 +694,7 @@ export class SleepService {
     const pauses = session.pauses ?? [];
     return {
       id: session.id,
+      revision: session.revision,
       kind: session.kind,
       startedAt: session.startedAt.toISOString(),
       endedAt: session.endedAt?.toISOString() ?? null,
@@ -634,6 +708,28 @@ export class SleepService {
         endedAt: pause.endedAt?.toISOString() ?? null,
       })),
     };
+  }
+
+  private async claimActiveRevision(
+    tx: Prisma.TransactionClient,
+    session: SessionRow,
+    user: AuthUser,
+  ): Promise<void> {
+    const claimed = await tx.sleepSession.updateMany({
+      where: {
+        id: session.id,
+        householdId: user.householdId,
+        endedAt: null,
+        revision: session.revision,
+      },
+      data: {
+        revision: { increment: 1 },
+        updatedById: user.userId,
+      },
+    });
+    if (claimed.count !== 1) {
+      throw new ConflictException('Стан сну змінився. Оновіть сторінку.');
+    }
   }
 
   private assertPauseStart(

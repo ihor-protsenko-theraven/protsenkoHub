@@ -13,7 +13,7 @@ import {
 import type { Response } from 'express';
 import { AUTH } from './auth.config';
 import { AuthService } from './auth.service';
-import { LoginDto, RegisterDto } from './dto/auth.dto';
+import { LoginDto, MobileRefreshDto, RegisterDto } from './dto/auth.dto';
 import { JwtAuthGuard } from './jwt-auth.guard';
 import { CurrentUser } from '../common/current-user.decorator';
 import type { AuthUser } from '../common/types';
@@ -105,6 +105,51 @@ export class AuthController {
     const result = await this.authService.login(dto);
     this.setCookie(res, result.token);
     return { user: result.user };
+  }
+
+  @Post('mobile/login')
+  @HttpCode(200)
+  async mobileLogin(@Body() dto: LoginDto) {
+    const result = await this.authService.login(dto);
+    return this.authService.issueMobileSession(result.user);
+  }
+
+  @Post('mobile/register')
+  async mobileRegister(@Body() dto: RegisterDto) {
+    const result = await this.authService.register(dto);
+    return this.authService.issueMobileSession(result.user);
+  }
+
+  @Post('mobile/invitations/:token/register')
+  async mobileRegisterInvited(
+    @Param('token') token: string,
+    @Body() dto: RegisterInvitedDto,
+  ) {
+    const result = await this.invitations.register(token, dto);
+    return this.authService.issueMobileSession(result.user);
+  }
+
+  @Post('mobile/invitations/:token/accept')
+  @UseGuards(JwtAuthGuard)
+  async mobileAcceptInvitation(
+    @CurrentUser() user: AuthUser,
+    @Param('token') token: string,
+  ) {
+    const result = await this.invitations.accept(user, token);
+    return { user: result.user };
+  }
+
+  @Post('mobile/refresh')
+  @HttpCode(200)
+  mobileRefresh(@Body() dto: MobileRefreshDto) {
+    return this.authService.refreshMobileSession(dto.refreshToken);
+  }
+
+  @Post('mobile/logout')
+  @HttpCode(200)
+  async mobileLogout(@Body() dto: MobileRefreshDto) {
+    await this.authService.revokeMobileSession(dto.refreshToken);
+    return { ok: true };
   }
 
   @Post('logout')

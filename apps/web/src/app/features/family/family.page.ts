@@ -9,6 +9,8 @@ import {
 import { DatePipe } from '@angular/common';
 import { FormField, email, form, maxLength, required } from '@angular/forms/signals';
 import { AuthService } from '../../core/services/auth.service';
+import { MOBILE_WEB_ORIGIN_TOKEN } from '../../core/configs/mobile-web.config';
+import { isNativeApp } from '../../core/configs/native-platform.config';
 import { formatAgeFromBirthDate } from './family-age.util';
 import type { ChildProfileForm } from './family.model';
 import { FamilyService } from './family.service';
@@ -23,6 +25,7 @@ import { FamilyService } from './family.service';
 })
 export class FamilyPage {
   readonly auth = inject(AuthService);
+  private readonly mobileWebOrigin = inject(MOBILE_WEB_ORIGIN_TOKEN);
   readonly family = inject(FamilyService);
   readonly model = signal({ email: '' });
   readonly inviteForm = form(this.model, (path) => {
@@ -69,7 +72,7 @@ export class FamilyPage {
       .subscribe({
         next: () => {
           this.busy.set(false);
-          this.notice.set('Дані дитини збережено для всієї родини.');
+          this.notice.set('Дані дитини збережено.');
           this.family.overview.reload();
         },
         error: () => {
@@ -81,11 +84,16 @@ export class FamilyPage {
 
   invite(): void {
     if (!this.inviteForm().valid()) return;
+    const inviteOrigin = isNativeApp() ? this.mobileWebOrigin : location.origin;
+    if (!inviteOrigin) {
+      this.error.set('Для запрошень у мобільній збірці потрібна публічна HTTPS-адреса вебзастосунку.');
+      return;
+    }
     this.busy.set(true);
     this.error.set('');
     this.family.createInvitation(this.model().email.trim()).subscribe({
       next: ({ token }) => {
-        this.link.set(`${location.origin}/invite/${token}`);
+        this.link.set(`${inviteOrigin}/invite/${encodeURIComponent(token)}`);
         this.notice.set('Запрошення створено. Передайте посилання особисто.');
         this.busy.set(false);
         this.family.overview.reload();
@@ -104,7 +112,7 @@ export class FamilyPage {
       await navigator.clipboard.writeText(this.link());
       this.notice.set('Посилання скопійовано.');
     } catch {
-      this.notice.set('Скопіюйте посилання з поля нижче.');
+      this.notice.set('Скопіюйте посилання з поля.');
     }
   }
 
