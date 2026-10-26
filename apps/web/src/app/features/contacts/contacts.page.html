@@ -48,7 +48,7 @@
     @if (contacts.hasValue() && !contacts.isLoading() && !contacts.error()) { <span>Показано: {{ filtered().length }}</span> }
   </div>
   @if (contacts.isLoading()) {
-    <div class="panel state" role="status">Завантажуємо контакти…</div>
+    <div class="panel state"><app-loader label="Завантажуємо контакти…" /></div>
   } @else if (contacts.error()) {
   <div class="panel state"><h2>Не вдалося завантажити</h2>
     <button class="button button--secondary" type="button" (click)="contacts.reload()">Повторити</button>

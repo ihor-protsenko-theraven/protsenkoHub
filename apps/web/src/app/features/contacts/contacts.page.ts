@@ -1,5 +1,6 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { FormField, email, form, required } from '@angular/forms/signals';
+import { Loader } from '../../shared/loader.component';
 import { CONTACT_CATEGORIES } from './contacts.config';
 import { ContactCategory, ContactForm, ContactItem, ContactPayload } from './contacts.model';
 import { ContactsService } from './contacts.service';
@@ -11,7 +12,7 @@ const emptyForm = (): ContactForm => ({
 
 @Component({
   selector: 'app-contacts-page',
-  imports: [FormField],
+  imports: [FormField, Loader],
   providers: [ContactsService],
   templateUrl: './contacts.page.html',
   styleUrl: './contacts.page.scss',

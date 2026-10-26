@@ -11,13 +11,14 @@ import { FormField, email, form, maxLength, required } from '@angular/forms/sign
 import { AuthService } from '../../core/services/auth.service';
 import { MOBILE_WEB_ORIGIN_TOKEN } from '../../core/configs/mobile-web.config';
 import { isNativeApp } from '../../core/configs/native-platform.config';
+import { Loader } from '../../shared/loader.component';
 import { formatAgeFromBirthDate } from './family-age.util';
 import type { ChildProfileForm } from './family.model';
 import { FamilyService } from './family.service';
 
 @Component({
   selector: 'app-family-page',
-  imports: [DatePipe, FormField],
+  imports: [DatePipe, FormField, Loader],
   providers: [FamilyService],
   templateUrl: './family.page.html',
   styleUrl: './family.page.scss',

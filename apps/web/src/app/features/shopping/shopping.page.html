@@ -47,7 +47,7 @@
   @if (items.error() || lists.error()) {
     <div class="panel state"><h2>Не вдалося завантажити покупки</h2><button class="button button--secondary" type="button" (click)="items.reload(); lists.reload()">Повторити</button></div>
   } @else if (items.isLoading() || lists.isLoading()) {
-    <div class="panel state" role="status">Завантажуємо покупки…</div>
+    <div class="panel state"><app-loader label="Завантажуємо покупки…" /></div>
   } @else {
     @if (singleItems().length || !namedGroups().length) {
       <div class="section-heading"><h2>Окремі покупки</h2><span>{{ singleItems().length }}</span></div>

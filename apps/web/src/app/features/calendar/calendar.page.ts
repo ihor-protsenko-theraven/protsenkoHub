@@ -3,6 +3,7 @@ import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@a
 import { FormField, form, required } from '@angular/forms/signals';
 import { ActivatedRoute } from '@angular/router';
 import { HistoryPanel } from '../../shared/history-panel.component';
+import { Loader } from '../../shared/loader.component';
 import { toLocalDateTime } from '../../shared/date-time.util';
 import { CalendarEvent, CalendarEventForm, CalendarEventPayload, EventStatus } from './calendar.model';
 import { eventStatusLabel, eventStatusNotice } from './calendar-status.util';
@@ -12,7 +13,7 @@ const emptyForm = (): CalendarEventForm => ({ title: '', notes: '', startsAt: ''
 
 @Component({
   selector: 'app-calendar-page',
-  imports: [DatePipe, FormField, HistoryPanel, NgTemplateOutlet],
+  imports: [DatePipe, FormField, HistoryPanel, Loader, NgTemplateOutlet],
   providers: [CalendarService],
   templateUrl: './calendar.page.html',
   styleUrl: './calendar.page.scss',

@@ -13,6 +13,7 @@ import {RouterLink} from '@angular/router';
 import {Capacitor} from '@capacitor/core';
 import {APP_LOCALE} from '../../core/configs/locale.config';
 import {HistoryPanel} from '../../shared/history-panel.component';
+import {Loader} from '../../shared/loader.component';
 import {toLocalDateTime} from '../../shared/date-time.util';
 import {asleepMs, formatMinutes} from './sleep-clock';
 import {SLEEP_UI} from './sleep.config';
@@ -33,7 +34,7 @@ const dayCount = new Intl.NumberFormat(APP_LOCALE, {style: 'unit', unit: 'day', 
 
 @Component({
   selector: 'app-sleep-page',
-  imports: [FormField, HistoryPanel, NgTemplateOutlet, RouterLink, SleepStatus, SleepTimePipe, SleepTimer],
+  imports: [FormField, HistoryPanel, Loader, NgTemplateOutlet, RouterLink, SleepStatus, SleepTimePipe, SleepTimer],
   providers: [SleepService, SleepReminderService, SleepTickerService],
   templateUrl: './sleep.page.html',
   styleUrl: './sleep.page.scss',

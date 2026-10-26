@@ -3,7 +3,7 @@
     <h2 id="sleep-title">Сон дитини</h2>
   </div>
   @if (snapshot.isLoading()) {
-    <p role="status">Завантажуємо дані про сон…</p>
+    <app-loader label="Завантажуємо дані про сон…" />
   } @else if (snapshot.error()) {
     <div>
       <p>Не вдалося завантажити дані про сон.</p>

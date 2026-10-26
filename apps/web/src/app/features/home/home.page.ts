@@ -4,13 +4,14 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { RouterLink } from '@angular/router';
 import { map, timer } from 'rxjs';
 import { AuthService } from '../../core/services/auth.service';
+import { Loader } from '../../shared/loader.component';
 import { HOME_CLOCK_REFRESH_MS } from './home.config';
 import { HomeService } from './home.service';
 import { HomeSleepCard } from './home-sleep-card.component';
 
 @Component({
   selector: 'app-home-page',
-  imports: [DatePipe, RouterLink, HomeSleepCard],
+  imports: [DatePipe, RouterLink, HomeSleepCard, Loader],
   providers: [HomeService],
   templateUrl: './home.page.html',
   styleUrl: './home.page.scss',

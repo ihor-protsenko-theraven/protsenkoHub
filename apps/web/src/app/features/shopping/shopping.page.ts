@@ -3,6 +3,7 @@ import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@a
 import { FormField, form, min, required } from '@angular/forms/signals';
 import { ActivatedRoute } from '@angular/router';
 import { HistoryPanel } from '../../shared/history-panel.component';
+import { Loader } from '../../shared/loader.component';
 import { ShoppingItem, ShoppingItemForm, ShoppingItemPayload, ShoppingListForm } from './shopping.model';
 import { ShoppingService } from './shopping.service';
 
@@ -10,7 +11,7 @@ const emptyForm = (): ShoppingItemForm => ({ name: '', qty: 1, unit: '', categor
 
 @Component({
   selector: 'app-shopping-page',
-  imports: [FormField, HistoryPanel, NgTemplateOutlet],
+  imports: [FormField, HistoryPanel, Loader, NgTemplateOutlet],
   providers: [ShoppingService],
   templateUrl: './shopping.page.html',
   styleUrl: './shopping.page.scss',

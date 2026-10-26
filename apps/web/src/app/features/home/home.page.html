@@ -34,7 +34,7 @@
     <section class="panel home-card" aria-labelledby="upcoming-title">
       <div class="home-card__heading"><h2 id="upcoming-title">Незабаром</h2><a routerLink="/app/calendar">Усі події</a></div>
       @if (snapshot.isLoading()) {
-        <p class="home-card__state" role="status">Завантажуємо події…</p>
+        <div class="home-card__state"><app-loader label="Завантажуємо події…" /></div>
       } @else if (snapshot.error()) {
         <div class="home-card__state"><p>Не вдалося завантажити події.</p><button class="button button--secondary" type="button" (click)="snapshot.reload()">Повторити</button></div>
       } @else if (!upcoming().length) {
@@ -50,7 +50,7 @@
     <section class="panel home-card" aria-labelledby="tasks-title">
       <div class="home-card__heading"><h2 id="tasks-title">Справи дітей</h2><a routerLink="/app/children">Усі задачі</a></div>
       @if (snapshot.isLoading()) {
-        <p class="home-card__state" role="status">Завантажуємо задачі…</p>
+        <div class="home-card__state"><app-loader label="Завантажуємо задачі…" /></div>
       } @else if (snapshot.error()) {
         <div class="home-card__state"><p>Не вдалося завантажити задачі.</p><button class="button button--secondary" type="button" (click)="snapshot.reload()">Повторити</button></div>
       } @else if (!openTasks().length) {
@@ -86,7 +86,7 @@
   <section class="home-shopping panel" aria-labelledby="shopping-title">
     <h2 id="shopping-title">Що купити</h2>
     @if (snapshot.isLoading()) {
-      <p role="status">Завантажуємо список…</p>
+      <app-loader label="Завантажуємо список…" />
     } @else if (snapshot.error()) {
       <div><p>Не вдалося завантажити покупки.</p><button class="button button--secondary" type="button" (click)="snapshot.reload()">Повторити</button></div>
     } @else if (openShopping().length) {

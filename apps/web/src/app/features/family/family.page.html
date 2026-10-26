@@ -1,7 +1,7 @@
 <section class="page">
   <header class="page-header"><div><h1>Родина</h1></div></header>
   @if (family.overview.isLoading()) {
-    <div class="panel state"><p>Завантажуємо родину…</p></div>
+    <div class="panel state"><app-loader label="Завантажуємо родину…" /></div>
   } @else if (family.overview.error()) {
     <div class="panel state"><h2>Не вдалося завантажити родину</h2><button class="button button--secondary" type="button" (click)="family.overview.reload()">Повторити</button></div>
   } @else if (family.overview.value(); as overview) {

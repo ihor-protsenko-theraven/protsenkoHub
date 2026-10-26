@@ -40,7 +40,7 @@
     </label>
   </div>
   @if (events.isLoading()) {
-    <div class="panel state" role="status">Завантажуємо події…</div>
+    <div class="panel state"><app-loader label="Завантажуємо події…" /></div>
   } @else if (events.error()) {
     <div class="panel state">
       <h2>Не вдалося завантажити події</h2>

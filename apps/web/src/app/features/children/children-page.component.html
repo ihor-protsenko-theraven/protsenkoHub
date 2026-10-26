@@ -89,7 +89,7 @@
   </div>
 
   @if (tasks.isLoading()) {
-    <div class="panel state" role="status">Завантажуємо задачі…</div>
+    <div class="panel state"><app-loader label="Завантажуємо задачі…" /></div>
   } @else if (tasks.error()) {
     <div class="panel state">
       <h2>Не вдалося завантажити</h2>

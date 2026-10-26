@@ -3,6 +3,7 @@ import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@a
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { FormField, form, required } from '@angular/forms/signals';
 import { HistoryPanel } from '../../shared/history-panel.component';
+import { Loader } from '../../shared/loader.component';
 import { toLocalDateTime } from '../../shared/date-time.util';
 import { TASK_PRIORITIES, TASK_STATUSES } from './children.config';
 import {
@@ -19,7 +20,7 @@ const emptyForm = (): TaskForm => ({ title: '', notes: '', dueAt: '', status: 'T
 
 @Component({
   selector: 'app-children-page',
-  imports: [DatePipe, FormField, HistoryPanel, NgTemplateOutlet, RouterLink],
+  imports: [DatePipe, FormField, HistoryPanel, Loader, NgTemplateOutlet, RouterLink],
   providers: [ChildrenService],
   templateUrl: './children-page.component.html',
   styleUrl: './children-page.component.scss',
