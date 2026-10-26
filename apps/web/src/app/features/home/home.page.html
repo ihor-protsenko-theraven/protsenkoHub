@@ -33,10 +33,10 @@
   <div class="home-grid">
     <section class="panel home-card" aria-labelledby="upcoming-title">
       <div class="home-card__heading"><h2 id="upcoming-title">Незабаром</h2><a routerLink="/app/calendar">Усі події</a></div>
-      @if (calendar.events.isLoading()) {
+      @if (snapshot.isLoading()) {
         <p class="home-card__state" role="status">Завантажуємо події…</p>
-      } @else if (calendar.events.error()) {
-        <div class="home-card__state"><p>Не вдалося завантажити події.</p><button class="button button--secondary" type="button" (click)="calendar.events.reload()">Повторити</button></div>
+      } @else if (snapshot.error()) {
+        <div class="home-card__state"><p>Не вдалося завантажити події.</p><button class="button button--secondary" type="button" (click)="snapshot.reload()">Повторити</button></div>
       } @else if (!upcoming().length) {
         <div class="home-card__state"><p>Найближчих подій немає.</p><a routerLink="/app/calendar" [queryParams]="{ new: '1' }">Додати подію</a></div>
       } @else {
@@ -49,10 +49,10 @@
     </section>
     <section class="panel home-card" aria-labelledby="tasks-title">
       <div class="home-card__heading"><h2 id="tasks-title">Справи дітей</h2><a routerLink="/app/children">Усі задачі</a></div>
-      @if (children.tasks.isLoading()) {
+      @if (snapshot.isLoading()) {
         <p class="home-card__state" role="status">Завантажуємо задачі…</p>
-      } @else if (children.tasks.error()) {
-        <div class="home-card__state"><p>Не вдалося завантажити задачі.</p><button class="button button--secondary" type="button" (click)="children.tasks.reload()">Повторити</button></div>
+      } @else if (snapshot.error()) {
+        <div class="home-card__state"><p>Не вдалося завантажити задачі.</p><button class="button button--secondary" type="button" (click)="snapshot.reload()">Повторити</button></div>
       } @else if (!openTasks().length) {
         <div class="home-card__state"><p>Зараз немає справ.</p><a routerLink="/app/children" [queryParams]="{ new: '1' }">Додати задачу</a></div>
       } @else {
@@ -85,10 +85,10 @@
 
   <section class="home-shopping panel" aria-labelledby="shopping-title">
     <h2 id="shopping-title">Що купити</h2>
-    @if (shopping.items.isLoading()) {
+    @if (snapshot.isLoading()) {
       <p role="status">Завантажуємо список…</p>
-    } @else if (shopping.items.error()) {
-      <div><p>Не вдалося завантажити покупки.</p><button class="button button--secondary" type="button" (click)="shopping.items.reload()">Повторити</button></div>
+    } @else if (snapshot.error()) {
+      <div><p>Не вдалося завантажити покупки.</p><button class="button button--secondary" type="button" (click)="snapshot.reload()">Повторити</button></div>
     } @else if (openShopping().length) {
       <p>{{ shoppingPreview() }}</p>
     } @else {

@@ -7,10 +7,11 @@ import {
   Param,
   Post,
   Put,
+  Req,
   Res,
   UseGuards,
 } from '@nestjs/common';
-import type { Response } from 'express';
+import type { Request, Response } from 'express';
 import { AUTH } from './auth.config';
 import { AuthService } from './auth.service';
 import { LoginDto, MobileRefreshDto, RegisterDto } from './dto/auth.dto';
@@ -161,7 +162,17 @@ export class AuthController {
 
   @Get('me')
   @UseGuards(JwtAuthGuard)
-  me(@CurrentUser() user: AuthUser) {
+  async me(
+    @CurrentUser() user: AuthUser,
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const cookies = req.cookies as Record<string, string> | undefined;
+    const upgraded = await this.authService.upgradeWebToken(
+      user,
+      cookies?.[AUTH.cookieName],
+    );
+    if (upgraded) this.setCookie(res, upgraded);
     return { user };
   }
 

@@ -180,6 +180,32 @@ describe('JWT validation', () => {
     expect(findFirst).toHaveBeenCalledOnce();
   });
 
+  it('reads a web session from the token and skips the database', async () => {
+    const { strategy, findFirst, findUnique } = setup();
+
+    await expect(
+      strategy.validate(request('GET', '/api/v1/auth/me'), {
+        sub: 'parent-1',
+        email: 'parent@example.com',
+        householdId: 'household-9',
+        membershipId: 'member-9',
+        displayName: 'Тато',
+        role: 'MEMBER',
+        color: '#111111',
+      }),
+    ).resolves.toEqual({
+      userId: 'parent-1',
+      email: 'parent@example.com',
+      displayName: 'Тато',
+      householdId: 'household-9',
+      membershipId: 'member-9',
+      role: 'MEMBER',
+      color: '#111111',
+    });
+    expect(findFirst).not.toHaveBeenCalled();
+    expect(findUnique).not.toHaveBeenCalled();
+  });
+
   it('preserves web cookie JWT access and rejects unknown token types', async () => {
     const { strategy, findFirst } = setup();
 

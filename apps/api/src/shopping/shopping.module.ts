@@ -6,5 +6,6 @@ import { ShoppingListsController } from './shopping-lists.controller';
 @Module({
   controllers: [ShoppingController, ShoppingListsController],
   providers: [ShoppingService],
+  exports: [ShoppingService],
 })
 export class ShoppingModule {}

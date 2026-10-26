@@ -4,7 +4,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@drawable/sleep_widget_background"
-    android:gravity="center_horizontal"
+    android:gravity="center"
     android:orientation="vertical"
     android:padding="3dp">
     <TextView
@@ -22,14 +22,12 @@
     <LinearLayout
         android:id="@+id/widget_active"
         android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1"
+        android:layout_height="wrap_content"
         android:gravity="center_horizontal"
         android:orientation="vertical">
         <LinearLayout
             android:layout_width="match_parent"
-            android:layout_height="0dp"
-            android:layout_weight="1"
+            android:layout_height="wrap_content"
             android:gravity="center"
             android:orientation="vertical">
             <Chronometer
@@ -61,6 +59,7 @@
             android:src="@android:drawable/ic_media_pause"
             android:tint="#B5A9FF" />
         <LinearLayout
+            android:id="@+id/widget_actions"
             android:layout_width="match_parent"
             android:layout_height="28dp"
             android:gravity="center"
@@ -89,15 +88,13 @@
     <LinearLayout
         android:id="@+id/widget_idle"
         android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1"
+        android:layout_height="wrap_content"
         android:gravity="center_horizontal"
         android:orientation="vertical"
         android:visibility="gone">
         <LinearLayout
             android:layout_width="match_parent"
-            android:layout_height="0dp"
-            android:layout_weight="1"
+            android:layout_height="wrap_content"
             android:gravity="center"
             android:orientation="vertical">
             <TextView
@@ -144,8 +141,7 @@
     <LinearLayout
         android:id="@+id/widget_fallback"
         android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1"
+        android:layout_height="wrap_content"
         android:gravity="center"
         android:orientation="vertical"
         android:visibility="gone">

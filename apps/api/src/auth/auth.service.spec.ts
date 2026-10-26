@@ -188,4 +188,49 @@ describe('mobile sessions', () => {
     expect(revocation?.where.revokedAt).toBeNull();
     expect(revocation?.data.revokedAt).toBeInstanceOf(Date);
   });
+
+  it('reissues a web cookie that does not yet carry the household', async () => {
+    const signAsync = vi.fn().mockResolvedValue('upgraded');
+    const decode = vi
+      .fn()
+      .mockReturnValue({ sub: user.userId, email: user.email });
+    const service = new AuthService(
+      {} as PrismaService,
+      { signAsync, decode } as unknown as JwtService,
+    );
+
+    await expect(service.upgradeWebToken(user, 'old-token')).resolves.toBe(
+      'upgraded',
+    );
+    expect(signAsync).toHaveBeenCalledWith(
+      expect.objectContaining({
+        sub: user.userId,
+        householdId: user.householdId,
+        membershipId: user.membershipId,
+        role: user.role,
+      }),
+    );
+  });
+
+  it('leaves a web cookie that already carries the household', async () => {
+    const signAsync = vi.fn();
+    const decode = vi.fn().mockReturnValue({
+      sub: user.userId,
+      email: user.email,
+      householdId: user.householdId,
+      membershipId: user.membershipId,
+      displayName: user.displayName,
+      role: user.role,
+      color: user.color,
+    });
+    const service = new AuthService(
+      {} as PrismaService,
+      { signAsync, decode } as unknown as JwtService,
+    );
+
+    await expect(service.upgradeWebToken(user, 'current-token')).resolves.toBe(
+      null,
+    );
+    expect(signAsync).not.toHaveBeenCalled();
+  });
 });

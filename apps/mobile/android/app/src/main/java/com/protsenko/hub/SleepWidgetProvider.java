@@ -7,19 +7,30 @@ import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.SystemClock;
+import android.util.SizeF;
+import android.util.TypedValue;
 import android.view.View;
 import android.widget.RemoteViews;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.LinkedHashMap;
 import java.util.Locale;
+import java.util.Map;
 import java.util.TimeZone;
 import org.json.JSONException;
 import org.json.JSONObject;
 
 public class SleepWidgetProvider extends AppWidgetProvider {
+    private static final float MIN_WIDTH_DP = 109f;
+    private static final float COMPACT_BASE_HEIGHT_DP = 115f;
+    private static final float MINI_MAX_HEIGHT_DP = 105f;
+    private static final float MAX_SCALE = 2.4f;
+
     @Override
     public void onUpdate(Context context, AppWidgetManager manager, int[] appWidgetIds) {
         update(context, manager, appWidgetIds);
@@ -43,11 +54,42 @@ public class SleepWidgetProvider extends AppWidgetProvider {
 
     private static RemoteViews render(Context context, int widgetId) {
         Bundle options = AppWidgetManager.getInstance(context).getAppWidgetOptions(widgetId);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && options != null) {
+            ArrayList<SizeF> sizes = widgetSizes(options);
+            if (sizes != null && !sizes.isEmpty()) {
+                Map<SizeF, RemoteViews> layouts = new LinkedHashMap<>();
+                for (SizeF size : sizes) {
+                    layouts.put(size, renderForSize(context, widgetId,
+                            size.getWidth(), size.getHeight(), true));
+                }
+                return new RemoteViews(layouts);
+            }
+        }
         int width = options == null ? 0 : options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH);
         int height = options == null ? 0 : options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT);
-        boolean compact = width < 190 || height < 190;
-        RemoteViews views = new RemoteViews(context.getPackageName(), compact
+        return renderForSize(context, widgetId, width, height, false);
+    }
+
+    @SuppressWarnings("deprecation")
+    private static ArrayList<SizeF> widgetSizes(Bundle options) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            return options.getParcelableArrayList(AppWidgetManager.OPTION_APPWIDGET_SIZES, SizeF.class);
+        }
+        return options.getParcelableArrayList(AppWidgetManager.OPTION_APPWIDGET_SIZES);
+    }
+
+    private static RemoteViews renderForSize(Context context, int widgetId,
+            float width, float height, boolean exactSize) {
+        boolean mini = height > 0 && height < MINI_MAX_HEIGHT_DP;
+        boolean compact = !mini && (exactSize || width < 190 || height < 190);
+        RemoteViews views = new RemoteViews(context.getPackageName(), mini
+                ? R.layout.sleep_widget_mini : compact
                 ? R.layout.sleep_widget_compact : R.layout.sleep_widget);
+        if (compact && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            scaleCompactViews(context, views, width, height);
+        } else if (mini && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            scaleMiniViews(context, views, width, height);
+        }
         Intent open = new Intent(Intent.ACTION_VIEW, Uri.parse("protsenkohub://sleep"), context, MainActivity.class);
         open.addCategory(Intent.CATEGORY_BROWSABLE);
         open.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
@@ -79,6 +121,7 @@ public class SleepWidgetProvider extends AppWidgetProvider {
         long age = receivedAt > 0 ? Math.max(0, now - receivedAt) : 0;
         if ("sleeping".equals(state) || "paused".equals(state)) {
             views.setViewVisibility(R.id.widget_active, View.VISIBLE);
+            if (mini) views.setViewVisibility(R.id.widget_active_controls, View.VISIBLE);
             boolean sleeping = "sleeping".equals(state);
             long asleep = Math.max(0, snapshot.optLong("asleepMs", 0) + (sleeping ? age : 0));
             String icon = "NIGHT".equals(snapshot.optString("kind")) ? "☾ " : "☀ ";
@@ -99,6 +142,7 @@ public class SleepWidgetProvider extends AppWidgetProvider {
         }
 
         views.setViewVisibility(R.id.widget_idle, View.VISIBLE);
+        if (mini) views.setViewVisibility(R.id.widget_start, View.VISIBLE);
         JSONObject last = snapshot.optJSONObject("lastSleep");
         if (last != null) {
             long ended = parseIso(last.optString("endedAt", ""));
@@ -110,15 +154,100 @@ public class SleepWidgetProvider extends AppWidgetProvider {
                     + formatTime(ended, timeZone);
             String duration = formatDurationHuman(last.optLong("asleepMs", 0));
             views.setTextViewText(R.id.widget_last_detail,
-                    compact ? interval : interval + " · " + duration);
-            if (compact) views.setTextViewText(R.id.widget_last_duration, "Тривав " + duration);
+                    compact || mini ? interval : interval + " · " + duration);
+            if (compact || mini) views.setTextViewText(R.id.widget_last_duration, duration);
         } else {
             views.setTextViewText(R.id.widget_last_ago, "Ще немає сну");
             views.setTextViewText(R.id.widget_last_detail, "Почніть перший запис");
-            if (compact) views.setTextViewText(R.id.widget_last_duration, "");
+            if (compact || mini) views.setTextViewText(R.id.widget_last_duration, "");
         }
         configureAction(context, views, widgetId, snapshot, "start", R.id.widget_start, 4);
         return views;
+    }
+
+    private static void scaleCompactViews(Context context, RemoteViews views,
+            float width, float height) {
+        float scale = Math.min(MAX_SCALE, Math.max(1f,
+                Math.min(width / MIN_WIDTH_DP, height / COMPACT_BASE_HEIGHT_DP)));
+        int dip = TypedValue.COMPLEX_UNIT_DIP;
+        int sp = TypedValue.COMPLEX_UNIT_SP;
+        views.setViewLayoutHeight(R.id.widget_child, 16f * scale, dip);
+        views.setViewLayoutWidth(R.id.widget_toggle, 32f * scale, dip);
+        views.setViewLayoutHeight(R.id.widget_toggle, 32f * scale, dip);
+        views.setViewLayoutHeight(R.id.widget_actions, 28f * scale, dip);
+        for (int id : new int[] { R.id.widget_delete, R.id.widget_save }) {
+            views.setViewLayoutWidth(id, 28f * scale, dip);
+            views.setViewLayoutHeight(id, 28f * scale, dip);
+        }
+        views.setViewLayoutMargin(R.id.widget_save, RemoteViews.MARGIN_START, 18f * scale, dip);
+        views.setViewLayoutWidth(R.id.widget_start, 42f * scale, dip);
+        views.setViewLayoutHeight(R.id.widget_start, 42f * scale, dip);
+        views.setTextViewTextSize(R.id.widget_child, sp, 10f * scale);
+        views.setTextViewTextSize(R.id.widget_active_duration, sp, 18f * scale);
+        views.setTextViewTextSize(R.id.widget_active_detail, sp, 9f * scale);
+        views.setTextViewTextSize(R.id.widget_last_ago, sp, 14f * scale);
+        views.setTextViewTextSize(R.id.widget_last_detail, sp, 9f * scale);
+        views.setTextViewTextSize(R.id.widget_last_duration, sp, 9f * scale);
+        views.setTextViewTextSize(R.id.widget_start, sp, 20f * scale);
+        views.setTextViewTextSize(R.id.widget_fallback_title, sp, 13f * scale);
+        views.setTextViewTextSize(R.id.widget_fallback_detail, sp, 10f * scale);
+        int outer = dp(context, 3f * scale);
+        views.setViewPadding(R.id.widget_root, outer, outer, outer, outer);
+        int childHorizontal = dp(context, 7f * scale);
+        views.setViewPadding(R.id.widget_child, childHorizontal, 0, childHorizontal, 0);
+        int togglePadding = dp(context, 8f * scale);
+        views.setViewPadding(R.id.widget_toggle, togglePadding, togglePadding,
+                togglePadding, togglePadding);
+        int actionPadding = dp(context, 7f * scale);
+        for (int id : new int[] { R.id.widget_delete, R.id.widget_save }) {
+            views.setViewPadding(id, actionPadding, actionPadding,
+                    actionPadding, actionPadding);
+        }
+    }
+
+    private static void scaleMiniViews(Context context, RemoteViews views,
+            float width, float height) {
+        float scale = Math.min(1.25f, Math.max(1f,
+                Math.min(width / 140f, height / 80f)));
+        int dip = TypedValue.COMPLEX_UNIT_DIP;
+        int sp = TypedValue.COMPLEX_UNIT_SP;
+        views.setViewLayoutHeight(R.id.widget_child, 16f * scale, dip);
+        views.setViewLayoutWidth(R.id.widget_active_controls, 60f * scale, dip);
+        views.setViewLayoutWidth(R.id.widget_toggle, 32f * scale, dip);
+        views.setViewLayoutHeight(R.id.widget_toggle, 32f * scale, dip);
+        views.setViewLayoutHeight(R.id.widget_actions, 26f * scale, dip);
+        for (int id : new int[] { R.id.widget_delete, R.id.widget_save }) {
+            views.setViewLayoutWidth(id, 26f * scale, dip);
+            views.setViewLayoutHeight(id, 26f * scale, dip);
+        }
+        views.setViewLayoutMargin(R.id.widget_save, RemoteViews.MARGIN_START, 4f * scale, dip);
+        views.setViewLayoutWidth(R.id.widget_start, 40f * scale, dip);
+        views.setViewLayoutHeight(R.id.widget_start, 40f * scale, dip);
+        views.setTextViewTextSize(R.id.widget_child, sp, 10f * scale);
+        views.setTextViewTextSize(R.id.widget_active_duration, sp, 18f * scale);
+        views.setTextViewTextSize(R.id.widget_active_detail, sp, 9f * scale);
+        views.setTextViewTextSize(R.id.widget_last_ago, sp, 12f * scale);
+        views.setTextViewTextSize(R.id.widget_last_detail, sp, 9f * scale);
+        views.setTextViewTextSize(R.id.widget_last_duration, sp, 9f * scale);
+        views.setTextViewTextSize(R.id.widget_start, sp, 18f * scale);
+        views.setTextViewTextSize(R.id.widget_fallback_title, sp, 11f * scale);
+        views.setTextViewTextSize(R.id.widget_fallback_detail, sp, 9f * scale);
+        int outer = dp(context, 3f * scale);
+        views.setViewPadding(R.id.widget_root, outer, outer, outer, outer);
+        int childHorizontal = dp(context, 7f * scale);
+        views.setViewPadding(R.id.widget_child, childHorizontal, 0, childHorizontal, 0);
+        int togglePadding = dp(context, 8f * scale);
+        views.setViewPadding(R.id.widget_toggle, togglePadding, togglePadding,
+                togglePadding, togglePadding);
+        int actionPadding = dp(context, 6f * scale);
+        for (int id : new int[] { R.id.widget_delete, R.id.widget_save }) {
+            views.setViewPadding(id, actionPadding, actionPadding,
+                    actionPadding, actionPadding);
+        }
+    }
+
+    private static int dp(Context context, float value) {
+        return Math.round(value * context.getResources().getDisplayMetrics().density);
     }
 
     private static void fallback(RemoteViews views, String title) {

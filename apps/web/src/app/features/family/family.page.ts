@@ -74,6 +74,7 @@ export class FamilyPage {
           this.busy.set(false);
           this.notice.set('Дані дитини збережено.');
           this.family.overview.reload();
+          void this.auth.refreshNativeWidget();
         },
         error: () => {
           this.busy.set(false);

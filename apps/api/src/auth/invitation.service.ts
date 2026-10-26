@@ -11,6 +11,7 @@ import * as bcrypt from 'bcrypt';
 import { createHash, randomBytes } from 'crypto';
 import { PrismaService } from '../prisma/prisma.service';
 import type { AuthUser } from '../common/types';
+import { webAccessTokenPayload } from './auth.model';
 import { HOUSEHOLD } from '../config/household.config';
 import {
   ageLabelFromDays,
@@ -263,7 +264,7 @@ export class InvitationService {
       displayName: membership.displayName,
     };
     return {
-      token: await this.jwt.signAsync({ sub: user.userId, email: user.email }),
+      token: await this.jwt.signAsync(webAccessTokenPayload(next)),
       user: next,
     };
   }
@@ -315,7 +316,7 @@ export class InvitationService {
       color: joined.membership.color,
     };
     return {
-      token: await this.jwt.signAsync({ sub: user.userId, email: user.email }),
+      token: await this.jwt.signAsync(webAccessTokenPayload(user)),
       user,
     };
   }

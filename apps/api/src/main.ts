@@ -19,7 +19,10 @@ function databaseEnv(): void {
 
 async function bootstrap() {
   databaseEnv();
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create(
+    AppModule,
+    process.env.VERCEL ? { logger: ['error', 'warn'] } : {},
+  );
   const config = app.get(ConfigService);
   const configured = config.get<string>('CORS_ORIGIN', 'http://localhost:4200');
   const vercelHosts = [

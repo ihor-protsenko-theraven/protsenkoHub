@@ -61,6 +61,7 @@
             android:src="@android:drawable/ic_media_pause"
             android:tint="#B5A9FF" />
         <LinearLayout
+            android:id="@+id/widget_actions"
             android:layout_width="match_parent"
             android:layout_height="52dp"
             android:gravity="center"

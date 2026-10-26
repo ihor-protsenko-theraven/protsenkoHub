@@ -5,7 +5,7 @@ import { ExtractJwt, Strategy } from 'passport-jwt';
 import type { Request } from 'express';
 import { PrismaService } from '../prisma/prisma.service';
 import { AUTH } from './auth.config';
-import type { JwtPayload } from './auth.model';
+import { authUserFromWebPayload, type JwtPayload } from './auth.model';
 import type { AuthUser } from '../common/types';
 
 function cookieExtractor(req: Request): string | null {
@@ -45,6 +45,9 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     } else if (payload.typ !== undefined && payload.typ !== 'mobile-access') {
       throw new UnauthorizedException('Invalid token type');
     }
+
+    const webSession = authUserFromWebPayload(payload);
+    if (webSession) return webSession;
 
     if (payload.typ === 'mobile-access' || payload.typ === 'widget-action') {
       const active =

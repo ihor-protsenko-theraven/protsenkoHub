@@ -12,7 +12,12 @@ import { PrismaService } from '../prisma/prisma.service';
 import { LoginDto, RegisterDto } from './dto/auth.dto';
 import type { AuthUser } from '../common/types';
 import { AUTH } from './auth.config';
-import type { MobileSessionResponse } from './auth.model';
+import {
+  authUserFromWebPayload,
+  webAccessTokenPayload,
+  type JwtPayload,
+  type MobileSessionResponse,
+} from './auth.model';
 
 @Injectable()
 export class AuthService {
@@ -98,6 +103,24 @@ export class AuthService {
 
   me(authUser: AuthUser): AuthUser {
     return authUser;
+  }
+
+  upgradeWebToken(
+    user: AuthUser,
+    currentToken: unknown,
+  ): Promise<string | null> {
+    if (typeof currentToken !== 'string' || currentToken.length === 0) {
+      return Promise.resolve(null);
+    }
+    const decoded = this.jwt.decode(currentToken);
+    if (
+      decoded &&
+      typeof decoded === 'object' &&
+      authUserFromWebPayload(decoded as JwtPayload)
+    ) {
+      return Promise.resolve(null);
+    }
+    return this.sign(user);
   }
 
   async issueMobileSession(user: AuthUser): Promise<MobileSessionResponse> {
@@ -228,7 +251,7 @@ export class AuthService {
   }
 
   private sign(user: AuthUser): Promise<string> {
-    return this.jwt.signAsync({ sub: user.userId, email: user.email });
+    return this.jwt.signAsync(webAccessTokenPayload(user));
   }
 }
 

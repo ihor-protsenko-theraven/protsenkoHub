@@ -2,15 +2,15 @@
   <div class="home-sleep__heading">
     <h2 id="sleep-title">Сон дитини</h2>
   </div>
-  @if (sleep.overview.isLoading()) {
+  @if (snapshot.isLoading()) {
     <p role="status">Завантажуємо дані про сон…</p>
-  } @else if (sleep.overview.error()) {
+  } @else if (snapshot.error()) {
     <div>
       <p>Не вдалося завантажити дані про сон.</p>
-      <button class="button button--secondary" type="button" (click)="sleep.overview.reload()">Повторити</button>
+      <button class="button button--secondary" type="button" (click)="snapshot.reload()">Повторити</button>
     </div>
-  } @else if (sleep.overview.hasValue()) {
-    @let overview = sleep.overview.value();
+  } @else if (snapshot.hasValue()) {
+    @let overview = snapshot.value().sleep;
     <div class="home-sleep__body">
       <div>
         <strong class="home-sleep__number">{{ sleepDuration(overview.stats.todaySleepMin) }}</strong>

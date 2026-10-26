@@ -146,6 +146,10 @@ export class AuthService {
     }
   }
 
+  refreshNativeWidget(): Promise<void> {
+    return this.syncNativeWidget();
+  }
+
   registerMobileInvitation(token: string, payload: { displayName: string; password: string }): Observable<{ user: AuthUser }> {
     return this.mobileLoginOrRegister(
       `${API_BASE_URL}/auth/mobile/invitations/${encodeURIComponent(token)}/register`,

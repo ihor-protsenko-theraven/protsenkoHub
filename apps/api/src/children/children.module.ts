@@ -15,5 +15,6 @@ import { SleepReminderService } from './sleep/sleep-reminder.service';
     SleepReminderService,
     HouseholdPushService,
   ],
+  exports: [ChildrenService, SleepService],
 })
 export class ChildrenModule {}
