@@ -7,6 +7,12 @@ export interface SleepWidgetSnapshot {
   childName: string;
   state: SleepWidgetState;
   nextSleepAt: string | null;
+  lastSleep: {
+    kind: 'NAP' | 'NIGHT';
+    startedAt: string;
+    endedAt: string;
+    asleepMs: number;
+  } | null;
   active: {
     sessionId: string;
     revision: number;
@@ -14,6 +20,7 @@ export interface SleepWidgetSnapshot {
     startedAt: string;
     pauseStartedAt: string | null;
     asleepMs: number;
+    pauseCount: number;
   } | null;
 }
 

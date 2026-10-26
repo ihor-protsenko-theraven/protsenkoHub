@@ -1,4 +1,4 @@
 export const SLEEP_WIDGET = {
   schemaVersion: 1,
-  actions: ['pause', 'resume'],
+  actions: ['start', 'pause', 'resume', 'save', 'delete'],
 } as const;

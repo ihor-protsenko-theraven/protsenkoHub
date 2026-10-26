@@ -484,6 +484,7 @@ describe('SleepService widget snapshot', () => {
         return Promise.resolve([]);
       },
     );
+    const findLast = vi.fn().mockResolvedValue(null);
     const prisma = {
       household: {
         findUnique: vi.fn(({ where }: { where: { id: string } }) =>
@@ -497,7 +498,10 @@ describe('SleepService widget snapshot', () => {
       },
       childProfile: { findUnique: findChild },
       activeSleep: { findUnique: vi.fn().mockResolvedValue(null) },
-      sleepSession: { findMany: findSessions },
+      sleepSession: {
+        findMany: findSessions,
+        findFirst: findLast,
+      },
     } as unknown as PrismaService;
     const { push } = createPush(prisma);
     const service = new SleepService(prisma, push);
@@ -525,5 +529,17 @@ describe('SleepService widget snapshot', () => {
       }),
     );
     expect(sessionHouseholds).toEqual(['home-1', 'home-1', 'home-2', 'home-2']);
+    expect(findLast).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({
+        where: { householdId: 'home-1', endedAt: { not: null } },
+      }),
+    );
+    expect(findLast).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({
+        where: { householdId: 'home-2', endedAt: { not: null } },
+      }),
+    );
   });
 });

@@ -109,13 +109,15 @@ export class WidgetSleepActionDto {
   @IsIn(SLEEP_WIDGET.actions)
   action!: (typeof SLEEP_WIDGET.actions)[number];
 
+  @IsOptional()
   @IsString()
   @IsNotEmpty()
-  expectedSessionId!: string;
+  expectedSessionId?: string;
 
+  @IsOptional()
   @IsInt()
   @Min(0)
-  expectedRevision!: number;
+  expectedRevision?: number;
 }
 
 export class UpdateSleepProfileDto {

@@ -50,44 +50,136 @@ export class SleepService {
   }
 
   async widgetSnapshot(user: AuthUser): Promise<SleepWidgetSnapshot> {
-    const overview = await this.overviewForHousehold(user.householdId);
-    return toSleepWidgetSnapshot(overview);
+    const [overview, last] = await Promise.all([
+      this.overviewForHousehold(user.householdId),
+      this.prisma.sleepSession.findFirst({
+        where: { householdId: user.householdId, endedAt: { not: null } },
+        orderBy: { endedAt: 'desc' },
+        include: sessionInclude,
+      }),
+    ]);
+    return toSleepWidgetSnapshot({
+      ...overview,
+      lastSleep: last?.endedAt
+        ? {
+            kind: last.kind,
+            startedAt: last.startedAt.toISOString(),
+            endedAt: last.endedAt.toISOString(),
+            pauses: last.pauses.map((pause) => ({
+              startedAt: pause.startedAt.toISOString(),
+              endedAt: pause.endedAt?.toISOString() ?? null,
+            })),
+          }
+        : null,
+    });
   }
 
   async widgetAction(user: AuthUser, dto: WidgetSleepActionDto) {
-    await this.prisma.$transaction(async (tx) => {
-      const current = await this.findOpen(tx, user.householdId);
-      if (
-        !current ||
-        current.id !== dto.expectedSessionId ||
-        current.revision !== dto.expectedRevision
-      ) {
+    const startTimeZone =
+      dto.action === 'start' ? await this.timeZoneOf(user.householdId) : null;
+    let event: Extract<
+      HouseholdPushEvent,
+      { type: 'sleep-started' | 'sleep-stopped' }
+    > | null;
+    try {
+      event = await this.prisma.$transaction(async (tx) => {
+        const current = await this.findOpen(tx, user.householdId);
+        if (dto.action === 'start') {
+          if (
+            current ||
+            dto.expectedSessionId ||
+            dto.expectedRevision !== undefined
+          ) {
+            throw new ConflictException('Стан сну змінився. Оновіть віджет.');
+          }
+          const now = new Date();
+          await this.assertNoOverlap(tx, user.householdId, now, null);
+          const kind = suggestedKind(
+            now,
+            startTimeZone ?? HOUSEHOLD.defaultTimeZone,
+          );
+          const session = await tx.sleepSession.create({
+            data: {
+              householdId: user.householdId,
+              kind,
+              startedAt: now,
+              startedById: user.userId,
+            },
+          });
+          await tx.activeSleep.create({
+            data: { householdId: user.householdId, sessionId: session.id },
+          });
+          return {
+            type: 'sleep-started' as const,
+            sessionId: session.id,
+            kind,
+          };
+        }
+        if (
+          !current ||
+          current.id !== dto.expectedSessionId ||
+          current.revision !== dto.expectedRevision
+        ) {
+          throw new ConflictException('Стан сну змінився. Оновіть віджет.');
+        }
+
+        if (dto.action === 'delete') {
+          await this.claimActiveRevision(tx, current, user);
+          await tx.sleepSession.delete({ where: { id: current.id } });
+          return null;
+        }
+
+        if (dto.action === 'save') {
+          const now = new Date();
+          this.assertRange(current.startedAt, now);
+          await this.claimActiveRevision(tx, current, user);
+          await tx.sleepPause.updateMany({
+            where: { sessionId: current.id, endedAt: null },
+            data: { endedAt: now },
+          });
+          await tx.sleepSession.update({
+            where: { id: current.id },
+            data: { endedAt: now, endedById: user.userId },
+          });
+          await tx.activeSleep.deleteMany({
+            where: { householdId: user.householdId, sessionId: current.id },
+          });
+          return { type: 'sleep-stopped' as const, sessionId: current.id };
+        }
+
+        const openPause = current.pauses.find(
+          (pause) => pause.endedAt === null,
+        );
+        if (
+          (dto.action === 'pause' && openPause) ||
+          (dto.action === 'resume' && !openPause)
+        ) {
+          throw new ConflictException('Стан сну змінився. Оновіть віджет.');
+        }
+
+        const now = new Date();
+        if (dto.action === 'pause') this.assertPauseStart(current, now);
+        else this.assertPauseEnd(openPause!.startedAt, now, current.startedAt);
+        await this.claimActiveRevision(tx, current, user);
+        if (dto.action === 'pause') {
+          await tx.sleepPause.create({
+            data: { sessionId: current.id, startedAt: now },
+          });
+        } else {
+          await tx.sleepPause.update({
+            where: { id: openPause!.id },
+            data: { endedAt: now },
+          });
+        }
+        return null;
+      });
+    } catch (error) {
+      if (dto.action === 'start' && this.isUnique(error)) {
         throw new ConflictException('Стан сну змінився. Оновіть віджет.');
       }
-
-      const openPause = current.pauses.find((pause) => pause.endedAt === null);
-      if (
-        (dto.action === 'pause' && openPause) ||
-        (dto.action === 'resume' && !openPause)
-      ) {
-        throw new ConflictException('Стан сну змінився. Оновіть віджет.');
-      }
-
-      const now = new Date();
-      if (dto.action === 'pause') this.assertPauseStart(current, now);
-      else this.assertPauseEnd(openPause!.startedAt, now, current.startedAt);
-      await this.claimActiveRevision(tx, current, user);
-      if (dto.action === 'pause') {
-        await tx.sleepPause.create({
-          data: { sessionId: current.id, startedAt: now },
-        });
-      } else {
-        await tx.sleepPause.update({
-          where: { id: openPause!.id },
-          data: { endedAt: now },
-        });
-      }
-    });
+      throw error;
+    }
+    if (event) await this.safeNotify(user, event);
     return { snapshot: await this.widgetSnapshot(user) };
   }
 

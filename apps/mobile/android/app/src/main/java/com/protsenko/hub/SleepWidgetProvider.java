@@ -1,6 +1,5 @@
 package com.protsenko.hub;
 
-import android.app.AlarmManager;
 import android.app.PendingIntent;
 import android.appwidget.AppWidgetManager;
 import android.appwidget.AppWidgetProvider;
@@ -8,6 +7,7 @@ import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.net.Uri;
+import android.os.Bundle;
 import android.os.SystemClock;
 import android.view.View;
 import android.widget.RemoteViews;
@@ -20,60 +20,25 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 public class SleepWidgetProvider extends AppWidgetProvider {
-    private static final String ACTION_EXPIRE = "com.protsenko.hub.SLEEP_WIDGET_EXPIRE";
-    static final long STALE_AFTER_MS = 45L * 60L * 1000L;
-    static final long CLOCK_TOLERANCE_MS = 5L * 60L * 1000L;
-
-    @Override
-    public void onReceive(Context context, Intent intent) {
-        if (ACTION_EXPIRE.equals(intent.getAction())) {
-            refreshAll(context);
-            return;
-        }
-        super.onReceive(context, intent);
-    }
-
     @Override
     public void onUpdate(Context context, AppWidgetManager manager, int[] appWidgetIds) {
         update(context, manager, appWidgetIds);
-        scheduleExpiry(context, appWidgetIds.length > 0);
+    }
+
+    @Override
+    public void onAppWidgetOptionsChanged(Context context, AppWidgetManager manager,
+            int appWidgetId, Bundle newOptions) {
+        manager.updateAppWidget(appWidgetId, render(context, appWidgetId));
     }
 
     static void refreshAll(Context context) {
         AppWidgetManager manager = AppWidgetManager.getInstance(context);
         int[] ids = manager.getAppWidgetIds(new ComponentName(context, SleepWidgetProvider.class));
         update(context, manager, ids);
-        scheduleExpiry(context, ids.length > 0);
-    }
-
-    @Override
-    public void onDisabled(Context context) {
-        scheduleExpiry(context, false);
-        super.onDisabled(context);
     }
 
     private static void update(Context context, AppWidgetManager manager, int[] ids) {
-        for (int id : ids) {
-            manager.updateAppWidget(id, render(context, id));
-        }
-    }
-
-    private static void scheduleExpiry(Context context, boolean hasWidgets) {
-        AlarmManager alarms = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
-        if (alarms == null) return;
-        Intent expire = new Intent(context, SleepWidgetProvider.class).setAction(ACTION_EXPIRE);
-        PendingIntent pending = PendingIntent.getBroadcast(context, 0, expire,
-                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
-        JSONObject snapshot = hasWidgets ? readSnapshot(context) : null;
-        long receivedAt = snapshot == null ? -1 : parseIso(snapshot.optString("receivedAt", ""));
-        long now = System.currentTimeMillis();
-        boolean alreadyStale = snapshot != null && "stale".equals(snapshot.optString("state"));
-        if (receivedAt <= 0 || receivedAt > now + CLOCK_TOLERANCE_MS
-                || receivedAt + STALE_AFTER_MS <= now || alreadyStale) {
-            alarms.cancel(pending);
-            return;
-        }
-        alarms.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, receivedAt + STALE_AFTER_MS, pending);
+        for (int id : ids) manager.updateAppWidget(id, render(context, id));
     }
 
     private static RemoteViews render(Context context, int widgetId) {
@@ -84,81 +49,90 @@ public class SleepWidgetProvider extends AppWidgetProvider {
         PendingIntent pending = PendingIntent.getActivity(context, 0, open,
                 PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
         views.setOnClickPendingIntent(R.id.widget_root, pending);
-        views.setViewVisibility(R.id.widget_action, View.GONE);
-        views.setViewVisibility(R.id.widget_open, View.VISIBLE);
+        views.setViewVisibility(R.id.widget_active, View.GONE);
+        views.setViewVisibility(R.id.widget_idle, View.GONE);
+        views.setViewVisibility(R.id.widget_fallback, View.GONE);
 
         JSONObject snapshot = readSnapshot(context);
-        views.setViewVisibility(R.id.widget_timer, View.GONE);
-        views.setViewVisibility(R.id.widget_value, View.VISIBLE);
         if (snapshot == null) {
             views.setTextViewText(R.id.widget_child, "Сон дитини");
-            views.setTextViewText(R.id.widget_state, "Потрібен вхід");
-            views.setTextViewText(R.id.widget_value, "Увійдіть");
-            views.setTextViewText(R.id.widget_updated, "Дані приховано");
+            fallback(views, "Потрібен вхід");
+            return views;
+        }
+        String child = snapshot.optString("childName", "Дитина").trim();
+        views.setTextViewText(R.id.widget_child, child.isEmpty() ? "Дитина" : child);
+        String feedback = snapshot.optString("feedback", "");
+        String state = snapshot.optString("state", "stale");
+        if (!feedback.isEmpty() || "stale".equals(state)) {
+            fallback(views, feedback.isEmpty() ? "Перевірте стан сну" : feedback);
             return views;
         }
 
-        String child = snapshot.optString("childName", "Дитина").trim();
-        views.setTextViewText(R.id.widget_child, child.isEmpty() ? "Дитина" : child);
+        String timeZone = snapshot.optString("timeZone", "Europe/Kyiv");
         long receivedAt = parseIso(snapshot.optString("receivedAt", ""));
         long now = System.currentTimeMillis();
-        long age = receivedAt > 0 ? Math.max(0, now - receivedAt) : Long.MAX_VALUE;
-        boolean stale = age >= STALE_AFTER_MS || receivedAt > now + CLOCK_TOLERANCE_MS;
-        String timeZone = snapshot.optString("timeZone", "Europe/Kyiv");
-        String updated = receivedAt > 0
-                ? "Дані на " + formatTime(receivedAt, timeZone)
-                : "Час оновлення невідомий";
-        views.setTextViewText(R.id.widget_updated, stale ? "Застаріло · " + updated : updated);
+        long age = receivedAt > 0 ? Math.max(0, now - receivedAt) : 0;
+        if ("sleeping".equals(state) || "paused".equals(state)) {
+            views.setViewVisibility(R.id.widget_active, View.VISIBLE);
+            boolean sleeping = "sleeping".equals(state);
+            long asleep = Math.max(0, snapshot.optLong("asleepMs", 0) + (sleeping ? age : 0));
+            String icon = "NIGHT".equals(snapshot.optString("kind")) ? "☾ " : "☀ ";
+            views.setChronometer(R.id.widget_active_duration,
+                    SystemClock.elapsedRealtime() - asleep, icon + "%s", sleeping);
+            String started = formatTime(parseIso(snapshot.optString("startedAt", "")), timeZone);
+            int pauseCount = Math.max(0, snapshot.optInt("pauseCount", 0));
+            views.setTextViewText(R.id.widget_active_detail,
+                    "✎ " + started + "    Ⅱ " + pauseCount);
+            views.setImageViewResource(R.id.widget_toggle, sleeping
+                    ? android.R.drawable.ic_media_pause : android.R.drawable.ic_media_play);
+            views.setContentDescription(R.id.widget_toggle, sleeping ? "Пауза" : "Продовжити");
+            configureAction(context, views, widgetId, snapshot,
+                    sleeping ? "pause" : "resume", R.id.widget_toggle, 1);
+            configureAction(context, views, widgetId, snapshot, "delete", R.id.widget_delete, 2);
+            configureAction(context, views, widgetId, snapshot, "save", R.id.widget_save, 3);
+            return views;
+        }
 
-        String state = snapshot.optString("state", "stale");
-        if (stale || state.equals("stale")) {
-            views.setTextViewText(R.id.widget_state, "Перевірте стан сну");
-            views.setTextViewText(R.id.widget_value, "Оновіть дані");
-        } else if (state.equals("sleeping")) {
-            long duration = Math.max(0, snapshot.optLong("asleepMs", 0) + age);
-            views.setTextViewText(R.id.widget_state, "Сон на " + formatTime(receivedAt, timeZone));
-            views.setViewVisibility(R.id.widget_value, View.GONE);
-            views.setViewVisibility(R.id.widget_timer, View.VISIBLE);
-            views.setChronometer(R.id.widget_timer, SystemClock.elapsedRealtime() - duration, null, true);
-            configureAction(context, views, widgetId, snapshot, "pause", "Пауза");
-        } else if (state.equals("paused")) {
-            views.setTextViewText(R.id.widget_state, "Пауза сну");
-            views.setTextViewText(R.id.widget_value, formatDuration(snapshot.optLong("asleepMs", 0)));
-            configureAction(context, views, widgetId, snapshot, "resume", "Продовжити");
+        views.setViewVisibility(R.id.widget_idle, View.VISIBLE);
+        JSONObject last = snapshot.optJSONObject("lastSleep");
+        if (last != null) {
+            long ended = parseIso(last.optString("endedAt", ""));
+            long started = parseIso(last.optString("startedAt", ""));
+            views.setTextViewText(R.id.widget_last_ago,
+                    ended > 0 ? formatSince(Math.max(0, now - ended)) : "Останній сон");
+            String icon = "NIGHT".equals(last.optString("kind")) ? "☾" : "☀";
+            views.setTextViewText(R.id.widget_last_detail,
+                    icon + " " + formatTime(started, timeZone) + "–"
+                            + formatTime(ended, timeZone) + " · "
+                            + formatDurationHuman(last.optLong("asleepMs", 0)));
         } else {
-            long next = parseIso(snapshot.optString("nextSleepAt", ""));
-            views.setTextViewText(R.id.widget_state, "Наступний сон");
-            views.setTextViewText(R.id.widget_value, next > 0
-                    ? formatTime(next, timeZone)
-                    : "Без прогнозу");
+            views.setTextViewText(R.id.widget_last_ago, "Ще немає сну");
+            views.setTextViewText(R.id.widget_last_detail, "Почніть перший запис");
         }
-        String feedback = snapshot.optString("feedback", "");
-        if (!feedback.isEmpty()) {
-            views.setTextViewText(R.id.widget_updated, feedback + " · " + updated);
-        }
+        configureAction(context, views, widgetId, snapshot, "start", R.id.widget_start, 4);
         return views;
     }
 
+    private static void fallback(RemoteViews views, String title) {
+        views.setViewVisibility(R.id.widget_fallback, View.VISIBLE);
+        views.setTextViewText(R.id.widget_fallback_title, title);
+    }
+
     private static void configureAction(Context context, RemoteViews views, int widgetId,
-            JSONObject snapshot, String action, String label) {
+            JSONObject snapshot, String action, int viewId, int requestOffset) {
+        if (!SleepWidgetCredentialStore.isAvailable(context)) return;
         String sessionId = snapshot.optString("sessionId", "");
         int revision = snapshot.optInt("revision", -1);
-        if (sessionId.isEmpty() || revision < 0
-                || !snapshot.optString("feedback", "").isEmpty()
-                || !SleepWidgetCredentialStore.isAvailable(context)) return;
+        if (!"start".equals(action) && (sessionId.isEmpty() || revision < 0)) return;
         Intent intent = new Intent(context, SleepWidgetActionReceiver.class)
                 .setAction(SleepWidgetActionReceiver.ACTION_WIDGET_TOGGLE)
                 .putExtra(SleepWidgetActionReceiver.EXTRA_ACTION, action)
                 .putExtra(SleepWidgetActionReceiver.EXTRA_SESSION_ID, sessionId)
                 .putExtra(SleepWidgetActionReceiver.EXTRA_REVISION, revision)
                 .putExtra(SleepWidgetActionReceiver.EXTRA_STATE, snapshot.optString("state", ""));
-        PendingIntent pending = PendingIntent.getBroadcast(context, widgetId, intent,
-                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
-        views.setTextViewText(R.id.widget_action, label);
-        views.setOnClickPendingIntent(R.id.widget_action, pending);
-        views.setViewVisibility(R.id.widget_action, View.VISIBLE);
-        views.setViewVisibility(R.id.widget_open, View.GONE);
-        views.setViewVisibility(R.id.widget_updated, View.GONE);
+        PendingIntent pending = PendingIntent.getBroadcast(context, widgetId * 10 + requestOffset,
+                intent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+        views.setOnClickPendingIntent(viewId, pending);
     }
 
     static JSONObject readSnapshot(Context context) {
@@ -185,14 +159,30 @@ public class SleepWidgetProvider extends AppWidgetProvider {
         }
     }
 
-    private static String formatDuration(long millis) {
-        long minutes = Math.max(0, millis) / 60_000L;
-        return String.format(Locale.getDefault(), "%d:%02d", minutes / 60, minutes % 60);
-    }
-
     private static String formatTime(long millis, String timeZone) {
+        if (millis < 0) return "—";
         SimpleDateFormat format = new SimpleDateFormat("HH:mm", Locale.forLanguageTag("uk-UA"));
         format.setTimeZone(TimeZone.getTimeZone(timeZone));
         return format.format(new Date(millis));
+    }
+
+    private static String formatSince(long millis) {
+        long minutes = millis / 60_000L;
+        long days = minutes / 1_440L;
+        long hours = minutes % 1_440L / 60L;
+        long rest = minutes % 60L;
+        if (days > 0) return days + " д " + hours + " год тому";
+        if (hours > 0) return hours + " год " + rest + " хв тому";
+        return Math.max(1, rest) + " хв тому";
+    }
+
+    private static String formatDurationHuman(long millis) {
+        long minutes = Math.max(0, millis) / 60_000L;
+        long days = minutes / 1_440L;
+        long hours = minutes / 60L;
+        long rest = minutes % 60L;
+        if (days > 0) return days + " д " + (hours % 24) + " год " + rest + " хв";
+        if (hours > 0) return hours + " год " + rest + " хв";
+        return minutes + " хв";
     }
 }

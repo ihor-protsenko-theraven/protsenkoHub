@@ -33,10 +33,11 @@ struct SleepWidgetActionCredential: Codable {
         return true
     }
 
-    func replacingTarget(_ active: SleepWidgetServerSnapshot.Active, state: String) -> SleepWidgetActionCredential {
+    func replacingTarget(_ source: SleepWidgetServerSnapshot) -> SleepWidgetActionCredential {
         SleepWidgetActionCredential(
             token: token, expiresAt: expiresAt, apiOrigin: apiOrigin,
-            sessionId: active.sessionId, revision: active.revision, state: state
+            sessionId: source.active?.sessionId ?? "",
+            revision: source.active?.revision ?? -1, state: source.state
         )
     }
 }
@@ -98,14 +99,18 @@ enum SleepWidgetActionStore {
 
     static func reference(for snapshot: SleepWidgetSnapshot?) -> SleepWidgetActionReference? {
         guard let snapshot,
-              snapshot.notice == nil,
-              ["sleeping", "paused"].contains(snapshot.state),
-              let receivedAt = parseDate(snapshot.receivedAt),
-              Date().timeIntervalSince(receivedAt) >= -5 * 60,
-              Date().timeIntervalSince(receivedAt) < 45 * 60,
+              ["idle", "sleeping", "paused"].contains(snapshot.state),
               let credential = read(),
-              credential.state == snapshot.state else { return nil }
+              matches(snapshot, credential: credential) else { return nil }
         return credential.reference
+    }
+
+    static func matches(_ snapshot: SleepWidgetSnapshot?, credential: SleepWidgetActionCredential) -> Bool {
+        guard let snapshot else { return false }
+        return snapshot.notice == nil
+            && snapshot.state == credential.state
+            && (snapshot.sessionId ?? "") == credential.sessionId
+            && (snapshot.revision ?? -1) == credential.revision
     }
 }
 
@@ -116,11 +121,15 @@ private struct SleepWidgetActionResponse: Decodable {
 enum SleepWidgetActionClient {
     static func perform(action: String, sessionId: String, revision: Int) async {
         defer { WidgetCenter.shared.reloadTimelines(ofKind: SleepWidgetStore.kind) }
-        guard ["pause", "resume"].contains(action),
+        guard ["start", "pause", "resume", "save", "delete"].contains(action),
               let credential = SleepWidgetActionStore.read(),
               credential.sessionId == sessionId,
               credential.revision == revision,
-              credential.state == (action == "pause" ? "sleeping" : "paused"),
+              ((action == "start" && credential.state == "idle")
+                || (action == "pause" && credential.state == "sleeping")
+                || (action == "resume" && credential.state == "paused")
+                || (["save", "delete"].contains(action)
+                    && ["sleeping", "paused"].contains(credential.state))),
               SleepWidgetActionStore.reference(for: SleepWidgetStore.read()) != nil else {
             return
         }
@@ -128,9 +137,12 @@ enum SleepWidgetActionClient {
         do {
             // Compare the live state with the card that was tapped before mutating anything.
             let live = try await requestSnapshot(credential)
-            guard live.active?.sessionId == sessionId,
-                  live.active?.revision == revision,
-                  live.state == credential.state else {
+            let matchesLive = action == "start"
+                ? live.active == nil && live.state == "idle"
+                : live.active?.sessionId == sessionId
+                    && live.active?.revision == revision
+                    && live.state == credential.state
+            guard matchesLive else {
                 publish(live, using: credential, notice: "Стан оновлено")
                 return
             }
@@ -167,25 +179,25 @@ enum SleepWidgetActionClient {
               current.token == prior.token,
               current.sessionId == prior.sessionId,
               current.revision == prior.revision,
-              current.state == prior.state else { return }
+              current.state == prior.state,
+              SleepWidgetActionStore.matches(SleepWidgetStore.read(), credential: prior) else { return }
         guard var display = source.projected(at: Date()) else {
             showFailure("Оновіть у застосунку", using: prior)
             return
         }
         display.notice = notice
-        guard SleepWidgetStore.write(display) else { return }
-        if let active = source.active, ["sleeping", "paused"].contains(source.state) {
-            if !SleepWidgetActionStore.write(prior.replacingTarget(active, state: source.state)) {
-                SleepWidgetActionStore.clear()
-            }
-        } else {
-            SleepWidgetActionStore.clear()
-        }
+        guard SleepWidgetActionStore.write(prior.replacingTarget(source)) else { return }
+        _ = SleepWidgetStore.write(display)
     }
 
     private static func showFailure(_ message: String, using prior: SleepWidgetActionCredential) {
-        guard let current = SleepWidgetActionStore.read(), current.token == prior.token else { return }
-        guard var display = SleepWidgetStore.read() else { return }
+        guard let current = SleepWidgetActionStore.read(),
+              current.token == prior.token,
+              current.sessionId == prior.sessionId,
+              current.revision == prior.revision,
+              current.state == prior.state else { return }
+        guard var display = SleepWidgetStore.read(),
+              SleepWidgetActionStore.matches(display, credential: prior) else { return }
         display.notice = message
         _ = SleepWidgetStore.write(display)
     }
@@ -201,11 +213,12 @@ enum SleepWidgetActionClient {
         _ action: String,
         credential: SleepWidgetActionCredential
     ) async throws -> SleepWidgetServerSnapshot {
-        let body = try JSONSerialization.data(withJSONObject: [
-            "action": action,
-            "expectedSessionId": credential.sessionId,
-            "expectedRevision": credential.revision
-        ])
+        var parameters: [String: Any] = ["action": action]
+        if action != "start" {
+            parameters["expectedSessionId"] = credential.sessionId
+            parameters["expectedRevision"] = credential.revision
+        }
+        let body = try JSONSerialization.data(withJSONObject: parameters)
         let data = try await request(
             "POST", path: "/api/v1/children/sleep/widget/action", credential: credential, body: body
         )
@@ -224,23 +237,38 @@ enum SleepWidgetActionClient {
               let url = URL(string: credential.apiOrigin + path) else { throw SleepWidgetActionError.unauthorized }
         var request = URLRequest(url: url)
         request.httpMethod = method
+        request.cachePolicy = .reloadIgnoringLocalCacheData
         request.timeoutInterval = 12
         request.setValue("Bearer \(credential.token)", forHTTPHeaderField: "Authorization")
         request.setValue("application/json", forHTTPHeaderField: "Accept")
+        request.setValue("no-store", forHTTPHeaderField: "Cache-Control")
         if let body {
             request.httpBody = body
             request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         }
-        let (data, response) = try await URLSession.shared.data(for: request)
+        let (data, response) = try await URLSession.shared.data(for: request, delegate: SleepNoRedirectDelegate())
         guard let status = (response as? HTTPURLResponse)?.statusCode else {
             throw SleepWidgetActionError.invalidResponse
         }
+        guard data.count <= 65_536 else { throw SleepWidgetActionError.invalidResponse }
         switch status {
         case 200..<300: return data
         case 401, 403: throw SleepWidgetActionError.unauthorized
         case 409: throw SleepWidgetActionError.conflict
         default: throw SleepWidgetActionError.server
         }
+    }
+}
+
+private final class SleepNoRedirectDelegate: NSObject, URLSessionTaskDelegate {
+    func urlSession(
+        _ session: URLSession,
+        task: URLSessionTask,
+        willPerformHTTPRedirection response: HTTPURLResponse,
+        newRequest request: URLRequest,
+        completionHandler: @escaping (URLRequest?) -> Void
+    ) {
+        completionHandler(nil)
     }
 }
 

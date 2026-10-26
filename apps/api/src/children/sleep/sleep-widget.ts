@@ -12,6 +12,18 @@ export function toSleepWidgetSnapshot(
     serverNow: source.serverNow,
     timeZone: source.timeZone,
     childName: source.profile.babyName,
+    lastSleep: source.lastSleep
+      ? {
+          kind: source.lastSleep.kind,
+          startedAt: source.lastSleep.startedAt,
+          endedAt: source.lastSleep.endedAt,
+          asleepMs: asleepDurationMs(
+            source.lastSleep.startedAt,
+            source.lastSleep.pauses,
+            source.lastSleep.endedAt,
+          ),
+        }
+      : null,
   };
   const active = source.active;
   if (!active) {
@@ -39,6 +51,7 @@ export function toSleepWidgetSnapshot(
         active.pauses,
         source.serverNow,
       ),
+      pauseCount: active.pauses.length,
     },
   };
 }

@@ -1,7 +1,10 @@
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { of, Subject } from 'rxjs';
 import type { SleepWidgetSnapshot } from './sleep-widget.model';
-import { clearSleepWidgetSnapshot, refreshSleepWidgetSnapshot } from './sleep-widget-bridge';
+import {
+  clearSleepWidgetSnapshot,
+  refreshSleepWidgetSnapshot,
+} from './sleep-widget-bridge';
 
 const plugin = vi.hoisted(() => ({
   setSnapshot: vi.fn(async (_options: { snapshot: string }) => undefined),
@@ -20,6 +23,7 @@ const snapshot: SleepWidgetSnapshot = {
   childName: 'Соломія',
   state: 'sleeping',
   nextSleepAt: null,
+  lastSleep: null,
   active: {
     sessionId: 'sleep-1',
     revision: 2,
@@ -27,6 +31,7 @@ const snapshot: SleepWidgetSnapshot = {
     startedAt: '2026-10-24T09:00:00.000Z',
     pauseStartedAt: null,
     asleepMs: 60_000,
+    pauseCount: 0,
   },
 };
 
@@ -37,7 +42,10 @@ describe('sleep widget bridge', () => {
     const http = { get: vi.fn(() => of(snapshot)) } as unknown as HttpClient;
 
     await refreshSleepWidgetSnapshot(http, undefined, () => ({
-      actionCredential: { token: 'widget-action-token', expiresAt: '2026-11-24T10:00:00.000Z' },
+      actionCredential: {
+        token: 'widget-action-token',
+        expiresAt: '2026-11-24T10:00:00.000Z',
+      },
       apiOrigin: 'https://api.example.test',
     }));
 
@@ -57,7 +65,9 @@ describe('sleep widget bridge', () => {
 
   it('does not republish an older household after logout clears the widget', async () => {
     const response = new Subject<SleepWidgetSnapshot>();
-    const http = { get: vi.fn(() => response.asObservable()) } as unknown as HttpClient;
+    const http = {
+      get: vi.fn(() => response.asObservable()),
+    } as unknown as HttpClient;
     let sessionCurrent = true;
     const pending = refreshSleepWidgetSnapshot(http, () => sessionCurrent);
 
@@ -73,9 +83,13 @@ describe('sleep widget bridge', () => {
 
   it('does not let an old unauthorized response clear a newer session', async () => {
     const response = new Subject<SleepWidgetSnapshot>();
-    const http = { get: vi.fn(() => response.asObservable()) } as unknown as HttpClient;
+    const http = {
+      get: vi.fn(() => response.asObservable()),
+    } as unknown as HttpClient;
     const oldRequest = refreshSleepWidgetSnapshot(http);
-    await refreshSleepWidgetSnapshot({ get: () => of(snapshot) } as unknown as HttpClient);
+    await refreshSleepWidgetSnapshot({
+      get: () => of(snapshot),
+    } as unknown as HttpClient);
 
     response.error(new HttpErrorResponse({ status: 401 }));
     await expect(oldRequest).rejects.toBeInstanceOf(HttpErrorResponse);

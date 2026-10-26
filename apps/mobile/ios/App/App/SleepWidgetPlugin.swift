@@ -28,14 +28,12 @@ public class SleepWidgetPlugin: CAPPlugin, CAPBridgedPlugin {
             return
         }
 
-        guard SleepWidgetStore.write(snapshot) else {
-            call.reject("Could not save the sleep widget snapshot")
-            return
-        }
-
-        if let active = source.active, ["sleeping", "paused"].contains(source.state),
-           let action = call.getObject("actionCredential") {
-            guard !active.sessionId.isEmpty, active.revision >= 0,
+        var credential: SleepWidgetActionCredential?
+        if let action = call.getObject("actionCredential") {
+            let active = source.active
+            let isIdle = source.state == "idle" && active == nil
+            guard isIdle || (["sleeping", "paused"].contains(source.state)
+                    && active != nil && !active!.sessionId.isEmpty && active!.revision >= 0),
                   let token = action["token"] as? String, token.utf8.count <= 8_192,
                   let expiresAt = action["expiresAt"] as? String,
                   let apiOrigin = call.getString("apiOrigin"),
@@ -46,10 +44,14 @@ public class SleepWidgetPlugin: CAPPlugin, CAPBridgedPlugin {
                 call.reject("Invalid sleep widget action credential")
                 return
             }
-            let credential = SleepWidgetActionCredential(
+            credential = SleepWidgetActionCredential(
                 token: token, expiresAt: expiresAt, apiOrigin: apiOrigin,
-                sessionId: active.sessionId, revision: active.revision, state: source.state
+                sessionId: active?.sessionId ?? "", revision: active?.revision ?? -1,
+                state: source.state
             )
+        }
+
+        if let credential {
             guard SleepWidgetActionStore.write(credential) else {
                 SleepWidgetActionStore.clear()
                 WidgetCenter.shared.reloadTimelines(ofKind: SleepWidgetStore.kind)
@@ -58,6 +60,13 @@ public class SleepWidgetPlugin: CAPPlugin, CAPBridgedPlugin {
             }
         } else {
             SleepWidgetActionStore.clear()
+        }
+
+        guard SleepWidgetStore.write(snapshot) else {
+            SleepWidgetActionStore.clear()
+            WidgetCenter.shared.reloadTimelines(ofKind: SleepWidgetStore.kind)
+            call.reject("Could not save the sleep widget snapshot")
+            return
         }
         WidgetCenter.shared.reloadTimelines(ofKind: SleepWidgetStore.kind)
         call.resolve()

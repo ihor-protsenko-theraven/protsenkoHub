@@ -4,5 +4,5 @@
     <string name="title_activity_main">protsenkoHub</string>
     <string name="package_name">com.protsenko.hub</string>
     <string name="custom_url_scheme">com.protsenko.hub</string>
-    <string name="sleep_widget_description">Сон дитини: поточний стан і керування паузою</string>
+    <string name="sleep_widget_description">Сон дитини: початок, пауза й завершення</string>
 </resources>

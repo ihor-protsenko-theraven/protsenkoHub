@@ -11,6 +11,7 @@ function source(overrides: Partial<SleepWidgetSource> = {}): SleepWidgetSource {
     active: null,
     activeStale: false,
     nextSleepAt: '2026-10-20T10:30:00.000Z',
+    lastSleep: null,
     ...overrides,
   };
 }
@@ -24,6 +25,7 @@ describe('sleep widget snapshot', () => {
       childName: 'Олена',
       state: 'idle',
       nextSleepAt: '2026-10-20T10:30:00.000Z',
+      lastSleep: null,
       active: null,
     });
     expect(
@@ -58,6 +60,7 @@ describe('sleep widget snapshot', () => {
       startedAt: '2026-10-20T08:00:00.000Z',
       pauseStartedAt: null,
       asleepMs: 45 * 60_000,
+      pauseCount: 1,
     });
   });
 
@@ -77,6 +80,31 @@ describe('sleep widget snapshot', () => {
     expect(snapshot.state).toBe('paused');
     expect(snapshot.active?.pauseStartedAt).toBe('2026-10-20T08:30:00.000Z');
     expect(snapshot.active?.asleepMs).toBe(30 * 60_000);
+    expect(snapshot.active?.pauseCount).toBe(1);
+  });
+
+  it('reports the latest completed sleep and excludes its pauses', () => {
+    const snapshot = toSleepWidgetSnapshot(
+      source({
+        lastSleep: {
+          kind: 'NAP',
+          startedAt: '2026-10-20T06:00:00.000Z',
+          endedAt: '2026-10-20T08:00:00.000Z',
+          pauses: [
+            {
+              startedAt: '2026-10-20T06:30:00.000Z',
+              endedAt: '2026-10-20T06:45:00.000Z',
+            },
+          ],
+        },
+      }),
+    );
+    expect(snapshot.lastSleep).toEqual({
+      kind: 'NAP',
+      startedAt: '2026-10-20T06:00:00.000Z',
+      endedAt: '2026-10-20T08:00:00.000Z',
+      asleepMs: 105 * 60_000,
+    });
   });
 
   it('marks a long-running active tracker as stale without claiming the cache is old', () => {

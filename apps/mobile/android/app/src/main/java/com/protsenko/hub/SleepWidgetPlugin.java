@@ -150,12 +150,24 @@ public class SleepWidgetPlugin extends Plugin {
         display.put("receivedAt", nowIso());
         display.put("timeZone", timeZone.substring(0, Math.min(timeZone.length(), 64)));
         display.put("asleepMs", active == null ? 0 : Math.max(0, active.optLong("asleepMs", 0)));
+        JSONObject last = source.optJSONObject("lastSleep");
+        if (last != null) {
+            JSONObject projectedLast = new JSONObject();
+            projectedLast.put("kind", last.optString("kind", "NAP"));
+            projectedLast.put("startedAt", last.optString("startedAt", ""));
+            projectedLast.put("endedAt", last.optString("endedAt", ""));
+            projectedLast.put("asleepMs", Math.max(0, last.optLong("asleepMs", 0)));
+            display.put("lastSleep", projectedLast);
+        }
         if (active != null) {
             String sessionId = active.optString("sessionId", "");
             int revision = active.optInt("revision", -1);
             if (sessionId.length() > 0 && sessionId.length() <= 128 && revision >= 0) {
                 display.put("sessionId", sessionId);
                 display.put("revision", revision);
+                display.put("kind", active.optString("kind", "NAP"));
+                display.put("startedAt", active.optString("startedAt", ""));
+                display.put("pauseCount", Math.max(0, active.optInt("pauseCount", 0)));
             }
         }
         return display;

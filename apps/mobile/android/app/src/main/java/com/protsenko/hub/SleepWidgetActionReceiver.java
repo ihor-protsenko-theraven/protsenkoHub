@@ -25,7 +25,7 @@ public final class SleepWidgetActionReceiver extends BroadcastReceiver {
     static final String EXTRA_STATE = "state";
     private static final String SNAPSHOT_PATH = "/api/v1/children/sleep/widget";
     private static final String ACTION_PATH = "/api/v1/children/sleep/widget/action";
-    private static final int NETWORK_TIMEOUT_MS = 2_000;
+    private static final int NETWORK_TIMEOUT_MS = 4_000;
     private static final int MAX_RESPONSE_BYTES = 64 * 1024;
     private static final ExecutorService EXECUTOR = Executors.newSingleThreadExecutor();
     private static final AtomicBoolean ACTION_IN_PROGRESS = new AtomicBoolean(false);
@@ -37,9 +37,14 @@ public final class SleepWidgetActionReceiver extends BroadcastReceiver {
         String sessionId = intent.getStringExtra(EXTRA_SESSION_ID);
         String state = intent.getStringExtra(EXTRA_STATE);
         int revision = intent.getIntExtra(EXTRA_REVISION, -1);
-        if (sessionId == null || sessionId.isEmpty() || revision < 0
-                || !("pause".equals(action) && "sleeping".equals(state)
-                || "resume".equals(action) && "paused".equals(state))
+        boolean idleStart = "start".equals(action) && "idle".equals(state)
+                && "".equals(sessionId) && revision == -1;
+        boolean activeAction = sessionId != null && !sessionId.isEmpty() && revision >= 0
+                && (("pause".equals(action) && "sleeping".equals(state))
+                || ("resume".equals(action) && "paused".equals(state))
+                || (("save".equals(action) || "delete".equals(action))
+                && ("sleeping".equals(state) || "paused".equals(state))));
+        if (!(idleStart || activeAction)
                 || !ACTION_IN_PROGRESS.compareAndSet(false, true)) return;
 
         PendingResult pending = goAsync();
@@ -64,7 +69,7 @@ public final class SleepWidgetActionReceiver extends BroadcastReceiver {
         SleepWidgetCredentialStore.Credential credential;
         try {
             credential = SleepWidgetCredentialStore.read(context);
-            if (credential == null || !isFresh(context)) {
+            if (credential == null) {
                 SleepWidgetProvider.refreshAll(context);
                 return;
             }
@@ -80,9 +85,12 @@ public final class SleepWidgetActionReceiver extends BroadcastReceiver {
         try {
             JSONObject live = fetchSnapshot(credential);
             JSONObject active = live.optJSONObject("active");
-            if (active == null || !sessionId.equals(active.optString("sessionId"))
-                    || revision != active.optInt("revision", -1)
-                    || !state.equals(live.optString("state"))) {
+            boolean matchesLive = "start".equals(action)
+                    ? active == null && "idle".equals(live.optString("state"))
+                    : active != null && sessionId.equals(active.optString("sessionId"))
+                            && revision == active.optInt("revision", -1)
+                            && state.equals(live.optString("state"));
+            if (!matchesLive) {
                 SleepWidgetPlugin.replaceSnapshotFromServer(context, live, "Стан оновлено",
                         credential.token, sessionId, revision, state);
                 return;
@@ -124,15 +132,6 @@ public final class SleepWidgetActionReceiver extends BroadcastReceiver {
         }
     }
 
-    private static boolean isFresh(Context context) {
-        JSONObject display = SleepWidgetProvider.readSnapshot(context);
-        if (display == null) return false;
-        long received = SleepWidgetProvider.parseIso(display.optString("receivedAt", ""));
-        long now = System.currentTimeMillis();
-        return received > 0 && received >= now - SleepWidgetProvider.STALE_AFTER_MS
-                && received <= now + SleepWidgetProvider.CLOCK_TOLERANCE_MS;
-    }
-
     private static JSONObject fetchSnapshot(SleepWidgetCredentialStore.Credential credential)
             throws IOException, JSONException {
         return request(credential, "GET", SNAPSHOT_PATH, null);
@@ -142,8 +141,10 @@ public final class SleepWidgetActionReceiver extends BroadcastReceiver {
             String action, String sessionId, int revision) throws IOException, JSONException {
         JSONObject body = new JSONObject();
         body.put("action", action);
-        body.put("expectedSessionId", sessionId);
-        body.put("expectedRevision", revision);
+        if (!"start".equals(action)) {
+            body.put("expectedSessionId", sessionId);
+            body.put("expectedRevision", revision);
+        }
         JSONObject response = request(credential, "POST", ACTION_PATH, body);
         JSONObject snapshot = response.optJSONObject("snapshot");
         if (snapshot == null) throw new JSONException("Missing action snapshot");
