@@ -42,7 +42,12 @@ public class SleepWidgetProvider extends AppWidgetProvider {
     }
 
     private static RemoteViews render(Context context, int widgetId) {
-        RemoteViews views = new RemoteViews(context.getPackageName(), R.layout.sleep_widget);
+        Bundle options = AppWidgetManager.getInstance(context).getAppWidgetOptions(widgetId);
+        int width = options == null ? 0 : options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH);
+        int height = options == null ? 0 : options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT);
+        boolean compact = width < 190 || height < 190;
+        RemoteViews views = new RemoteViews(context.getPackageName(), compact
+                ? R.layout.sleep_widget_compact : R.layout.sleep_widget);
         Intent open = new Intent(Intent.ACTION_VIEW, Uri.parse("protsenkohub://sleep"), context, MainActivity.class);
         open.addCategory(Intent.CATEGORY_BROWSABLE);
         open.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
@@ -101,13 +106,16 @@ public class SleepWidgetProvider extends AppWidgetProvider {
             views.setTextViewText(R.id.widget_last_ago,
                     ended > 0 ? formatSince(Math.max(0, now - ended)) : "Останній сон");
             String icon = "NIGHT".equals(last.optString("kind")) ? "☾" : "☀";
+            String interval = icon + " " + formatTime(started, timeZone) + "–"
+                    + formatTime(ended, timeZone);
+            String duration = formatDurationHuman(last.optLong("asleepMs", 0));
             views.setTextViewText(R.id.widget_last_detail,
-                    icon + " " + formatTime(started, timeZone) + "–"
-                            + formatTime(ended, timeZone) + " · "
-                            + formatDurationHuman(last.optLong("asleepMs", 0)));
+                    compact ? interval : interval + " · " + duration);
+            if (compact) views.setTextViewText(R.id.widget_last_duration, "Тривав " + duration);
         } else {
             views.setTextViewText(R.id.widget_last_ago, "Ще немає сну");
             views.setTextViewText(R.id.widget_last_detail, "Почніть перший запис");
+            if (compact) views.setTextViewText(R.id.widget_last_duration, "");
         }
         configureAction(context, views, widgetId, snapshot, "start", R.id.widget_start, 4);
         return views;

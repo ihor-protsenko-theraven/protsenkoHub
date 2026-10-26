@@ -56,9 +56,25 @@
       } @else if (!openTasks().length) {
         <div class="home-card__state"><p>Зараз немає справ.</p><a routerLink="/app/children" [queryParams]="{ new: '1' }">Додати задачу</a></div>
       } @else {
-        <ul class="home-list home-list--tasks">
+        <ul class="home-list">
           @for (task of openTasks().slice(0, 3); track task.id) {
-            <li><span class="home-list__body"><strong>{{ task.title }}</strong><small>{{ task.dueAt ? ('До ' + (task.dueAt | date:'d MMM, HH:mm':'':'uk')) : 'Без терміну' }}</small></span></li>
+            <li>
+              <span class="home-list__date">
+                @if (task.dueAt; as dueAt) {
+                  <strong>{{ dueAt | date:'d':'':'uk' }}</strong><small>{{ dueAt | date:'LLL':'':'uk' }}</small>
+                } @else {
+                  <strong>—</strong><small>дата</small>
+                }
+              </span>
+              <span class="home-list__body">
+                <strong>{{ task.title }}</strong>
+                @if (task.dueAt; as dueAt) {
+                  <small>{{ dueAt | date:'HH:mm':'':'uk' }} · {{ dueAt | date:'EEEE':'':'uk' }}</small>
+                } @else {
+                  <small>Без терміну</small>
+                }
+              </span>
+            </li>
           }
         </ul>
       }

@@ -1,0 +1,170 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/widget_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/sleep_widget_background"
+    android:gravity="center_horizontal"
+    android:orientation="vertical"
+    android:padding="3dp">
+    <TextView
+        android:id="@+id/widget_child"
+        android:layout_width="wrap_content"
+        android:layout_height="16dp"
+        android:background="@drawable/sleep_widget_name_background"
+        android:ellipsize="end"
+        android:gravity="center"
+        android:maxLines="1"
+        android:paddingStart="7dp"
+        android:paddingEnd="7dp"
+        android:textColor="#433F50"
+        android:textSize="10sp" />
+    <LinearLayout
+        android:id="@+id/widget_active"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:gravity="center_horizontal"
+        android:orientation="vertical">
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:gravity="center"
+            android:orientation="vertical">
+            <Chronometer
+                android:id="@+id/widget_active_duration"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center"
+                android:maxLines="1"
+                android:textColor="#FFFFFF"
+                android:textSize="18sp"
+                android:textStyle="bold" />
+            <TextView
+                android:id="@+id/widget_active_detail"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:ellipsize="end"
+                android:gravity="center"
+                android:maxLines="1"
+                android:textColor="#B5A9FF"
+                android:textSize="9sp" />
+        </LinearLayout>
+        <ImageView
+            android:id="@+id/widget_toggle"
+            android:layout_width="32dp"
+            android:layout_height="32dp"
+            android:background="@drawable/sleep_widget_outline_button"
+            android:contentDescription="Пауза"
+            android:padding="8dp"
+            android:src="@android:drawable/ic_media_pause"
+            android:tint="#B5A9FF" />
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="28dp"
+            android:gravity="center"
+            android:orientation="horizontal">
+            <ImageView
+                android:id="@+id/widget_delete"
+                android:layout_width="28dp"
+                android:layout_height="28dp"
+                android:background="@drawable/sleep_widget_round_button"
+                android:contentDescription="Видалити сон"
+                android:padding="7dp"
+                android:src="@android:drawable/ic_menu_delete"
+                android:tint="#B5A9FF" />
+            <ImageView
+                android:id="@+id/widget_save"
+                android:layout_width="28dp"
+                android:layout_height="28dp"
+                android:layout_marginStart="18dp"
+                android:background="@drawable/sleep_widget_round_button"
+                android:contentDescription="Зберегти сон"
+                android:padding="7dp"
+                android:src="@android:drawable/ic_menu_save"
+                android:tint="#B5A9FF" />
+        </LinearLayout>
+    </LinearLayout>
+    <LinearLayout
+        android:id="@+id/widget_idle"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:gravity="center_horizontal"
+        android:orientation="vertical"
+        android:visibility="gone">
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:gravity="center"
+            android:orientation="vertical">
+            <TextView
+                android:id="@+id/widget_last_ago"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:ellipsize="end"
+                android:gravity="center"
+                android:maxLines="1"
+                android:textColor="#FFFFFF"
+                android:textSize="14sp"
+                android:textStyle="bold" />
+            <TextView
+                android:id="@+id/widget_last_detail"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:ellipsize="end"
+                android:gravity="center"
+                android:maxLines="1"
+                android:textColor="#D7D3DF"
+                android:textSize="9sp" />
+            <TextView
+                android:id="@+id/widget_last_duration"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:ellipsize="end"
+                android:gravity="center"
+                android:maxLines="1"
+                android:textColor="#D7D3DF"
+                android:textSize="9sp" />
+        </LinearLayout>
+        <TextView
+            android:id="@+id/widget_start"
+            android:layout_width="42dp"
+            android:layout_height="42dp"
+            android:background="@drawable/sleep_widget_action_background"
+            android:contentDescription="Почати сон"
+            android:gravity="center"
+            android:text="zZ"
+            android:textColor="#FFFFFF"
+            android:textSize="20sp"
+            android:textStyle="bold" />
+    </LinearLayout>
+    <LinearLayout
+        android:id="@+id/widget_fallback"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:gravity="center"
+        android:orientation="vertical"
+        android:visibility="gone">
+        <TextView
+            android:id="@+id/widget_fallback_title"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center"
+            android:textColor="#FFFFFF"
+            android:textSize="13sp"
+            android:textStyle="bold" />
+        <TextView
+            android:id="@+id/widget_fallback_detail"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:gravity="center"
+            android:text="Відкрити сон ›"
+            android:textColor="#B5A9FF"
+            android:textSize="10sp" />
+    </LinearLayout>
+</LinearLayout>

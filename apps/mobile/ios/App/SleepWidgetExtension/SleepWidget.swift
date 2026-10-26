@@ -125,7 +125,12 @@ private struct SleepWidgetView: View {
             SleepWidgetClock.parse(last.endedAt), timeZone: snapshot.timeZone
         )
         let icon = last.kind == "NIGHT" ? "☾" : "☀"
-        return "\(icon) \(start)–\(end) · \(SleepWidgetClock.humanDuration(last.asleepMs))"
+        return "\(icon) \(start)–\(end)"
+    }
+
+    private var lastDuration: String? {
+        guard let last = snapshot?.lastSleep else { return nil }
+        return "Тривав \(SleepWidgetClock.humanDuration(last.asleepMs))"
     }
 
     @ViewBuilder
@@ -183,13 +188,13 @@ private struct SleepWidgetView: View {
                     .foregroundStyle(lavender)
                 elapsed
             }
-            .font(.system(size: compact ? 26 : 34, weight: .bold, design: .rounded))
+            .font(.system(size: compact ? 23 : 34, weight: .bold, design: .rounded))
             .foregroundStyle(.white)
             .lineLimit(1)
             .minimumScaleFactor(0.75)
             .privacySensitive()
             Text(activeDetail)
-                .font(.system(size: compact ? 11 : 14))
+                .font(.system(size: compact ? 10 : 14))
                 .foregroundStyle(lavender)
                 .lineLimit(1)
             Spacer(minLength: 0)
@@ -197,13 +202,13 @@ private struct SleepWidgetView: View {
                 snapshot?.state == "paused" ? "resume" : "pause",
                 symbol: snapshot?.state == "paused" ? "play.fill" : "pause.fill",
                 label: snapshot?.state == "paused" ? "Продовжити сон" : "Пауза",
-                size: compact ? 45 : 60
+                size: compact ? 42 : 60
             )
-            HStack(spacing: compact ? 34 : 70) {
+            HStack(spacing: compact ? 22 : 70) {
                 actionButton("delete", symbol: "trash.fill", label: "Видалити сон",
-                             size: compact ? 35 : 49)
+                             size: compact ? 32 : 49)
                 actionButton("save", symbol: "square.and.arrow.down.fill",
-                             label: "Зберегти сон", size: compact ? 35 : 49)
+                             label: "Зберегти сон", size: compact ? 32 : 49)
             }
         }
         .frame(maxWidth: .infinity)
@@ -215,31 +220,39 @@ private struct SleepWidgetView: View {
             Text(SleepWidgetClock.since(
                 SleepWidgetClock.parse(snapshot?.lastSleep?.endedAt), now: entry.date
             ))
-            .font(.system(size: compact ? 17 : 24, weight: .bold))
+            .font(.system(size: compact ? 16 : 24, weight: .bold))
             .foregroundStyle(.white)
             .lineLimit(1)
             .minimumScaleFactor(0.7)
             .privacySensitive()
             Text(lastDetail)
-                .font(.system(size: compact ? 10 : 13))
+                .font(.system(size: compact ? 9 : 13))
                 .foregroundStyle(.white.opacity(0.85))
                 .lineLimit(1)
                 .minimumScaleFactor(0.7)
                 .privacySensitive()
+            if let lastDuration {
+                Text(lastDuration)
+                    .font(.system(size: compact ? 9 : 13))
+                    .foregroundStyle(.white.opacity(0.85))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
+                    .privacySensitive()
+            }
             Spacer(minLength: 0)
             actionButton("start", symbol: "moon.zzz.fill", label: "Почати сон",
-                         size: compact ? 57 : 76, filled: true)
+                         size: compact ? 52 : 76, filled: true)
         }
         .frame(maxWidth: .infinity)
     }
 
     private var content: some View {
-        VStack(spacing: compact ? 4 : 8) {
+        VStack(spacing: compact ? 3 : 8) {
             Text(childName)
-                .font(.system(size: compact ? 11 : 14))
+                .font(.system(size: compact ? 10 : 14))
                 .foregroundStyle(Color(red: 0.26, green: 0.25, blue: 0.30))
-                .padding(.horizontal, compact ? 11 : 17)
-                .frame(height: compact ? 22 : 28)
+                .padding(.horizontal, compact ? 9 : 17)
+                .frame(height: compact ? 20 : 28)
                 .background(Color(red: 0.94, green: 0.93, blue: 0.96), in: Capsule())
                 .lineLimit(1)
                 .privacySensitive()
@@ -264,8 +277,7 @@ private struct SleepWidgetView: View {
                     .lineLimit(1)
             }
         }
-        .padding(compact ? 7 : 12)
-        .frame(maxWidth: 280)
+        .padding(compact ? 5 : 12)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .widgetURL(destination)
     }
@@ -289,6 +301,6 @@ struct SleepWidget: Widget {
         }
         .configurationDisplayName("Сон дитини")
         .description("Початок, пауза та збереження сну")
-        .supportedFamilies([.systemSmall, .systemMedium])
+        .supportedFamilies([.systemSmall])
     }
 }
