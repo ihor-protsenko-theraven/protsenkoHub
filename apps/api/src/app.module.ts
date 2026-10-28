@@ -7,6 +7,7 @@ import { PrismaModule } from './prisma/prisma.module';
 import { ShoppingModule } from './shopping/shopping.module';
 import { ChildrenModule } from './children/children.module';
 import { HealthController } from './health.controller';
+import { FeedingModule } from './feeding/feeding.module';
 import { HomeModule } from './home/home.module';
 
 @Module({
@@ -18,6 +19,7 @@ import { HomeModule } from './home/home.module';
     ShoppingModule,
     ChildrenModule,
     ContactsModule,
+    FeedingModule,
     HomeModule,
   ],
   controllers: [HealthController],

@@ -1,0 +1,93 @@
+.feeding-tabs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+  padding: 4px;
+  margin-bottom: 20px;
+  border-radius: 13px;
+  background: var(--soft);
+}
+
+.feeding-tabs button {
+  min-height: 44px;
+  border: 0;
+  border-radius: 12px;
+  background: transparent;
+  color: var(--muted);
+  font-weight: 700;
+}
+
+.feeding-tabs button[aria-selected='true'] {
+  background: var(--surface);
+  box-shadow: var(--shadow);
+  color: var(--forest-dark);
+}
+
+.guide-category {
+  margin-bottom: 22px;
+}
+
+.guide-card {
+  padding: 20px 22px;
+}
+
+.guide-card__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.guide-card h3 {
+  margin: 0;
+  font-size: 1.06rem;
+}
+
+.guide-card h4 {
+  margin: 12px 0 0;
+  font-size: 0.82rem;
+  font-weight: 800;
+  color: var(--forest);
+}
+
+.guide-steps,
+.feeding-tips ul {
+  margin: 8px 0 0;
+  padding-left: 1.2rem;
+  color: var(--muted);
+}
+
+.guide-steps li + li,
+.feeding-tips li + li {
+  margin-top: 6px;
+}
+
+.feeding-tips {
+  margin-bottom: 16px;
+  padding: 20px 22px;
+}
+
+.feeding-tips h2 {
+  margin: 0;
+  font: normal 1.35rem var(--font-display);
+  letter-spacing: -0.03em;
+}
+
+.badge--allergen {
+  background: var(--warm);
+  color: var(--danger);
+}
+
+.age-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  color: var(--ink);
+}
+
+.guide-category .list,
+.page .list {
+  display: grid;
+  gap: 12px;
+}

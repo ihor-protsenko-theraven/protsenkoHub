@@ -46,6 +46,11 @@ export const routes: Routes = [
           import('./features/sleep/sleep.page').then((m) => m.SleepPage),
       },
       {
+        path: 'feeding',
+        loadComponent: () =>
+          import('./features/feeding/feeding.page').then((m) => m.FeedingPage),
+      },
+      {
         path: 'contacts',
         loadComponent: () =>
           import('./features/contacts/contacts.page').then((m) => m.ContactsPage),

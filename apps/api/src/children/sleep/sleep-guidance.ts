@@ -35,8 +35,8 @@ const G = SLEEP_GUIDANCE;
 
 /**
  * Recommendations combine three public signals:
- * 1. Age norms for wake windows and total sleep (AAP: 12–16h at 4–12 months;
- *    4-month wake windows lengthen from about 1h 45m to 2h 35m).
+ * 1. Age norms for wake windows and total sleep. The band comes from the
+ *    child's age in weeks, counted from the birth date.
  * 2. The baby's own recent median, blended with the norm. Gaps too long to be
  *    one wake window are ignored, so a missed log does not become a new habit.
  *    Little data keeps the norm in charge.
@@ -46,11 +46,16 @@ const G = SLEEP_GUIDANCE;
  */
 
 export function buildSleepGuidance(input: GuidanceInput): SleepGuidance {
-  const norms = normsForWeeks(input.ageWeeks);
-  const napTarget = normalizeNapTarget(input.napTarget, input.ageWeeks);
+  if (input.ageWeeks === null || input.ageLabel === null) {
+    return guidanceWithoutAge(input);
+  }
+  const ageWeeks = input.ageWeeks;
+  const ageLabel = input.ageLabel;
+  const norms = normsForWeeks(ageWeeks);
+  const napTarget = normalizeNapTarget(input.napTarget, ageWeeks);
   const rhythm = {
-    lifeWeek: input.ageWeeks,
-    weekNote: weekNoteFor(input.ageWeeks),
+    lifeWeek: ageWeeks,
+    weekNote: weekNoteFor(ageWeeks),
     napTarget,
   };
   const ordered = [...input.sessions].sort(
@@ -152,7 +157,7 @@ export function buildSleepGuidance(input: GuidanceInput): SleepGuidance {
         nightMin: norms.typicalNightMin,
         bedtimeAnchor: anchor,
         napTarget,
-        ageWeeks: input.ageWeeks,
+        ageWeeks,
         example: false,
       }),
       scheduleNote: G.copy.afterWakeNote,
@@ -186,13 +191,7 @@ export function buildSleepGuidance(input: GuidanceInput): SleepGuidance {
       : blended.personalized
         ? 'blended'
         : 'age';
-  const source = sourceText(
-    blended.personalized,
-    basis,
-    input.assumedAge,
-    penalty,
-    debtAdjust,
-  );
+  const source = sourceText(blended.personalized, basis, penalty, debtAdjust);
   const detail = detailText(windowMin, source, debtAdjust, penalty, debtMin);
 
   if (!awakeSince) {
@@ -206,7 +205,7 @@ export function buildSleepGuidance(input: GuidanceInput): SleepGuidance {
     );
     return {
       ...base,
-      headline: `Поки немає записів. Для віку «${input.ageLabel}» перше вікно неспання близько ${formatMinutes(windowAt(norms, 0))}.`,
+      headline: `Поки немає записів. Для віку «${ageLabel}» перше вікно неспання близько ${formatMinutes(windowAt(norms, 0))}.`,
       detail: G.copy.emptyDetail,
       ...rhythm,
       nextSleepAt: null,
@@ -226,7 +225,7 @@ export function buildSleepGuidance(input: GuidanceInput): SleepGuidance {
         nightMin: norms.typicalNightMin,
         bedtimeAnchor: anchor,
         napTarget,
-        ageWeeks: input.ageWeeks,
+        ageWeeks,
         example: true,
       }),
       scheduleNote: G.copy.exampleNote,
@@ -242,7 +241,7 @@ export function buildSleepGuidance(input: GuidanceInput): SleepGuidance {
   );
   const overdue =
     nextAt.getTime() < input.now.getTime() - G.overdueGraceMin * G.minuteMs;
-  const prepareAt = settleTime(nextAt, input.ageWeeks, input.timeZone);
+  const prepareAt = settleTime(nextAt, ageWeeks, input.timeZone);
   const clock = formatClock(nextAt, input.timeZone);
   let headline: string;
   if (awakeMin > G.longAwakeMin) {
@@ -277,12 +276,51 @@ export function buildSleepGuidance(input: GuidanceInput): SleepGuidance {
       nightMin: norms.typicalNightMin,
       bedtimeAnchor: anchor,
       napTarget,
-      ageWeeks: input.ageWeeks,
+      ageWeeks,
       example: false,
     }),
     scheduleNote: null,
     activeStale: false,
     awakeSince: awakeSince.toISOString(),
+  };
+}
+
+function guidanceWithoutAge(input: GuidanceInput): SleepGuidance {
+  const ordered = [...input.sessions].sort(
+    (a, b) => a.startedAt.getTime() - b.startedAt.getTime(),
+  );
+  const active =
+    [...ordered].reverse().find((session) => session.endedAt === null) ?? null;
+  const closed = ordered.filter(
+    (session): session is ClosedSession => session.endedAt !== null,
+  );
+  const stats = computeStats(ordered, input.now, input.timeZone, null);
+  const minutes = active
+    ? (input.now.getTime() - active.startedAt.getTime()) / G.minuteMs
+    : 0;
+  const stale = active !== null && minutes >= STALE_SLEEP_MIN;
+  return {
+    howItWorks: [...G.copy.howItWorks],
+    disclaimer: G.copy.disclaimer,
+    suggestedKind: suggestedKind(input.now, input.timeZone),
+    stats,
+    todayBlocks: computeBlocks(ordered, input.now, input.timeZone),
+    week: computeWeek(ordered, input.now, input.timeZone, 0),
+    headline: stale ? G.copy.staleHeadline : G.copy.missingAgeHeadline,
+    detail: stale ? G.copy.staleDetail : G.copy.missingAgeDetail,
+    nextSleepAt: null,
+    prepareAt: null,
+    expectedWakeAt: null,
+    wakeWindowMin: null,
+    lifeWeek: null,
+    weekNote: null,
+    napTarget: explicitNapTarget(input.napTarget),
+    basis: 'missingAge',
+    signals: [],
+    schedule: [],
+    scheduleNote: null,
+    activeStale: stale,
+    awakeSince: latestEnd(closed)?.toISOString() ?? null,
   };
 }
 
@@ -310,7 +348,6 @@ function detailText(
 function sourceText(
   personalized: boolean,
   basis: GuidanceBasis,
-  assumedAge: boolean,
   penalty: number,
   debtAdjust: number,
 ): string {
@@ -324,7 +361,6 @@ function sourceText(
   }
   if (basis === 'debt') return G.copy.sourceDebtAge;
   if (personalized) return G.copy.sourceBlended;
-  if (assumedAge) return G.copy.sourceAssumedAge;
   return G.copy.sourceAge;
 }
 
@@ -344,9 +380,7 @@ function buildSignals(
   const signals: SleepSignal[] = [
     {
       label: G.copy.signalAge,
-      value: input.assumedAge
-        ? `${input.ageLabel} ${G.copy.signalAgeHint}`
-        : input.ageLabel,
+      value: input.ageLabel ?? '',
     },
     {
       label: G.copy.signalDay,
@@ -552,7 +586,7 @@ function computeStats(
   sessions: GuidanceSession[],
   now: Date,
   timeZone: string,
-  norms: SleepNorm,
+  norms: SleepNorm | null,
 ): SleepStats {
   const todayStart = startOfLocalDay(now, timeZone);
   const todayEnd = nextLocalMidnight(now, timeZone);
@@ -581,7 +615,8 @@ function computeStats(
       todayNight += netOverlap(session, end, todayStart, todayEnd);
     }
   }
-  const week = computeWeek(sessions, now, timeZone, norms.totalTargetMin);
+  const target = norms?.totalTargetMin ?? null;
+  const week = computeWeek(sessions, now, timeZone, target ?? 0);
   const prior = week.filter((day) => day.date !== todayKey && day.sleepMin > 0);
   const sample =
     prior.length > 0 ? prior : week.filter((day) => day.sleepMin > 0);
@@ -603,8 +638,8 @@ function computeStats(
     todayNapMin: Math.round(todayNap),
     todayNightMin: Math.round(todayNight),
     last24hSleepMin: Math.round(last24),
-    targetSleepMin: Math.round(norms.totalTargetMin),
-    sleepDebtMin: Math.round(norms.totalTargetMin - last24),
+    targetSleepMin: target === null ? 0 : Math.round(target),
+    sleepDebtMin: target === null ? 0 : Math.round(target - last24),
     hasFullDayHistory: sessions.some(
       (session) =>
         session.startedAt <= last24Start &&
@@ -980,10 +1015,7 @@ function clamp(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value));
 }
 
-function normalizeNapTarget(
-  value: number | null | undefined,
-  weeks: number,
-): number {
+function explicitNapTarget(value: number | null | undefined): number | null {
   if (
     value === G.napTarget.older ||
     value === G.napTarget.middle ||
@@ -991,6 +1023,15 @@ function normalizeNapTarget(
   ) {
     return value;
   }
+  return null;
+}
+
+function normalizeNapTarget(
+  value: number | null | undefined,
+  weeks: number,
+): number {
+  const chosen = explicitNapTarget(value);
+  if (chosen !== null) return chosen;
   if (weeks < G.napTarget.fourUntilWeek) return G.napTarget.young;
   if (weeks < G.napTarget.threeUntilWeek) return G.napTarget.middle;
   return G.napTarget.older;

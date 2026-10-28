@@ -70,9 +70,8 @@ export interface SleepStats {
 export interface SleepProfile {
   babyName: string;
   birthDate: string | null;
-  ageWeeks: number;
-  ageLabel: string;
-  assumedAge: boolean;
+  ageWeeks: number | null;
+  ageLabel: string | null;
   napTarget: number | null;
   updatedByName: string | null;
 }
@@ -90,9 +89,9 @@ export interface SleepOverview {
   prepareAt: string | null;
   expectedWakeAt: string | null;
   wakeWindowMin: number | null;
-  lifeWeek: number;
+  lifeWeek: number | null;
   weekNote: string | null;
-  napTarget: number;
+  napTarget: number | null;
   basis: string;
   signals: SleepSignal[];
   schedule: ScheduleItem[];

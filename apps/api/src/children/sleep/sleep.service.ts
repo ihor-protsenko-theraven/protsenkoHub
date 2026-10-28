@@ -29,7 +29,6 @@ import { toSleepWidgetSnapshot } from './sleep-widget';
 import type { SleepWidgetSnapshot } from './sleep-widget.model';
 import {
   ageLabelFromDays,
-  ASSUMED_AGE_WEEKS,
   calendarAgeDays,
   CLOCK_SKEW_MS,
   MAX_SLEEP_MIN,
@@ -615,7 +614,6 @@ export class SleepService {
       timeZone,
       ageWeeks: age.weeks,
       ageLabel: age.label,
-      assumedAge: age.assumed,
       sessions: sessions.map((session) => ({
         id: session.id,
         kind: session.kind,
@@ -637,7 +635,6 @@ export class SleepService {
         birthDate: age.birthDate,
         ageWeeks: age.weeks,
         ageLabel: age.label,
-        assumedAge: age.assumed,
         napTarget: profile.napTarget,
         updatedByName: child?.updatedBy?.displayName ?? null,
       },
@@ -766,10 +763,9 @@ export class SleepService {
   ) {
     if (!profile.birthDate) {
       return {
-        weeks: ASSUMED_AGE_WEEKS,
-        label: 'близько 4 місяців',
-        assumed: true,
-        birthDate: null as string | null,
+        weeks: null,
+        label: null,
+        birthDate: null,
       };
     }
     const birthDate = profile.birthDate.toISOString().slice(0, 10);
@@ -777,7 +773,6 @@ export class SleepService {
     return {
       weeks: Math.floor(days / 7),
       label: ageLabelFromDays(days),
-      assumed: false,
       birthDate,
     };
   }

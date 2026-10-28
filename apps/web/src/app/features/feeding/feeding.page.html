@@ -1,0 +1,142 @@
+<section class="page" aria-labelledby="page-title">
+  <header class="page-header">
+    <div>
+      <h1 id="page-title">Прикорм</h1>
+      <p class="page-subtitle">{{ disclaimer }}</p>
+      @if (child(); as child) {
+        <p class="page-subtitle">
+          Для {{ child.name }}@if (child.ageMonths !== null) {, {{ formatAgeMonths(child.ageMonths) }} }
+        </p>
+      }
+    </div>
+  </header>
+
+  @if (loading()) {
+    <div class="panel state"><app-loader label="Завантажуємо прикорм…" /></div>
+  } @else if (failed()) {
+    <div class="panel state">
+      <h2>Не вдалося завантажити</h2>
+      <button class="button button--secondary" type="button" (click)="retry()">Повторити</button>
+    </div>
+  } @else {
+    <div ngTabs>
+      <div ngTabList [(selectedTab)]="tab" class="feeding-tabs" aria-label="Розділи прикорму">
+        @for (item of tabs; track item.value) {
+          <button ngTab [value]="item.value" type="button">{{ item.label }}</button>
+        }
+      </div>
+
+      <div ngTabPanel value="guide">
+        <ng-template ngTabContent>
+          <section class="panel feeding-tips" aria-labelledby="feeding-tips-title">
+            <h2 id="feeding-tips-title">Поради</h2>
+            <ul>
+              @for (tip of tips; track tip) {
+                <li>{{ tip }}</li>
+              }
+            </ul>
+          </section>
+          <div class="panel toolbar">
+            <label class="field field--search">
+              <span>Пошук у довіднику</span>
+              <input type="search" [value]="guideQuery()" (input)="setGuideQuery($event)">
+            </label>
+            <label class="field field--filter">
+              <span>Категорія</span>
+              <select [value]="categoryId()" (change)="setCategory($event)">
+                <option value="ALL">Усі категорії</option>
+                @for (category of categories(); track category.id) {
+                  <option [value]="category.id">{{ category.name }}</option>
+                }
+              </select>
+            </label>
+            @if (ageMonths() !== null) {
+              <label class="age-toggle">
+                <input type="checkbox" [checked]="ageOnly()" (change)="setAgeOnly($event)">
+                <span>Лише за віком</span>
+              </label>
+            } @else {
+              <a class="button button--secondary" routerLink="/app/family">Вказати дату народження</a>
+            }
+          </div>
+
+          @if (!guideCategories().length) {
+            <div class="panel state">
+              <h2>{{ categories().length ? 'Нічого не знайдено' : 'Довідник ще порожній' }}</h2>
+              @if (categories().length) { <p>Змініть пошук або категорію.</p> }
+            </div>
+          } @else {
+            @for (category of guideCategories(); track category.id) {
+              <section class="guide-category" [attr.aria-labelledby]="'feeding-cat-' + category.id">
+                <div class="section-heading">
+                  <h2 [id]="'feeding-cat-' + category.id">{{ category.name }}</h2>
+                </div>
+                <div class="list">
+                  @for (item of category.items; track item.id) {
+                    <article class="panel guide-card">
+                      <div class="guide-card__meta">
+                        <h3>{{ item.name }}</h3>
+                        <span class="badge">{{ allowedFrom(item.allowedFromAgeMonths) }}</span>
+                        @if (item.isAllergen) { <span class="badge badge--allergen">Алерген</span> }
+                      </div>
+                      <h4>Як готувати</h4>
+                      <ol class="guide-steps">
+                        @for (step of guideSteps(item.preparationGuide); track $index) {
+                          <li>{{ step }}</li>
+                        }
+                      </ol>
+                    </article>
+                  }
+                </div>
+              </section>
+            }
+          }
+        </ng-template>
+      </div>
+
+      <div ngTabPanel value="tracker">
+        <ng-template ngTabContent>
+          @if (!child()) {
+            <div class="panel state">
+              <h2>Спочатку додайте дитину</h2>
+              <p>Прикорм ведеться для профілю дитини в родині.</p>
+              <a class="button button--primary" routerLink="/app/family">Відкрити родину</a>
+            </div>
+          } @else {
+            <div class="panel toolbar">
+              <label class="field field--search">
+                <span>Пошук продукту</span>
+                <input type="search" [value]="trackerQuery()" (input)="setTrackerQuery($event)">
+              </label>
+              <label class="field field--filter">
+                <span>Статус</span>
+                <select [value]="trackerStatus()" (change)="setTrackerStatus($event)" aria-label="Фільтр статусу">
+                  <option value="ALL">Усі статуси</option>
+                  @for (option of statuses; track option.value) {
+                    <option [value]="option.value">{{ option.label }}</option>
+                  }
+                </select>
+              </label>
+            </div>
+            @if (!rows().length) {
+              <div class="panel state">
+                <h2>{{ categories().length ? 'Нічого не знайдено' : 'Довідник ще порожній' }}</h2>
+              </div>
+            } @else {
+              <div class="list">
+                @for (row of rows(); track row.food.id) {
+                  <app-feeding-tracker-card
+                    [food]="row.food"
+                    [categoryName]="row.categoryName"
+                    [record]="row.record"
+                    [ageMonths]="ageMonths()"
+                  />
+                }
+              </div>
+            }
+          }
+        </ng-template>
+      </div>
+    </div>
+  }
+</section>

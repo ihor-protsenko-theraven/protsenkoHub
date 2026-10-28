@@ -1,5 +1,6 @@
 export type SleepKindName = 'NAP' | 'NIGHT';
-export type GuidanceBasis = 'age' | 'blended' | 'debt' | 'sleeping' | 'stale';
+export type GuidanceBasis =
+  'age' | 'blended' | 'debt' | 'sleeping' | 'stale' | 'missingAge';
 export type AgeBand =
   | 'newborn'
   | 'twoMonths'
@@ -30,9 +31,8 @@ export interface GuidanceInput {
   babyName?: string;
   now: Date;
   timeZone: string;
-  ageWeeks: number;
-  ageLabel: string;
-  assumedAge: boolean;
+  ageWeeks: number | null;
+  ageLabel: string | null;
   napTarget?: number | null;
   sessions: GuidanceSession[];
 }
@@ -90,9 +90,9 @@ export interface SleepGuidance {
   prepareAt: string | null;
   expectedWakeAt: string | null;
   wakeWindowMin: number | null;
-  lifeWeek: number;
+  lifeWeek: number | null;
   weekNote: string | null;
-  napTarget: number;
+  napTarget: number | null;
   basis: GuidanceBasis;
   signals: SleepSignal[];
   schedule: ScheduleItem[];

@@ -55,10 +55,10 @@ describe('SleepPage', () => {
     };
     const overview: SleepOverview = {
       serverNow: new Date(now).toISOString(), timeZone: 'Europe/Kyiv', historyDays: 7,
-      profile: { babyName: 'Дитина', birthDate: null, ageWeeks: 16, ageLabel: '16 тижнів',
-        assumedAge: false, napTarget: 3, updatedByName: null },
+      profile: { babyName: 'Дитина', birthDate: null, ageWeeks: null, ageLabel: null,
+        napTarget: 3, updatedByName: null },
       active, sessions: [], headline: '', detail: '', nextSleepAt: null, prepareAt: null,
-      expectedWakeAt: null, wakeWindowMin: null, lifeWeek: 16, weekNote: null,
+      expectedWakeAt: null, wakeWindowMin: null, lifeWeek: null, weekNote: null,
       napTarget: 3, basis: '', signals: [], schedule: [], scheduleNote: null,
       howItWorks: [], disclaimer: '', suggestedKind: 'NIGHT', activeStale: false,
       awakeSince: null, todayBlocks: [], week: [],

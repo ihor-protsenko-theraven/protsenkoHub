@@ -1,13 +1,8 @@
 import { HOUSEHOLD } from '../../config/household.config';
-import {
-  ASSUMED_AGE_WEEKS,
-  CLOCK_SKEW_MS,
-  MAX_SLEEP_MIN,
-  STALE_SLEEP_MIN,
-} from './sleep.config';
+import { CLOCK_SKEW_MS, MAX_SLEEP_MIN, STALE_SLEEP_MIN } from './sleep.config';
 import type { ZonedParts } from './sleep-time.model';
 
-export { ASSUMED_AGE_WEEKS, CLOCK_SKEW_MS, MAX_SLEEP_MIN, STALE_SLEEP_MIN };
+export { CLOCK_SKEW_MS, MAX_SLEEP_MIN, STALE_SLEEP_MIN };
 
 export function pad(value: number): string {
   return String(value).padStart(2, '0');

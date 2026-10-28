@@ -7,11 +7,12 @@ import { AuthService } from '../../core/services/auth.service';
 import { Loader } from '../../shared/loader.component';
 import { HOME_CLOCK_REFRESH_MS } from './home.config';
 import { HomeService } from './home.service';
+import { HomeFeedingCard } from './home-feeding-card.component';
 import { HomeSleepCard } from './home-sleep-card.component';
 
 @Component({
   selector: 'app-home-page',
-  imports: [DatePipe, RouterLink, HomeSleepCard, Loader],
+  imports: [DatePipe, RouterLink, HomeFeedingCard, HomeSleepCard, Loader],
   providers: [HomeService],
   templateUrl: './home.page.html',
   styleUrl: './home.page.scss',

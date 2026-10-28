@@ -157,8 +157,12 @@ export class SleepPage {
   }
 
   barHeight(day: WeekDay): number {
-    if (day.targetMin <= 0 || day.sleepMin <= 0) return 0;
-    return Math.min(100, (day.sleepMin / day.targetMin) * 100);
+    const week = this.snapshot()?.week ?? [];
+    const scale = day.targetMin > 0
+      ? day.targetMin
+      : Math.max(0, ...week.map((item) => item.sleepMin));
+    if (scale <= 0 || day.sleepMin <= 0) return 0;
+    return Math.min(100, (day.sleepMin / scale) * 100);
   }
 
   historyDuration(session: SleepSession): string {

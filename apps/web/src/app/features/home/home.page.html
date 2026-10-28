@@ -2,7 +2,7 @@
   <header class="home-hero">
     <div class="home-hero__content">
       <h1 id="page-title">Привіт, {{ firstName() }}!</h1>
-      <p>Події, справи дітей і покупки — на одному екрані.</p>
+      <p>Події, справи дітей, покупки й прикорм — на одному екрані.</p>
       <a class="button button--primary" routerLink="/app/calendar" [queryParams]="{ new: '1' }">Додати подію</a>
     </div>
     <div class="home-hero__today" aria-label="Сьогоднішня дата">
@@ -80,6 +80,8 @@
       }
     </section>
   </div>
+
+  <app-home-feeding-card />
 
   <app-home-sleep-card />
 

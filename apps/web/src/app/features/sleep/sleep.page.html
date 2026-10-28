@@ -13,9 +13,9 @@
   @if (snapshot(); as sleep) {
     <app-sleep-status [headline]="sleep.headline" [active]="sleep.active" [offset]="clockOffset()" [babyName]="sleep.profile.babyName" />
 
-    @if (sleep.profile.assumedAge) {
+    @if (!sleep.profile.birthDate) {
       <div class="panel child-context">
-        <p>Укажіть дату народження для точніших порад.</p>
+        <p>План сну рахується від віку. Укажіть дату народження.</p>
         <a class="button button--secondary" routerLink="/app/family">Додати дитину</a>
       </div>
     }
@@ -190,7 +190,9 @@
       @if (sleep.profile.updatedByName) { <p class="record-audit">Налаштування оновив: {{ sleep.profile.updatedByName }}</p> }
       @if (sleep.scheduleNote) { <p class="field-help">{{ sleep.scheduleNote }}</p> }
       @if (sleep.detail && sleep.active) { <p class="field-help">{{ sleep.detail }}</p> }
-      @if (!sleep.schedule.length) {
+      @if (!sleep.profile.birthDate && !sleep.activeStale) {
+        <p class="field-help">План з’явиться після дати народження.</p>
+      } @else if (!sleep.schedule.length) {
         <p class="field-help">{{ sleep.activeStale ? 'Уточніть час пробудження для плану.' : 'План з’явиться після пробудження.' }}</p>
       } @else {
         <div class="schedule">
@@ -205,7 +207,7 @@
     </section>
 
     <div class="chips">
-      <span class="badge">24 год: {{ minutes(sleep.stats.last24hSleepMin) }} / {{ minutes(sleep.stats.targetSleepMin) }}</span>
+      <span class="badge">24 год: {{ minutes(sleep.stats.last24hSleepMin) }}@if (sleep.profile.birthDate) { / {{ minutes(sleep.stats.targetSleepMin) }} }</span>
       <span class="badge">Денних сьогодні: {{ sleep.stats.todayNapCount }}</span>
     </div>
 
@@ -252,7 +254,9 @@
     <details class="panel fold-panel">
       <summary>Статистика й поради</summary>
       @if (sleep.nextSleepAt && sleep.headline) { <p class="field-help">{{ sleep.headline }}</p> }
-      <p class="field-help">{{ sleep.lifeWeek }}-й тиждень · {{ sleep.profile.ageLabel }}{{ sleep.profile.assumedAge ? ' (орієнтовно)' : '' }}</p>
+      @if (sleep.profile.birthDate && sleep.lifeWeek !== null) {
+        <p class="field-help">{{ sleep.lifeWeek }}-й тиждень · {{ sleep.profile.ageLabel }}</p>
+      }
       @if (sleep.weekNote) { <p class="field-help">{{ sleep.weekNote }}</p> }
       <div class="stats">
         <article class="stat">

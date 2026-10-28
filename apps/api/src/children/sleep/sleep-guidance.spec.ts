@@ -25,8 +25,7 @@ function guide(now: Date, sessions: GuidanceSession[]) {
     now,
     timeZone,
     ageWeeks: 17,
-    ageLabel: 'близько 4 місяців',
-    assumedAge: true,
+    ageLabel: '17 тижнів',
     sessions,
   });
 }
@@ -53,7 +52,7 @@ describe('sleep guidance', () => {
     endedAt: at(2026, 10, 19, 7, 0),
   });
 
-  it('uses the 4-month wake window when sleep is on target and history is thin', () => {
+  it('uses the wake window for a 17-week-old when sleep is on target and history is thin', () => {
     const now = at(2026, 10, 19, 8, 0);
     const result = guide(now, [balancedNight()]);
     expect(result.basis).toBe('age');
@@ -172,7 +171,6 @@ describe('sleep guidance', () => {
         timeZone,
         ageWeeks,
         ageLabel: `${ageWeeks} тижнів`,
-        assumedAge: false,
         sessions: [
           {
             id: 'night',
@@ -374,6 +372,25 @@ describe('sleep guidance', () => {
       },
     ]);
     expect(result.schedule.at(-1)?.clock).toMatch(/^19:|^20:/);
+  });
+
+  it('does not invent an age norm when the birth date is missing', () => {
+    const result = buildSleepGuidance({
+      now: at(2026, 10, 19, 8, 0),
+      timeZone,
+      ageWeeks: null,
+      ageLabel: null,
+      sessions: [balancedNight()],
+    });
+    expect(result.basis).toBe('missingAge');
+    expect(result.wakeWindowMin).toBeNull();
+    expect(result.nextSleepAt).toBeNull();
+    expect(result.schedule).toEqual([]);
+    expect(result.lifeWeek).toBeNull();
+    expect(result.napTarget).toBeNull();
+    expect(result.headline).toContain('дату народження');
+    expect(result.stats.targetSleepMin).toBe(0);
+    expect(result.stats.todaySleepMin).toBe(420);
   });
 
   it('explains the age norm before any sleep is logged', () => {

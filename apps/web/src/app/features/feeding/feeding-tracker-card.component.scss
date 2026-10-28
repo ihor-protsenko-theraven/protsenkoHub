@@ -1,0 +1,82 @@
+.tracker-card {
+  display: grid;
+  gap: 12px;
+  padding: 20px 22px;
+}
+
+.tracker-card header {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+
+.tracker-card h3 {
+  margin: 0;
+  font-size: 1.06rem;
+}
+
+.tracker-card header p,
+.tracker-card .message {
+  margin: 4px 0 0;
+  color: var(--muted);
+}
+
+.tracker-card__marks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.badge--allergen {
+  background: var(--warm);
+  color: var(--danger);
+}
+
+.status-choice {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.status-choice .button {
+  padding: 0 14px;
+}
+
+.status-choice .button:hover:not(:disabled),
+.note-row .button:hover:not(:disabled) {
+  transform: none;
+}
+
+.status-choice .button.is-selected {
+  background: var(--forest);
+  border-color: transparent;
+  color: var(--surface);
+}
+
+.status-choice .button.is-allergy.is-selected {
+  background: var(--danger);
+}
+
+.status-choice .button.is-refused.is-selected {
+  background: var(--clay);
+}
+
+.note-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: end;
+}
+
+.note-row .field {
+  flex: 1 1 220px;
+}
+
+.note-row .button,
+.note-row .field input,
+.status-choice .button {
+  min-height: 44px;
+  border-radius: 12px;
+}

@@ -28,6 +28,12 @@ export class ApiService {
     });
   }
 
+  put<T>(path: string, body: unknown): Observable<T> {
+    return this.http.put<T>(`${API_BASE_URL}${path}`, body, {
+      withCredentials: true,
+    });
+  }
+
   patch<T>(path: string, body: unknown): Observable<T> {
     return this.http.patch<T>(`${API_BASE_URL}${path}`, body, {
       withCredentials: true,

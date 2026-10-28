@@ -38,6 +38,13 @@ enum EventStatus {
   DONE
 }
 
+enum FeedingStatus {
+  PENDING
+  INTRODUCED
+  ALLERGY
+  REFUSED
+}
+
 model User {
   id           String         @id @default(cuid())
   email        String         @unique
@@ -238,8 +245,9 @@ model ChildProfile {
   updatedById String?
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
-  household   Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
-  updatedBy   User?     @relation("ChildProfileUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull)
+  household      Household       @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  updatedBy      User?           @relation("ChildProfileUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull)
+  feedingRecords FeedingRecord[]
 }
 
 // Open tracker lives in ActiveSleep (one row per household). SleepSession keeps
@@ -325,4 +333,42 @@ model SleepReminderDelivery {
   subscription   PushSubscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
 
   @@unique([subscriptionId, awakeSince, leadMinutes])
+}
+
+// Foods and preparation notes are a shared static guide. FeedingRecord is the
+// per-child tracker; categories are not owned by a household.
+model FoodCategory {
+  id        String     @id
+  name      String
+  sortOrder Int        @default(0)
+  items     FoodItem[]
+}
+
+model FoodItem {
+  id                   String          @id
+  categoryId           String
+  name                 String
+  allowedFromAgeMonths Int
+  preparationGuide     String
+  isAllergen           Boolean         @default(false)
+  sortOrder            Int             @default(0)
+  category             FoodCategory    @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  records              FeedingRecord[]
+
+  @@index([categoryId, sortOrder])
+}
+
+model FeedingRecord {
+  id         String        @id @default(cuid())
+  childId    String
+  foodItemId String
+  status     FeedingStatus @default(PENDING)
+  notes      String?
+  createdAt  DateTime      @default(now())
+  updatedAt  DateTime      @updatedAt
+  child      ChildProfile  @relation(fields: [childId], references: [id], onDelete: Cascade)
+  foodItem   FoodItem      @relation(fields: [foodItemId], references: [id], onDelete: Cascade)
+
+  @@unique([childId, foodItemId])
+  @@index([childId])
 }

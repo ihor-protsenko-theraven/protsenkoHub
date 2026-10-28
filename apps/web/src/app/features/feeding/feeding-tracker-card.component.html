@@ -1,0 +1,39 @@
+<article class="panel tracker-card">
+  <header>
+    <div>
+      <h3>{{ food().name }}</h3>
+      <p>{{ categoryName() }} · {{ allowedFrom(food().allowedFromAgeMonths) }}</p>
+    </div>
+    <div class="tracker-card__marks">
+      @if (food().isAllergen) { <span class="badge badge--allergen">Алерген</span> }
+      @if (early()) { <span class="badge">Ще рано за віком</span> }
+    </div>
+  </header>
+  <div class="status-choice" role="radiogroup" [attr.aria-label]="'Статус для ' + food().name">
+    @for (option of statuses; track option.value) {
+      <button
+        type="button"
+        class="button button--secondary"
+        role="radio"
+        [attr.aria-checked]="model().status === option.value"
+        [class.is-selected]="model().status === option.value"
+        [class.is-allergy]="option.value === 'ALLERGY'"
+        [class.is-refused]="option.value === 'REFUSED'"
+        [disabled]="busy()"
+        (click)="setStatus(option.value)"
+      >{{ option.label }}</button>
+    }
+  </div>
+  <form class="note-row" (submit)="$event.preventDefault(); saveNotes()">
+    <label class="field">
+      <span>Нотатка</span>
+      <input [formField]="draft.notes" [attr.aria-label]="'Нотатка для ' + food().name" placeholder="Наприклад, ложка в обід">
+    </label>
+    <button class="button button--secondary" type="submit" [disabled]="busy() || !notesDirty()">Зберегти</button>
+  </form>
+  @if (draft.notes().invalid() && draft.notes().touched()) {
+    <p class="message message--error" role="alert">{{ notesTooLong }}</p>
+  } @else if (error()) {
+    <p class="message message--error" role="alert">{{ error() }}</p>
+  }
+</article>

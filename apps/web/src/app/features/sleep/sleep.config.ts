@@ -4,5 +4,5 @@ export const SLEEP_UI = {
   minuteMs: 60_000,
   historyDays: 21,
   defaultEditLookbackMs: 60 * 60_000,
-  napChoices: [3, 4],
+  napChoices: [2, 3, 4],
 } as const;

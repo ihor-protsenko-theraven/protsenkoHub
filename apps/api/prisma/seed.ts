@@ -6,6 +6,7 @@ import {
 } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 import { HOUSEHOLD } from '../src/config/household.config';
+import { ensureFeedingDictionary } from '../src/feeding/feeding-dictionary';
 
 const prisma = new PrismaClient();
 
@@ -170,6 +171,8 @@ async function main() {
       ],
     });
   }
+
+  await ensureFeedingDictionary(prisma);
 
   console.log('Seed OK');
   console.log('  admin@protsenkohub.local / protsenko123');

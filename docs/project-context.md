@@ -40,18 +40,19 @@ protsenkoHub/
 | Екран | Маршрут | API |
 | --- | --- | --- |
 | Вхід | `/login` | `POST /api/v1/auth/login`, `POST /api/v1/auth/register`, `GET /api/v1/auth/me` |
-| Головна | `/app/home` | `GET /api/v1/events`, `/api/v1/children/tasks`, `/api/v1/shopping/items`, `/api/v1/children/sleep` |
+| Головна | `/app/home` | `GET /api/v1/home` (події, задачі, покупки, сон і поточний та наступний продукт прикорму) |
 | Календар | `/app/calendar` | `/api/v1/events` |
 | Покупки | `/app/shopping` | `/api/v1/shopping/items`, `/api/v1/shopping/lists` |
 | Діти | `/app/children` | `/api/v1/children/tasks` |
 | Сон | `/app/sleep` | `/api/v1/children/sleep` |
+| Прикорм | `/app/feeding` | `GET /api/v1/feeding/dictionary`, `GET /api/v1/feeding/records`, `PUT /api/v1/feeding/records/:foodItemId` |
 | Контакти | `/app/contacts` | `/api/v1/contacts` |
 | Родина | `/app/family` | `GET /api/v1/auth/family`, `PUT /api/v1/auth/family/child` |
 
 Маршрути Angular ліниві через `loadComponent`. Оболонка `/app` закрита `authGuard`. Сторінка входу закрита `guestGuard`.
 Встановлений PWA стартує з `/app/home`; швидкі дії в маніфесті ведуть до сну та покупок.
 
-Назва «Діти» — це екран задач (`/api/v1/children/tasks`). Сон лишається окремим трекером (`/api/v1/children/sleep`). Не зводьте їх в один розділ.
+Назва «Діти» — це екран задач (`/api/v1/children/tasks`). Сон лишається окремим трекером (`/api/v1/children/sleep`). Прикорм теж окремий розділ (`/app/feeding`, `/api/v1/feeding`): довідник продуктів спільний, а статуси введення належать дитині. Не зводьте ці трекери в один розділ.
 
 Зараз у родині один профіль дитини. Ім’я та дата народження зберігаються в `ChildProfile` родини; сон використовує ці дані й тримає у своєму профілі лише ціль денних снів. Покупки підтримують окремі речі та названі списки з кількома позиціями.
 Під час переходу `SleepProfile` зберігає старі поля дитини: міграція переносить наявні дані, тригер приймає записи від попереднього API, а новий API дублює збереження для можливого відкату. Прибирати ці поля й тригер можна лише після завершення переходу встановлених PWA та старого API.

@@ -458,8 +458,38 @@ describe('SleepService profile', () => {
     expect(saved.napTarget).toBe(3);
     expect(overview.profile.babyName).toBe('Марко');
     expect(overview.profile.birthDate).toBe('2025-08-23');
-    expect(overview.profile.assumedAge).toBe(false);
+    expect(overview.profile.ageWeeks).toBeGreaterThan(0);
     expect(overview.profile.ageLabel).toContain('1 р.');
+  });
+
+  it('does not invent a four-month age when the birth date is missing', async () => {
+    const prisma = {
+      household: {
+        findUnique: vi.fn().mockResolvedValue({ timezone: 'Europe/Kyiv' }),
+      },
+      sleepProfile: {
+        findUnique: vi.fn().mockResolvedValue({ napTarget: null }),
+      },
+      childProfile: {
+        findUnique: vi.fn().mockResolvedValue({
+          name: 'Марко',
+          birthDate: null,
+          updatedBy: null,
+        }),
+      },
+      activeSleep: { findUnique: vi.fn().mockResolvedValue(null) },
+      sleepSession: { findMany: vi.fn().mockResolvedValue([]) },
+    } as unknown as PrismaService;
+    const { push } = createPush(prisma);
+    const overview = await new SleepService(prisma, push).overview(user());
+
+    expect(overview.profile.birthDate).toBeNull();
+    expect(overview.profile.ageWeeks).toBeNull();
+    expect(overview.profile.ageLabel).toBeNull();
+    expect(overview.basis).toBe('missingAge');
+    expect(overview.wakeWindowMin).toBeNull();
+    expect(overview.schedule).toEqual([]);
+    expect(overview.headline).toContain('дату народження');
   });
 });
 

@@ -19,6 +19,8 @@
       <p>
         @if (overview.active) {
           {{ overview.profile.babyName }} спить. Початок о {{ overview.active.startedAt | sleepTime:overview.timeZone }}.
+        } @else if (!overview.profile.birthDate) {
+          Вкажіть дату народження, щоб план рахувався від віку дитини.
         } @else if (overview.nextSleepAt) {
           Наступний сон близько {{ overview.nextSleepAt | sleepTime:overview.timeZone }}.
         } @else if (overview.stats.todaySleepMin > 0) {
