@@ -1,17 +1,17 @@
 .contact-links {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
-  margin-top: 10px;
+  gap: .5rem;
+  margin-top: .625rem;
 }
 
 .contact-links a {
   display: inline-flex;
   align-items: center;
-  padding: 5px 12px;
-  border-radius: 10px;
+  padding: .3125rem .75rem;
+  border-radius: .625rem;
   background: var(--paper);
-  border: 1px solid var(--line);
+  border: .0625rem solid var(--line);
   color: var(--forest-dark);
   font-size: 0.86rem;
   font-weight: 700;

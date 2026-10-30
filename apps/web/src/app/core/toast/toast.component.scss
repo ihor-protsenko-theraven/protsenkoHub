@@ -1,10 +1,10 @@
 .toast-stack {
   position: fixed;
   z-index: 1000;
-  inset: auto 16px 16px auto;
+  inset: auto 1rem 1rem auto;
   display: grid;
-  gap: 10px;
-  width: min(420px, calc(100vw - 32px));
+  gap: .625rem;
+  width: min(26.25rem, calc(100vw - 2rem));
   pointer-events: none;
 }
 
@@ -12,12 +12,12 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
-  padding: 10px 10px 10px 16px;
-  border: 1px solid var(--warm-strong);
-  border-radius: 14px;
+  gap: .75rem;
+  padding: .625rem .625rem .625rem 1rem;
+  border: .0625rem solid var(--warm-strong);
+  border-radius: .875rem;
   background: color-mix(in srgb, var(--surface) 94%, transparent);
-  backdrop-filter: blur(12px);
+  backdrop-filter: blur(.75rem);
   color: var(--ink);
   font-size: 0.92rem;
   font-weight: 600;
@@ -33,10 +33,10 @@
 
 .toast button {
   flex: none;
-  min-width: 44px;
-  min-height: 44px;
+  min-width: 2.75rem;
+  min-height: 2.75rem;
   border: 0;
-  border-radius: 12px;
+  border-radius: .75rem;
   background: transparent;
   color: inherit;
   font-size: 1.35rem;

@@ -1,40 +1,34 @@
 .feeding-header { flex-wrap: wrap; align-items: flex-start; }
 .feeding-child-line strong { color: var(--forest-dark); }
-.feeding-progress { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
-.feeding-focus { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-bottom: 16px; }
-.feeding-focus__card { display: grid; align-content: start; gap: 6px; padding: 16px 18px; }
-.feeding-focus__card--done { background: color-mix(in srgb, var(--soft) 65%, var(--surface)); border-color: var(--sage); }
-.feeding-focus__label { color: var(--forest); font-size: .74rem; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; }
+.feeding-progress, .feeding-focus__actions, .category-pills, .guide-card__top, .guide-card__meta, .guide-card__actions { display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; }
+.feeding-focus { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .75rem; margin-bottom: 1rem; }
+.feeding-focus__card { display: grid; align-content: start; gap: .375rem; padding: 1rem 1.125rem; }
+.feeding-focus__card--done, .guide-card--done { background: color-mix(in srgb, var(--soft) 65%, var(--surface)); border-color: var(--sage); }
+.feeding-focus__label, .guide-card h4 { margin: 0; color: var(--forest); font-size: .75rem; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; }
 .feeding-focus__card strong { font: 700 1.35rem var(--font-display); letter-spacing: -.03em; }
 .feeding-focus__card small { color: var(--muted); }
-.feeding-focus__actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; }
-@media (max-width: 700px) { .feeding-focus { grid-template-columns: 1fr; } }
-.feeding-tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; padding: 4px; margin-bottom: 16px; border-radius: 14px; background: var(--soft); border: 1px solid var(--line); }
-.feeding-tabs button { min-height: 44px; border: 0; border-radius: 10px; background: transparent; color: var(--muted); font-weight: 700; }
+@media (max-width: 43.75rem) { .feeding-focus { grid-template-columns: 1fr; } }
+.feeding-tabs { display: grid; grid-template-columns: 1fr 1fr; gap: .25rem; padding: .25rem; margin-bottom: 1rem; border-radius: .875rem; background: var(--soft); border: .0625rem solid var(--line); }
+.feeding-tabs button { min-height: 2.75rem; border: 0; border-radius: .625rem; background: transparent; color: var(--muted); font-weight: 700; }
 .feeding-tabs button[aria-selected='true'] { background: var(--surface); box-shadow: var(--shadow-sm); color: var(--forest-dark); }
-.feeding-tips { margin-bottom: 14px; background: linear-gradient(145deg, var(--surface) 0%, var(--soft) 100%); }
-.feeding-tips summary { display: flex; align-items: center; justify-content: space-between; gap: 10px; list-style: none; font: 700 1.15rem var(--font-display); }
+.feeding-tips, .feeding-toolbar { margin-bottom: .875rem; }
+.feeding-tips summary { display: flex; align-items: center; justify-content: space-between; gap: .625rem; list-style: none; font: 700 1.15rem var(--font-display); }
 .feeding-tips summary::-webkit-details-marker { display: none; }
-.feeding-tips ul, .guide-steps { margin: 10px 0 0; padding-left: 1.2rem; color: var(--muted); line-height: 1.48; }
-.feeding-tips li + li, .guide-steps li + li { margin-top: 5px; }
-.feeding-toolbar { margin-bottom: 14px; }
-.category-pills { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 20px; }
-.category-pill { display: inline-flex; align-items: center; gap: 6px; height: 44px; min-height: 44px; padding: 0 14px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); color: var(--muted); font-size: .88rem; font-weight: 700; }
+.feeding-tips ul, .guide-steps { margin: .625rem 0 0; padding-left: 1.2rem; color: var(--muted); line-height: 1.48; }
+.feeding-tips li + li, .guide-steps li + li { margin-top: .3rem; }
+.category-pills { margin-bottom: 1.25rem; }
+.category-pill, .age-toggle { display: inline-flex; align-items: center; gap: .375rem; height: 2.75rem; min-height: 2.75rem; padding: 0 .875rem; border: .0625rem solid var(--line); border-radius: .75rem; background: var(--surface); color: var(--muted); font-size: .88rem; font-weight: 700; }
 .category-pill:hover { background: var(--soft); color: var(--forest-dark); }
 .category-pill.is-active { background: var(--forest); border-color: var(--forest-dark); color: var(--surface); box-shadow: var(--shadow-sm); }
-.category-pill span { font-size: .78rem; opacity: .82; font-variant-numeric: tabular-nums; }
-.guide-category { margin-bottom: 26px; }
-.guide-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr)); gap: 12px; }
-.guide-card { display: flex; flex-direction: column; justify-content: space-between; gap: 12px; padding: 18px 20px; }
-.guide-card--done { background: color-mix(in srgb, var(--surface) 72%, var(--soft)); border-color: var(--sage); }
-.guide-card__top { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-start; gap: 8px; }
-.guide-card__meta { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.category-pill span { font-size: .78rem; opacity: .82; }
+.guide-category { margin-bottom: 1.625rem; }
+.guide-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 20rem), 1fr)); gap: .75rem; }
+.guide-card { display: flex; flex-direction: column; justify-content: space-between; gap: .75rem; padding: 1.125rem 1.25rem; }
+.guide-card__top { justify-content: space-between; align-items: flex-start; }
 .guide-card h3 { margin: 0; font-size: 1.08rem; }
-.guide-card h4 { margin: 0; font-size: .76rem; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; color: var(--forest); }
-.guide-card__note { margin: 10px 0 0; padding: 8px 10px; border-radius: 10px; background: var(--paper); border: 1px solid var(--line); font-size: .84rem; color: var(--forest-dark); }
-.guide-card__actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; padding-top: 10px; border-top: 1px solid var(--line); }
-.guide-card__actions .button { padding: 0 14px; font-size: .85rem; }
-.guide-card__actions .button:hover:not(:disabled) { transform: none; }
+.guide-card__note { margin: .625rem 0 0; padding: .5rem .625rem; border-radius: .625rem; background: var(--paper); border: .0625rem solid var(--line); font-size: .84rem; color: var(--forest-dark); }
+.guide-card__actions { padding-top: .625rem; border-top: .0625rem solid var(--line); }
+.guide-card__actions .button { padding: 0 .875rem; font-size: .85rem; }
 .badge--allergen { background: var(--warm); border-color: var(--warm-strong); color: var(--danger); }
-.age-toggle { display: inline-flex; align-items: center; gap: 8px; height: 44px; min-height: 44px; padding: 0 12px; border-radius: 12px; background: var(--surface); border: 1px solid var(--line); color: var(--ink); font-size: .88rem; font-weight: 700; cursor: pointer; }
-.age-toggle input { width: 18px; height: 18px; accent-color: var(--forest); }
+.age-toggle { color: var(--ink); cursor: pointer; }
+.age-toggle input { width: 1.125rem; height: 1.125rem; accent-color: var(--forest); }

@@ -1,6 +1,6 @@
 :host {
   display: block;
-  margin-top: 20px;
+  margin-top: 1.25rem;
 }
 
 .history-panel {
@@ -12,13 +12,13 @@
   cursor: pointer;
   display: flex;
   width: 100%;
-  min-height: 48px;
+  min-height: 3rem;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
-  padding: 0 18px;
+  gap: .75rem;
+  padding: 0 1.125rem;
   list-style: none;
-  border-radius: 16px;
+  border-radius: 1rem;
   background: transparent;
   color: var(--forest-dark);
   font-weight: 700;
@@ -34,20 +34,20 @@
 }
 
 .history-panel__toggle:focus-visible {
-  outline: 2px solid var(--forest);
-  outline-offset: -2px;
+  outline: .125rem solid var(--forest);
+  outline-offset: -.125rem;
 }
 
 .history-panel__count {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 26px;
-  height: 24px;
-  padding: 0 8px;
-  border-radius: 999px;
+  min-width: 1.625rem;
+  height: 1.5rem;
+  padding: 0 .5rem;
+  border-radius: 99rem;
   background: var(--surface);
-  border: 1px solid var(--line);
+  border: .0625rem solid var(--line);
   color: var(--muted);
   font-size: 0.78rem;
   font-weight: 700;
@@ -56,5 +56,5 @@
 
 .history-panel__body,
 .history-panel__empty {
-  padding: 4px 16px 16px;
+  padding: .25rem 1rem 1rem;
 }

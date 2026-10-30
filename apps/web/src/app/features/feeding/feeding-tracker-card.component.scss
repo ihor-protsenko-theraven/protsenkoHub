@@ -1,18 +1,18 @@
-.tracker-card { display: grid; gap: 12px; padding: 18px 20px; }
-.tracker-card header { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: flex-start; justify-content: space-between; }
+.tracker-card { display: grid; gap: .75rem; padding: 1.125rem 1.25rem; }
+.tracker-card header { display: flex; flex-wrap: wrap; gap: .5rem 1rem; align-items: flex-start; justify-content: space-between; }
 .tracker-card h3 { margin: 0; font-size: 1.06rem; }
-.tracker-card header p, .tracker-card .message { margin: 4px 0 0; color: var(--muted); font-size: .88rem; }
-.tracker-card__marks { display: flex; flex-wrap: wrap; gap: 6px; }
-.tracker-card__guide ol { margin: 8px 0 0; padding-left: 1.2rem; font-size: .9rem; line-height: 1.45; }
-.tracker-card__guide li + li { margin-top: 4px; }
+.tracker-card header p, .tracker-card .message { margin: .25rem 0 0; color: var(--muted); font-size: .88rem; }
+.tracker-card__marks { display: flex; flex-wrap: wrap; gap: .375rem; }
+.tracker-card__guide ol { margin: .5rem 0 0; padding-left: 1.2rem; font-size: .9rem; line-height: 1.45; }
+.tracker-card__guide li + li { margin-top: .25rem; }
 .badge--allergen { background: var(--warm); border-color: var(--warm-strong); color: var(--danger); }
-.status-choice { display: flex; flex-wrap: wrap; gap: 6px; padding: 4px; border-radius: 14px; background: var(--soft); border: 1px solid var(--line); }
-.status-choice .button { flex: 1 1 auto; padding: 0 12px; background: transparent; border-color: transparent; box-shadow: none; }
+.status-choice { display: flex; flex-wrap: wrap; gap: .375rem; padding: .25rem; border-radius: .875rem; background: var(--soft); border: .0625rem solid var(--line); }
+.status-choice .button { flex: 1 1 auto; padding: 0 .75rem; background: transparent; border-color: transparent; box-shadow: none; }
 .status-choice .button:hover:not(:disabled) { background: var(--surface); }
 .status-choice .button:hover:not(:disabled), .note-row .button:hover:not(:disabled) { transform: none; }
 .status-choice .button.is-selected { background: var(--forest); border-color: var(--forest-dark); color: var(--surface); box-shadow: var(--shadow-sm); }
 .status-choice .button.is-allergy.is-selected { background: var(--danger); border-color: var(--danger); }
 .status-choice .button.is-refused.is-selected { background: var(--clay); border-color: var(--forest-dark); }
-.note-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: end; }
-.note-row .field { flex: 1 1 220px; }
-.note-row .button, .note-row .field input, .status-choice .button { min-height: 44px; border-radius: 12px; }
+.note-row { display: flex; flex-wrap: wrap; gap: .5rem; align-items: end; }
+.note-row .field { flex: 1 1 13.75rem; }
+.note-row .button, .note-row .field input, .status-choice .button { min-height: 2.75rem; border-radius: .75rem; }
