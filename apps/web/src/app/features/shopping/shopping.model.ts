@@ -1,38 +1,51 @@
 import type { RecordAudit } from '../../shared/record-audit.model';
 
 export interface ShoppingItem extends RecordAudit {
-  id: string;
-  listId: string;
-  name: string;
-  qty: number;
-  unit: string | null;
-  category: string | null;
-  isChecked: boolean;
-  version: number;
+  readonly id: string;
+  readonly listId: string;
+  readonly name: string;
+  readonly qty: number;
+  readonly unit: string | null;
+  readonly category: string | null;
+  readonly isChecked: boolean;
+  readonly version: number;
+  readonly createdAt?: string;
+  readonly updatedAt?: string;
 }
 
 export interface ShoppingItemForm {
-  name: string;
-  qty: number;
-  unit: string;
-  category: string;
+  readonly name: string;
+  readonly qty: number;
+  readonly unit: string;
+  readonly category: string;
 }
 
 export interface ShoppingItemPayload {
-  name: string;
-  listId?: string;
-  qty: number;
-  unit?: string | null;
-  category?: string | null;
+  readonly name: string;
+  readonly listId?: string;
+  readonly qty: number;
+  readonly unit?: string | null;
+  readonly category?: string | null;
 }
 
 export interface ShoppingList {
-  id: string;
-  name: string;
-  isDefault: boolean;
+  readonly id: string;
+  readonly name: string;
+  readonly isDefault: boolean;
+  readonly createdAt?: string;
+  readonly updatedAt?: string;
 }
 
 export interface ShoppingListForm {
-  name: string;
-  items: string;
+  readonly name: string;
+  readonly items: string;
+}
+
+export interface ShoppingFilterForm {
+  readonly search: string;
+  readonly category: string;
+}
+
+export interface ShoppingQuickForm {
+  readonly name: string;
 }

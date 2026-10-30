@@ -46,3 +46,10 @@
 .toast button:hover {
   background: var(--soft);
 }
+
+@media (max-width: 53.125rem) {
+  .toast-stack {
+    inset: auto 1rem calc(5.25rem + env(safe-area-inset-bottom)) 1rem;
+    width: auto;
+  }
+}

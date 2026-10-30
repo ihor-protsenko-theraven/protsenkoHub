@@ -644,6 +644,11 @@ a {
   .field-grid {
     grid-template-columns: 1fr;
   }
+  .field input,
+  .field select,
+  .field textarea {
+    font-size: 1rem;
+  }
   .list-card {
     flex-direction: column;
     align-items: stretch;
@@ -660,5 +665,84 @@ a {
   }
   .form-panel {
     padding: 1rem;
+  }
+}
+
+.sr-only {
+  position: absolute;
+  width: .0625rem;
+  height: .0625rem;
+  margin: -.0625rem;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.sheet-backdrop {
+  display: none;
+}
+
+@keyframes sheet-in {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+/* Форма-панель на телефоні відкривається знизу, щоб не губитися над довгим списком. */
+@media (max-width: 43.75rem) {
+  .sheet-backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 29;
+    background: var(--forest-shade);
+  }
+  .form-sheet {
+    position: fixed;
+    z-index: 30;
+    inset: auto 0 0;
+    max-height: min(88dvh, 40rem);
+    margin: 0;
+    padding: 1rem 1rem calc(1rem + env(safe-area-inset-bottom));
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    border-radius: 1.25rem 1.25rem 0 0;
+    animation: sheet-in 0.22s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .form-sheet .field-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .form-sheet .field--wide {
+    grid-column: 1 / -1;
+  }
+  .form-sheet .form-actions .button--primary {
+    flex: 2;
+  }
+  .form-sheet .form-actions .button--quiet {
+    flex: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .form-sheet {
+    animation: none;
+  }
+}
+
+.progress-bar {
+  height: .375rem;
+  margin-bottom: .5rem;
+  border-radius: 99rem;
+  background: var(--sage);
+  overflow: hidden;
+
+  span {
+    display: block;
+    height: 100%;
+    border-radius: inherit;
+    background: var(--forest);
   }
 }

@@ -39,6 +39,13 @@ export class ShoppingService {
     return this.api.patch<ShoppingItem>(`/shopping/items/${id}`, payload).pipe(tap(() => this.items.reload()));
   }
 
+   toggle(item: ShoppingItem) {
+    const isChecked = !item.isChecked;
+    const updatedAt = new Date().toISOString();
+    this.items.update((list) => list.map((entry) => (entry.id === item.id ? { ...entry, isChecked, updatedAt } : entry)));
+    return this.update(item.id, { isChecked, version: item.version });
+  }
+
   remove(id: string) {
     return this.api.delete<void>(`/shopping/items/${id}`).pipe(tap(() => this.items.reload()));
   }
