@@ -1,35 +1,137 @@
 <section class="panel home-sleep" aria-labelledby="sleep-title">
   <div class="home-sleep__heading">
-    <h2 id="sleep-title">Сон дитини</h2>
+    <div class="home-sleep__title-group">
+      <h2 id="sleep-title">Сон дитини</h2>
+      @if (snapshot.hasValue()) {
+        @let overview = snapshot.value().sleep;
+        <span
+          class="home-sleep__badge"
+          [class.home-sleep__badge--active]="!!overview.active && !isPaused(overview.active)"
+          [class.home-sleep__badge--paused]="isPaused(overview.active)">
+          @if (isPaused(overview.active)) {
+            На паузі
+          } @else if (overview.active; as active) {
+            Спить · {{ active.kind === 'NIGHT' ? 'Нічний' : 'Денний' }}
+          } @else {
+            Не спить
+          }
+        </span>
+        @if (overview.profile.ageLabel) {
+          <span class="home-sleep__meta">{{ overview.profile.babyName }} · {{ overview.profile.ageLabel }}</span>
+        }
+      }
+    </div>
+    <a class="home-sleep__link" routerLink="/app/sleep">Увесь трекер</a>
   </div>
+
   @if (snapshot.isLoading()) {
     <app-loader label="Завантажуємо дані про сон…" />
   } @else if (snapshot.error()) {
-    <div>
+    <div class="home-sleep__state">
       <p>Не вдалося завантажити дані про сон.</p>
       <button class="button button--secondary" type="button" (click)="snapshot.reload()">Повторити</button>
     </div>
   } @else if (snapshot.hasValue()) {
     @let overview = snapshot.value().sleep;
-    <div class="home-sleep__body">
-      <div>
+    <div class="home-sleep__metrics">
+      <div class="home-sleep__metric">
+        <span>Сьогодні сну</span>
         <strong class="home-sleep__number">{{ sleepDuration(overview.stats.todaySleepMin) }}</strong>
-        <span>сну сьогодні</span>
+        <small>
+          @if (overview.stats.targetSleepMin > 0) {
+            норма ~{{ sleepDuration(overview.stats.targetSleepMin) }}
+          } @else {
+            за поточну добу
+          }
+        </small>
       </div>
-      <p>
-        @if (overview.active) {
-          {{ overview.profile.babyName }} спить. Початок о {{ overview.active.startedAt | sleepTime:overview.timeZone }}.
-        } @else if (!overview.profile.birthDate) {
-          Вкажіть дату народження, щоб план рахувався від віку дитини.
+      <div class="home-sleep__metric">
+        <span>Денні сни</span>
+        <strong class="home-sleep__number">{{ overview.stats.todayNapCount }}</strong>
+        <small>
+          @if (overview.napTarget) {
+            ціль: {{ overview.napTarget }} на день
+          } @else {
+            {{ sleepDuration(overview.stats.todayNapMin) }} вдень
+          }
+        </small>
+      </div>
+      <div class="home-sleep__metric">
+        @if (overview.active && overview.expectedWakeAt) {
+          <span>Пробудження</span>
+          <strong class="home-sleep__number">~{{ overview.expectedWakeAt | sleepTime:overview.timeZone }}</strong>
+          <small>початок о {{ overview.active.startedAt | sleepTime:overview.timeZone }}</small>
         } @else if (overview.nextSleepAt) {
-          Наступний сон близько {{ overview.nextSleepAt | sleepTime:overview.timeZone }}.
-        } @else if (overview.stats.todaySleepMin > 0) {
-          Сьогоднішній сон записано.
+          <span>Наступний сон</span>
+          <strong class="home-sleep__number">~{{ overview.nextSleepAt | sleepTime:overview.timeZone }}</strong>
+          <small>
+            @if (overview.prepareAt) {
+              підготовка з {{ overview.prepareAt | sleepTime:overview.timeZone }}
+            } @else {
+              за віковим ритмом
+            }
+          </small>
         } @else {
-          Поки немає записів сну.
+          <span>Статус</span>
+          <strong class="home-sleep__number">{{ overview.active ? (overview.active.startedAt | sleepTime:overview.timeZone) : '—' }}</strong>
+          <small>{{ overview.active ? 'час початку сну' : 'очікує запису' }}</small>
         }
-      </p>
+      </div>
+    </div>
+
+    <div class="home-sleep__guidance">
+      <div class="home-sleep__guidance-text">
+        <strong>{{ overview.headline }}</strong>
+        <p>
+          @if (overview.active; as active) {
+            {{ overview.profile.babyName }} спить з {{ active.startedAt | sleepTime:overview.timeZone }}.
+            @if (overview.detail) {
+              {{ overview.detail }}
+            }
+          } @else if (!overview.profile.birthDate) {
+            Вкажіть дату народження в розділі «Родина», щоб план рахувався від віку дитини.
+          } @else {
+            {{ overview.detail }}
+          }
+        </p>
+      </div>
+
+      <div class="home-sleep__actions">
+        @if (overview.active; as active) {
+          <button
+            class="button button--primary"
+            type="button"
+            [disabled]="busy()"
+            (click)="stop()">
+            Прокинулась
+          </button>
+          <button
+            class="button button--secondary"
+            type="button"
+            [disabled]="busy()"
+            (click)="togglePause(active)">
+            {{ isPaused(active) ? 'Продовжити' : 'Пауза' }}
+          </button>
+        } @else {
+          <button
+            class="button button--primary"
+            type="button"
+            [disabled]="busy()"
+            (click)="start(overview.suggestedKind)">
+            {{ overview.suggestedKind === 'NIGHT' ? 'Почати нічний сон' : 'Почати денний сон' }}
+          </button>
+          <button
+            class="button button--secondary"
+            type="button"
+            [disabled]="busy()"
+            (click)="start(alternateKind(overview.suggestedKind))">
+            {{ overview.suggestedKind === 'NIGHT' ? 'Денний сон' : 'Нічний сон' }}
+          </button>
+          @if (!overview.profile.birthDate) {
+            <a class="button button--ghost" routerLink="/app/family">Вказати вік</a>
+          }
+        }
+      </div>
     </div>
   }
-  <a class="button button--secondary" routerLink="/app/sleep">Відкрити сон</a>
 </section>

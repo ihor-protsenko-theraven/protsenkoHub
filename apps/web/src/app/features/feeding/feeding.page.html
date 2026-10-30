@@ -1,15 +1,30 @@
 <section class="page" aria-labelledby="page-title">
-  <header class="page-header">
+  <header class="page-header feeding-header">
     <div>
       <h1 id="page-title">Прикорм</h1>
       <p class="page-subtitle">{{ disclaimer }}</p>
       @if (child(); as child) {
-        <p class="page-subtitle">
-          Для {{ child.name }}@if (child.ageMonths !== null) {, {{ formatAgeMonths(child.ageMonths) }} }
+        <p class="page-subtitle feeding-child-line">
+          Для <strong>{{ child.name }}</strong>@if (child.ageMonths !== null) {, {{ formatAgeMonths(child.ageMonths) }} }
         </p>
       }
     </div>
+    @if (child() && progress().total > 0) {
+      <div class="feeding-progress" aria-label="Прогрес введення продуктів">
+        <span class="badge">Введено: {{ progress().introduced }} з {{ progress().total }}</span>
+        @if (progress().allergy > 0) {
+          <span class="badge badge--allergen">Алергія: {{ progress().allergy }}</span>
+        }
+        @if (progress().refused > 0) {
+          <span class="badge badge--warm">Відмова: {{ progress().refused }}</span>
+        }
+      </div>
+    }
   </header>
+
+  @if (quickError()) {
+    <p class="message message--error" role="alert">{{ quickError() }}</p>
+  }
 
   @if (loading()) {
     <div class="panel state"><app-loader label="Завантажуємо прикорм…" /></div>
@@ -19,6 +34,83 @@
       <button class="button button--secondary" type="button" (click)="retry()">Повторити</button>
     </div>
   } @else {
+    @if (child()) {
+      @let focus = focusPair();
+      <section class="feeding-focus" aria-label="Поточний крок прикорму">
+        @if (focus.introduced; as introduced) {
+          <article class="panel feeding-focus__card feeding-focus__card--done">
+            <div class="guide-card__top">
+              <span class="feeding-focus__label">Введено</span>
+              <span class="badge">✓ Введено</span>
+            </div>
+            <strong>{{ introduced.item.name }}</strong>
+            <small>{{ introduced.categoryName }} · {{ allowedFrom(introduced.item.allowedFromAgeMonths) }}</small>
+          </article>
+          <article class="panel feeding-focus__card">
+            <div class="guide-card__top">
+              <span class="feeding-focus__label">Наступний продукт</span>
+              @if (focus.next; as next) {
+                @if (next.item.isAllergen) {
+                  <span class="badge badge--allergen">Алерген</span>
+                }
+              }
+            </div>
+            @if (focus.next; as next) {
+              <strong>{{ next.item.name }}</strong>
+              <small>{{ next.categoryName }} · {{ allowedFrom(next.item.allowedFromAgeMonths) }}</small>
+              <div class="feeding-focus__actions">
+                <button
+                  class="button button--primary"
+                  type="button"
+                  [disabled]="savingFoodId() === next.item.id"
+                  (click)="markIntroduced(next.item)">
+                  {{ savingFoodId() === next.item.id ? 'Зберігаємо…' : 'Позначити введеним' }}
+                </button>
+                <button class="button button--ghost" type="button" (click)="openInTracker(next.item)">У трекері</button>
+              </div>
+            } @else {
+              <strong>План пройдено</strong>
+              <small>Усі продукти з довідника вже відмічені.</small>
+            }
+          </article>
+        } @else {
+          <article class="panel feeding-focus__card feeding-focus__card--done">
+            <div class="guide-card__top">
+              <span class="feeding-focus__label">Зараз вводимо</span>
+            </div>
+            @if (focus.current; as current) {
+              <strong>{{ current.item.name }}</strong>
+              <small>{{ current.categoryName }} · {{ allowedFrom(current.item.allowedFromAgeMonths) }}</small>
+              <div class="feeding-focus__actions">
+                <button
+                  class="button button--primary"
+                  type="button"
+                  [disabled]="savingFoodId() === current.item.id"
+                  (click)="markIntroduced(current.item)">
+                  {{ savingFoodId() === current.item.id ? 'Зберігаємо…' : 'Позначити введеним' }}
+                </button>
+              </div>
+            } @else {
+              <strong>Ще рано</strong>
+              <small>Перший продукт з’явиться, коли дитина доросте за віком.</small>
+            }
+          </article>
+          <article class="panel feeding-focus__card">
+            <div class="guide-card__top">
+              <span class="feeding-focus__label">Наступний продукт</span>
+            </div>
+            @if (focus.next; as next) {
+              <strong>{{ next.item.name }}</strong>
+              <small>{{ next.categoryName }} · {{ allowedFrom(next.item.allowedFromAgeMonths) }}</small>
+            } @else {
+              <strong>Далі немає</strong>
+              <small>Наступного продукту в черзі немає.</small>
+            }
+          </article>
+        }
+      </section>
+    }
+
     <div ngTabs>
       <div ngTabList [(selectedTab)]="tab" class="feeding-tabs" aria-label="Розділи прикорму">
         @for (item of tabs; track item.value) {
@@ -28,18 +120,27 @@
 
       <div ngTabPanel value="guide">
         <ng-template ngTabContent>
-          <section class="panel feeding-tips" aria-labelledby="feeding-tips-title">
-            <h2 id="feeding-tips-title">Поради</h2>
+          <details class="panel fold-panel feeding-tips">
+            <summary>
+              <span id="feeding-tips-title">Поради</span>
+              <span class="badge">{{ tips.length }} правил</span>
+            </summary>
             <ul>
               @for (tip of tips; track tip) {
                 <li>{{ tip }}</li>
               }
             </ul>
-          </section>
-          <div class="panel toolbar">
+          </details>
+
+          <div class="panel toolbar feeding-toolbar">
             <label class="field field--search">
               <span>Пошук у довіднику</span>
-              <input type="search" [value]="guideQuery()" (input)="setGuideQuery($event)">
+              <input
+                type="search"
+                placeholder="Наприклад, кабачок, каша або на парі"
+                [value]="guideQuery()"
+                (input)="setGuideQuery($event)"
+              >
             </label>
             <label class="field field--filter">
               <span>Категорія</span>
@@ -58,33 +159,113 @@
             } @else {
               <a class="button button--secondary" routerLink="/app/family">Вказати дату народження</a>
             }
+            @if (child()) {
+              <label class="age-toggle">
+                <input type="checkbox" [checked]="hideIntroduced()" (change)="setHideIntroduced($event)">
+                <span>Приховати введені</span>
+              </label>
+            }
+            @if (hasActiveGuideFilters()) {
+              <button class="button button--quiet" type="button" (click)="resetGuideFilters()">Скинути</button>
+            }
           </div>
+
+          @if (categories().length > 1) {
+            <div class="category-pills" role="group" aria-label="Швидкий вибір категорії">
+              <button
+                type="button"
+                class="category-pill"
+                [class.is-active]="categoryId() === 'ALL'"
+                (click)="selectCategory('ALL')"
+              >
+                Усі <span>{{ progress().total }}</span>
+              </button>
+              @for (category of categories(); track category.id) {
+                <button
+                  type="button"
+                  class="category-pill"
+                  [class.is-active]="categoryId() === category.id"
+                  (click)="selectCategory(category.id)"
+                >
+                  {{ category.name }} <span>{{ category.items.length }}</span>
+                </button>
+              }
+            </div>
+          }
 
           @if (!guideCategories().length) {
             <div class="panel state">
               <h2>{{ categories().length ? 'Нічого не знайдено' : 'Довідник ще порожній' }}</h2>
-              @if (categories().length) { <p>Змініть пошук або категорію.</p> }
+              @if (categories().length) {
+                <p>Змініть пошук або категорію.</p>
+                @if (hasActiveGuideFilters()) {
+                  <button class="button button--secondary" type="button" (click)="resetGuideFilters()">Показати всі продукти</button>
+                }
+              }
             </div>
           } @else {
             @for (category of guideCategories(); track category.id) {
               <section class="guide-category" [attr.aria-labelledby]="'feeding-cat-' + category.id">
                 <div class="section-heading">
                   <h2 [id]="'feeding-cat-' + category.id">{{ category.name }}</h2>
+                  @if (child()) {
+                    <span>Введено {{ category.introducedCount }} з {{ category.totalCount }}</span>
+                  } @else {
+                    <span>{{ category.items.length }}</span>
+                  }
                 </div>
-                <div class="list">
+                <div class="guide-grid">
                   @for (item of category.items; track item.id) {
-                    <article class="panel guide-card">
-                      <div class="guide-card__meta">
+                    @let status = itemStatus(item.id);
+                    <article class="panel guide-card" [class.guide-card--done]="status === 'INTRODUCED'">
+                      <div class="guide-card__top">
                         <h3>{{ item.name }}</h3>
-                        <span class="badge">{{ allowedFrom(item.allowedFromAgeMonths) }}</span>
-                        @if (item.isAllergen) { <span class="badge badge--allergen">Алерген</span> }
+                        <div class="guide-card__meta">
+                          <span class="badge" [class.badge--done]="isEarlyForChild(item.allowedFromAgeMonths)">
+                            {{ allowedFrom(item.allowedFromAgeMonths) }}
+                          </span>
+                          @if (item.isAllergen) {
+                            <span class="badge badge--allergen">Алерген</span>
+                          }
+                          @if (child() && status !== 'PENDING') {
+                            <span
+                              class="badge"
+                              [class.badge--allergen]="status === 'ALLERGY'"
+                              [class.badge--warm]="status === 'REFUSED'"
+                            >
+                              {{ statusLabel(status) }}
+                            </span>
+                          }
+                        </div>
                       </div>
-                      <h4>Як готувати</h4>
-                      <ol class="guide-steps">
-                        @for (step of guideSteps(item.preparationGuide); track $index) {
-                          <li>{{ step }}</li>
+                      <div class="guide-card__body">
+                        <h4>Як готувати</h4>
+                        <ol class="guide-steps">
+                          @for (step of guideSteps(item.preparationGuide); track $index) {
+                            <li>{{ step }}</li>
+                          }
+                        </ol>
+                        @if (itemNotes(item.id); as note) {
+                          <p class="guide-card__note">Нотатка: {{ note }}</p>
                         }
-                      </ol>
+                      </div>
+                      @if (child()) {
+                        <div class="guide-card__actions">
+                          @if (status !== 'INTRODUCED') {
+                            <button
+                              class="button button--secondary"
+                              type="button"
+                              [disabled]="savingFoodId() === item.id"
+                              (click)="markIntroduced(item)"
+                            >
+                              Позначити введеним
+                            </button>
+                          }
+                          <button class="button button--quiet" type="button" (click)="openInTracker(item)">
+                            У трекері
+                          </button>
+                        </div>
+                      }
                     </article>
                   }
                 </div>
@@ -106,7 +287,12 @@
             <div class="panel toolbar">
               <label class="field field--search">
                 <span>Пошук продукту</span>
-                <input type="search" [value]="trackerQuery()" (input)="setTrackerQuery($event)">
+                <input
+                  type="search"
+                  placeholder="Назва продукту"
+                  [value]="trackerQuery()"
+                  (input)="setTrackerQuery($event)"
+                >
               </label>
               <label class="field field--filter">
                 <span>Статус</span>

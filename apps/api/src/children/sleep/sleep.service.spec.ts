@@ -491,6 +491,29 @@ describe('SleepService profile', () => {
     expect(overview.schedule).toEqual([]);
     expect(overview.headline).toContain('дату народження');
   });
+
+  it('defaults napTarget to null on overview when sleepProfile does not exist yet without creating a row', async () => {
+    const createProfile = vi.fn();
+    const prisma = {
+      household: {
+        findUnique: vi.fn().mockResolvedValue({ timezone: 'Europe/Kyiv' }),
+      },
+      sleepProfile: {
+        findUnique: vi.fn().mockResolvedValue(null),
+        create: createProfile,
+      },
+      childProfile: {
+        findUnique: vi.fn().mockResolvedValue(null),
+      },
+      activeSleep: { findUnique: vi.fn().mockResolvedValue(null) },
+      sleepSession: { findMany: vi.fn().mockResolvedValue([]) },
+    } as unknown as PrismaService;
+    const { push } = createPush(prisma);
+    const overview = await new SleepService(prisma, push).overview(user());
+
+    expect(overview.profile.napTarget).toBeNull();
+    expect(createProfile).not.toHaveBeenCalled();
+  });
 });
 
 describe('SleepService widget snapshot', () => {

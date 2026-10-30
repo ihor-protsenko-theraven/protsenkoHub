@@ -7,14 +7,14 @@
 }
 
 .loader {
-  --color-1: #ba98d6;
-  --color-2: #e700ff;
+  --color-1: var(--forest);
+  --color-2: var(--clay);
   --size: 1px;
 
   position: relative;
   display: block;
-  width: calc(48 * var(--size));
-  height: calc(48 * var(--size));
+  width: calc(44 * var(--size));
+  height: calc(44 * var(--size));
   border-radius: 50%;
   color: var(--color-1);
   transform: rotateZ(45deg);

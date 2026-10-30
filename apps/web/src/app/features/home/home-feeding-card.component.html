@@ -24,47 +24,106 @@
         }
       </p>
       <div class="home-feeding__pair">
-        <article>
-          <span>Зараз вводимо</span>
-          @if (feeding.current; as current) {
-            <strong>{{ current.name }}</strong>
-            <small>{{ current.categoryName }} · {{ allowedFrom(current.allowedFromAgeMonths) }}</small>
-            @if (current.isAllergen) {
+        @if (feeding.introduced; as introduced) {
+          <article class="home-feeding__card home-feeding__card--introduced">
+            <div class="home-feeding__card-head">
+              <span>Введено</span>
+              <span class="badge">✓ Введено</span>
+            </div>
+            <strong>{{ introduced.name }}</strong>
+            <small>{{ introduced.categoryName }} · {{ allowedFrom(introduced.allowedFromAgeMonths) }}</small>
+            @if (introduced.isAllergen) {
               <em>Алерген</em>
             }
-            @if (guideSteps(current.preparationGuide).length) {
-              <ol>
-                @for (step of guideSteps(current.preparationGuide); track $index) {
-                  <li>{{ step }}</li>
+          </article>
+          <article class="home-feeding__card home-feeding__card--next">
+            <div class="home-feeding__card-head">
+              <span>Наступний</span>
+            </div>
+            @if (feeding.next; as next) {
+              <strong>{{ next.name }}</strong>
+              <small>
+                {{ next.categoryName }} · {{ allowedFrom(next.allowedFromAgeMonths) }}
+                @if (laterThanChild(next, feeding.child.ageMonths)) {
+                  · ще за віком
                 }
-              </ol>
-            }
-          } @else if (feeding.next) {
-            <strong>Ще рано</strong>
-            <small>Новий продукт з’явиться, коли дитина до нього доросте.</small>
-          } @else {
-            <strong>План пройдено</strong>
-            <small>Усі продукти з довідника вже відмічені.</small>
-          }
-        </article>
-        <article>
-          <span>Наступний</span>
-          @if (feeding.next; as next) {
-            <strong>{{ next.name }}</strong>
-            <small>
-              {{ next.categoryName }} · {{ allowedFrom(next.allowedFromAgeMonths) }}
-              @if (laterThanChild(next, feeding.child.ageMonths)) {
-                · ще за віком
+              </small>
+              @if (next.isAllergen) {
+                <em>Алерген</em>
               }
-            </small>
-            @if (next.isAllergen) {
-              <em>Алерген</em>
+              @if (guideSteps(next.preparationGuide).length) {
+                <ol>
+                  @for (step of guideSteps(next.preparationGuide); track $index) {
+                    <li>{{ step }}</li>
+                  }
+                </ol>
+              }
+              <button
+                class="button button--primary home-feeding__action"
+                type="button"
+                [disabled]="savingFoodId() === next.id"
+                (click)="markIntroduced(next)">
+                {{ savingFoodId() === next.id ? 'Зберігаємо…' : 'Позначити введеним' }}
+              </button>
+            } @else {
+              <strong>План пройдено</strong>
+              <small>Усі продукти з довідника вже відмічені.</small>
             }
-          } @else {
-            <strong>Далі немає</strong>
-            <small>Наступного продукту в черзі немає.</small>
-          }
-        </article>
+          </article>
+        } @else {
+          <article class="home-feeding__card home-feeding__card--current">
+            <div class="home-feeding__card-head">
+              <span>Зараз вводимо</span>
+            </div>
+            @if (feeding.current; as current) {
+              <strong>{{ current.name }}</strong>
+              <small>{{ current.categoryName }} · {{ allowedFrom(current.allowedFromAgeMonths) }}</small>
+              @if (current.isAllergen) {
+                <em>Алерген</em>
+              }
+              @if (guideSteps(current.preparationGuide).length) {
+                <ol>
+                  @for (step of guideSteps(current.preparationGuide); track $index) {
+                    <li>{{ step }}</li>
+                  }
+                </ol>
+              }
+              <button
+                class="button button--primary home-feeding__action"
+                type="button"
+                [disabled]="savingFoodId() === current.id"
+                (click)="markIntroduced(current)">
+                {{ savingFoodId() === current.id ? 'Зберігаємо…' : 'Позначити введеним' }}
+              </button>
+            } @else if (feeding.next) {
+              <strong>Ще рано</strong>
+              <small>Новий продукт з’явиться, коли дитина до нього доросте.</small>
+            } @else {
+              <strong>План пройдено</strong>
+              <small>Усі продукти з довідника вже відмічені.</small>
+            }
+          </article>
+          <article class="home-feeding__card home-feeding__card--next">
+            <div class="home-feeding__card-head">
+              <span>Наступний</span>
+            </div>
+            @if (feeding.next; as next) {
+              <strong>{{ next.name }}</strong>
+              <small>
+                {{ next.categoryName }} · {{ allowedFrom(next.allowedFromAgeMonths) }}
+                @if (laterThanChild(next, feeding.child.ageMonths)) {
+                  · ще за віком
+                }
+              </small>
+              @if (next.isAllergen) {
+                <em>Алерген</em>
+              }
+            } @else {
+              <strong>Далі немає</strong>
+              <small>Наступного продукту в черзі немає.</small>
+            }
+          </article>
+        }
       </div>
       <a class="button button--secondary" routerLink="/app/feeding">Відкрити прикорм</a>
     }

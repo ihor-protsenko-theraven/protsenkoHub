@@ -1,10 +1,85 @@
-.page-actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center;justify-content:flex-end}
-.page-actions .button{height:44px}
-.quick-status{display:flex;align-items:center}
-.quick-status select{height:44px;min-height:44px;min-width:148px;border:1px solid var(--line);border-radius:12px;background:#fff;color:var(--ink);padding:0 12px;font-size:.85rem;font-weight:700}
-.priority-choice{display:flex;gap:8px}
-.priority-choice button{flex:1;height:44px;min-height:44px;border:1px solid var(--line);border-radius:12px;background:#fff;font-weight:700;color:var(--ink)}
-.priority-choice button.is-selected{background:var(--forest);border-color:var(--forest);color:#fff}
-.priority-choice button.is-important.is-selected{background:#8a5a32;border-color:#8a5a32}
-.priority-choice button.is-urgent.is-selected{background:#9a3b2f;border-color:#9a3b2f}
-.badge--urgent{background:#fae7e1;color:#9a3b2f}
+.page-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.page-actions .button {
+  height: 44px;
+}
+
+.quick-status {
+  display: flex;
+  align-items: center;
+}
+
+.quick-status select {
+  appearance: none;
+  height: 44px;
+  min-height: 44px;
+  min-width: 152px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background-color: var(--paper);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23493856' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  color: var(--forest-dark);
+  padding: 0 34px 0 12px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.quick-status select:hover:not(:disabled) {
+  border-color: var(--warm-strong);
+  background-color: var(--soft);
+}
+
+.priority-choice {
+  display: flex;
+  gap: 6px;
+  padding: 4px;
+  border-radius: 14px;
+  background: var(--soft);
+  border: 1px solid var(--line);
+}
+
+.priority-choice button {
+  flex: 1;
+  height: 44px;
+  min-height: 44px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  background: transparent;
+  font-weight: 700;
+  color: var(--muted);
+  transition:
+    background-color 0.16s ease,
+    color 0.16s ease;
+}
+
+.priority-choice button.is-selected {
+  background: var(--forest);
+  border-color: var(--forest-dark);
+  color: #fff;
+  box-shadow: var(--shadow-sm);
+}
+
+.priority-choice button.is-important.is-selected {
+  background: var(--clay);
+  border-color: var(--forest-dark);
+}
+
+.priority-choice button.is-urgent.is-selected {
+  background: var(--danger);
+  border-color: var(--danger);
+}
+
+.badge--urgent {
+  background: color-mix(in srgb, var(--danger) 12%, var(--surface));
+  border-color: color-mix(in srgb, var(--danger) 30%, var(--line));
+  color: var(--danger);
+}

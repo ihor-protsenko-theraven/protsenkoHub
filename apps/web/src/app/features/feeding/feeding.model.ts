@@ -15,6 +15,19 @@ export interface FoodCategoryGroup {
   items: FoodItem[];
 }
 
+export interface GuideCategoryGroup extends FoodCategoryGroup {
+  introducedCount: number;
+  totalCount: number;
+}
+
+export interface FeedingProgressSummary {
+  total: number;
+  introduced: number;
+  allergy: number;
+  refused: number;
+  pending: number;
+}
+
 export interface FeedingChild {
   id: string;
   name: string;
@@ -47,6 +60,7 @@ export interface FeedingFocusFood {
 
 export interface FeedingFocus {
   child: FeedingChild | null;
+  introduced: FeedingFocusFood | null;
   current: FeedingFocusFood | null;
   next: FeedingFocusFood | null;
 }

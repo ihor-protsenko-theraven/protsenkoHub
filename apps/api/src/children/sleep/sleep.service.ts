@@ -727,25 +727,14 @@ export class SleepService {
     }
   }
 
-  private async ensureProfile(householdId: string) {
+  private async ensureProfile(
+    householdId: string,
+  ): Promise<{ napTarget: number | null }> {
     const existing = await this.prisma.sleepProfile.findUnique({
       where: { householdId },
       include: { updatedBy: { select: { displayName: true } } },
     });
-    if (existing) return existing;
-    try {
-      return await this.prisma.sleepProfile.create({
-        data: { householdId },
-      });
-    } catch (error) {
-      if (!this.isUnique(error)) throw error;
-      const created = await this.prisma.sleepProfile.findUnique({
-        where: { householdId },
-        include: { updatedBy: { select: { displayName: true } } },
-      });
-      if (!created) throw error;
-      return created;
-    }
+    return existing ?? { napTarget: null };
   }
 
   private async timeZoneOf(householdId: string): Promise<string> {

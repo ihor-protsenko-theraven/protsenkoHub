@@ -4,6 +4,7 @@ import {
   ForbiddenException,
   Injectable,
   NotFoundException,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { MemberRole, Prisma } from '@prisma/client';
@@ -32,43 +33,51 @@ export class InvitationService {
   ) {}
 
   async family(user: AuthUser) {
-    const household = await this.prisma.household.findUniqueOrThrow({
-      where: { id: user.householdId },
-      select: {
-        name: true,
-        timezone: true,
-        childProfile: {
-          select: {
-            name: true,
-            birthDate: true,
-            updatedBy: { select: { displayName: true } },
+    let household;
+    try {
+      household = await this.prisma.household.findUniqueOrThrow({
+        where: { id: user.householdId },
+        select: {
+          name: true,
+          timezone: true,
+          childProfile: {
+            select: {
+              name: true,
+              birthDate: true,
+              updatedBy: { select: { displayName: true } },
+            },
+          },
+          members: {
+            select: {
+              id: true,
+              displayName: true,
+              role: true,
+              user: { select: { email: true } },
+            },
+            orderBy: { createdAt: 'asc' },
+          },
+          invitations: {
+            where: {
+              acceptedAt: null,
+              revokedAt: null,
+              expiresAt: { gt: new Date() },
+            },
+            select: {
+              id: true,
+              email: true,
+              expiresAt: true,
+              createdBy: { select: { displayName: true } },
+            },
+            orderBy: { createdAt: 'desc' },
           },
         },
-        members: {
-          select: {
-            id: true,
-            displayName: true,
-            role: true,
-            user: { select: { email: true } },
-          },
-          orderBy: { createdAt: 'asc' },
-        },
-        invitations: {
-          where: {
-            acceptedAt: null,
-            revokedAt: null,
-            expiresAt: { gt: new Date() },
-          },
-          select: {
-            id: true,
-            email: true,
-            expiresAt: true,
-            createdBy: { select: { displayName: true } },
-          },
-          orderBy: { createdAt: 'desc' },
-        },
-      },
-    });
+      });
+    } catch (error) {
+      if (isMissingRecordError(error)) {
+        throw new UnauthorizedException('Сесія застаріла. Увійдіть знову.');
+      }
+      throw error;
+    }
     const birthDate = household.childProfile?.birthDate
       ? household.childProfile.birthDate.toISOString().slice(0, 10)
       : null;
@@ -107,10 +116,18 @@ export class InvitationService {
         'Вкажіть коректні ім’я та дату народження дитини.',
       );
     }
-    const household = await this.prisma.household.findUniqueOrThrow({
-      where: { id: user.householdId },
-      select: { timezone: true },
-    });
+    let household;
+    try {
+      household = await this.prisma.household.findUniqueOrThrow({
+        where: { id: user.householdId },
+        select: { timezone: true },
+      });
+    } catch (error) {
+      if (isMissingRecordError(error)) {
+        throw new UnauthorizedException('Сесія застаріла. Увійдіть знову.');
+      }
+      throw error;
+    }
     if (
       calendarAgeDays(
         dto.birthDate,
@@ -349,6 +366,15 @@ export class InvitationService {
 
 function hashToken(token: string): string {
   return createHash('sha256').update(token).digest('hex');
+}
+
+function isMissingRecordError(error: unknown): boolean {
+  return (
+    typeof error === 'object' &&
+    error !== null &&
+    'code' in error &&
+    error.code === 'P2025'
+  );
 }
 
 async function claimInvitation(

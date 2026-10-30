@@ -75,6 +75,27 @@ describe('FeedingPage', () => {
     expect(upsert).toHaveBeenCalledWith('food-zucchini', { status: 'INTRODUCED', notes: null });
   });
 
+  it('marks a food as introduced directly from the guide card and can open it in the tracker', async () => {
+    const { fixture, upsert } = setup();
+    await fixture.whenStable();
+    const host = fixture.nativeElement as HTMLElement;
+
+    const quickIntroduce = Array.from(host.querySelectorAll('button'))
+      .find((button) => button.textContent?.trim() === 'Позначити введеним');
+    expect(quickIntroduce).toBeTruthy();
+    quickIntroduce?.click();
+    fixture.detectChanges();
+    expect(upsert).toHaveBeenCalledWith('food-zucchini', { status: 'INTRODUCED', notes: null });
+
+    const openTracker = Array.from(host.querySelectorAll('button'))
+      .find((button) => button.textContent?.trim() === 'У трекері');
+    openTracker?.click();
+    fixture.detectChanges();
+    await fixture.whenStable();
+    expect(fixture.componentInstance.tab()).toBe('tracker');
+    expect(fixture.componentInstance.trackerQuery()).toBe('Кабачок');
+  });
+
   it('asks for a child profile before tracking', async () => {
     const { fixture } = setup({ child: null });
     await fixture.whenStable();

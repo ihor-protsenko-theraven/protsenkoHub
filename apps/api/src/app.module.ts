@@ -1,6 +1,8 @@
 import { Module } from '@nestjs/common';
+import { APP_FILTER } from '@nestjs/core';
 import { ConfigModule } from '@nestjs/config';
 import { AuthModule } from './auth/auth.module';
+import { StaleSessionExceptionFilter } from './auth/stale-session.filter';
 import { CalendarModule } from './calendar/calendar.module';
 import { ContactsModule } from './contacts/contacts.module';
 import { PrismaModule } from './prisma/prisma.module';
@@ -23,5 +25,11 @@ import { HomeModule } from './home/home.module';
     HomeModule,
   ],
   controllers: [HealthController],
+  providers: [
+    {
+      provide: APP_FILTER,
+      useClass: StaleSessionExceptionFilter,
+    },
+  ],
 })
 export class AppModule {}

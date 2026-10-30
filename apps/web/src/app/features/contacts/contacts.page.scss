@@ -1,1 +1,28 @@
-.contact-links{display:flex;flex-wrap:wrap;gap:6px 18px;margin-top:10px}.contact-links a{color:var(--forest);font-weight:700;overflow-wrap:anywhere}
+.contact-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.contact-links a {
+  display: inline-flex;
+  align-items: center;
+  padding: 5px 12px;
+  border-radius: 10px;
+  background: var(--paper);
+  border: 1px solid var(--line);
+  color: var(--forest-dark);
+  font-size: 0.86rem;
+  font-weight: 700;
+  text-decoration: none;
+  overflow-wrap: anywhere;
+  transition:
+    background-color 0.16s ease,
+    border-color 0.16s ease;
+}
+
+.contact-links a:hover {
+  background: var(--soft);
+  border-color: var(--warm-strong);
+}

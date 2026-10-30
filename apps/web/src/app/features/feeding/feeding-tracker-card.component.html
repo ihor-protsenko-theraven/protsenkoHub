@@ -9,6 +9,16 @@
       @if (early()) { <span class="badge">Ще рано за віком</span> }
     </div>
   </header>
+  @if (steps().length) {
+    <details class="fold tracker-card__guide">
+      <summary>Як готувати</summary>
+      <ol>
+        @for (step of steps(); track $index) {
+          <li>{{ step }}</li>
+        }
+      </ol>
+    </details>
+  }
   <div class="status-choice" role="radiogroup" [attr.aria-label]="'Статус для ' + food().name">
     @for (option of statuses; track option.value) {
       <button

@@ -101,8 +101,32 @@ export class AuthService {
     return { token: await this.sign(authUser), user: authUser };
   }
 
-  me(authUser: AuthUser): AuthUser {
-    return authUser;
+  async me(authUser: AuthUser): Promise<AuthUser> {
+    if (!this.prisma.user?.findUnique) {
+      return authUser;
+    }
+    let account = await this.prisma.user.findUnique({
+      where: { id: authUser.userId },
+      include: { memberships: { orderBy: { createdAt: 'asc' } } },
+    });
+    if (!account && authUser.email) {
+      account = await this.prisma.user.findUnique({
+        where: { email: authUser.email.toLowerCase() },
+        include: { memberships: { orderBy: { createdAt: 'asc' } } },
+      });
+    }
+    const membership =
+      account?.memberships.find(
+        (item) => item.householdId === account.activeHouseholdId,
+      ) ??
+      account?.memberships.find(
+        (item) => item.householdId === authUser.householdId,
+      ) ??
+      account?.memberships[0];
+    if (!account || !membership) {
+      throw new UnauthorizedException('Session expired');
+    }
+    return this.toAuthUser(account, membership);
   }
 
   upgradeWebToken(
@@ -113,10 +137,18 @@ export class AuthService {
       return Promise.resolve(null);
     }
     const decoded = this.jwt.decode(currentToken);
+    const tokenUser =
+      decoded && typeof decoded === 'object'
+        ? authUserFromWebPayload(decoded as JwtPayload)
+        : null;
     if (
-      decoded &&
-      typeof decoded === 'object' &&
-      authUserFromWebPayload(decoded as JwtPayload)
+      tokenUser &&
+      tokenUser.userId === user.userId &&
+      tokenUser.householdId === user.householdId &&
+      tokenUser.membershipId === user.membershipId &&
+      tokenUser.role === user.role &&
+      tokenUser.displayName === user.displayName &&
+      tokenUser.color === user.color
     ) {
       return Promise.resolve(null);
     }

@@ -25,8 +25,50 @@ const plan: FeedingPlanCategory[] = [
 describe('pickFeedingFocus', () => {
   it('starts with the earliest open food and the one after it', () => {
     expect(pickFeedingFocus(plan, [], 6)).toEqual({
+      introduced: null,
       current: named('food-zucchini', 'Кабачок', 'Овочі', 6),
       next: named('food-buckwheat', 'Гречана каша', 'Каші', 6),
+    });
+  });
+
+  it('shows the latest introduced food and the next open food after it', () => {
+    const vegetablesPlan: FeedingPlanCategory[] = [
+      {
+        name: 'Овочі',
+        sortOrder: 1,
+        items: [
+          food('food-zucchini', 'Кабачок', 1, 5),
+          food('food-cauliflower', 'Цвітна капуста', 2, 5),
+          food('food-pumpkin', 'Гарбуз', 3, 5),
+        ],
+      },
+    ];
+
+    expect(
+      pickFeedingFocus(
+        vegetablesPlan,
+        [{ foodItemId: 'food-zucchini', status: FeedingStatus.INTRODUCED }],
+        6,
+      ),
+    ).toEqual({
+      introduced: named('food-zucchini', 'Кабачок', 'Овочі', 5),
+      current: named('food-cauliflower', 'Цвітна капуста', 'Овочі', 5),
+      next: named('food-cauliflower', 'Цвітна капуста', 'Овочі', 5),
+    });
+
+    expect(
+      pickFeedingFocus(
+        vegetablesPlan,
+        [
+          { foodItemId: 'food-zucchini', status: FeedingStatus.INTRODUCED },
+          { foodItemId: 'food-cauliflower', status: FeedingStatus.INTRODUCED },
+        ],
+        6,
+      ),
+    ).toEqual({
+      introduced: named('food-cauliflower', 'Цвітна капуста', 'Овочі', 5),
+      current: named('food-pumpkin', 'Гарбуз', 'Овочі', 5),
+      next: named('food-pumpkin', 'Гарбуз', 'Овочі', 5),
     });
   });
 
@@ -41,6 +83,7 @@ describe('pickFeedingFocus', () => {
         6,
       ),
     ).toEqual({
+      introduced: named('food-zucchini', 'Кабачок', 'Овочі', 6),
       current: null,
       next: named('food-carrot', 'Морква', 'Овочі', 7),
     });
@@ -54,6 +97,7 @@ describe('pickFeedingFocus', () => {
         8,
       ),
     ).toEqual({
+      introduced: null,
       current: named('food-zucchini', 'Кабачок', 'Овочі', 6),
       next: named('food-buckwheat', 'Гречана каша', 'Каші', 6),
     });
@@ -61,6 +105,7 @@ describe('pickFeedingFocus', () => {
 
   it('holds the plan until the child reaches the first age', () => {
     expect(pickFeedingFocus(plan, [], 5)).toEqual({
+      introduced: null,
       current: null,
       next: named('food-zucchini', 'Кабачок', 'Овочі', 6),
     });
@@ -68,6 +113,7 @@ describe('pickFeedingFocus', () => {
 
   it('follows dictionary order when the birth date is unknown', () => {
     expect(pickFeedingFocus(plan, [], null)).toEqual({
+      introduced: null,
       current: named('food-zucchini', 'Кабачок', 'Овочі', 6),
       next: named('food-buckwheat', 'Гречана каша', 'Каші', 6),
     });

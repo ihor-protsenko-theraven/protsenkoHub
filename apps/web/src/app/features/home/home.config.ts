@@ -1,1 +1,2 @@
 export const HOME_CLOCK_REFRESH_MS = 60_000;
+export const HOME_SHOPPING_PREVIEW_LIMIT = 6;

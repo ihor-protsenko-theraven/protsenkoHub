@@ -24,15 +24,15 @@ export const FEEDING_TABS = [
   { value: 'tracker', label: 'Трекер' },
 ] as const;
 
-const STATUS_LABELS = {
+export const FEEDING_STATUS_LABELS = {
   PENDING: 'Очікує',
   INTRODUCED: 'Введено',
   ALLERGY: 'Алергія',
   REFUSED: 'Відмова',
-} satisfies Record<FeedingStatus, string>;
+} as const satisfies Record<FeedingStatus, string>;
 
 export const FEEDING_STATUSES: readonly { value: FeedingStatus; label: string }[] = (
-  Object.entries(STATUS_LABELS) as [FeedingStatus, string][]
+  Object.entries(FEEDING_STATUS_LABELS) as [FeedingStatus, string][]
 ).map(([value, label]) => ({ value, label }));
 
 export type FeedingTab = (typeof FEEDING_TABS)[number]['value'];

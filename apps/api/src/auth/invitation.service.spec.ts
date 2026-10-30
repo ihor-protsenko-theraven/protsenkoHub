@@ -3,6 +3,7 @@ import {
   BadRequestException,
   ForbiddenException,
   ConflictException,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { MemberRole } from '@prisma/client';
@@ -293,5 +294,27 @@ describe('InvitationService', () => {
       where: { userId: 'mom' },
       data: { householdId: 'family' },
     });
+  });
+
+  it('throws UnauthorizedException instead of P2025 when the household in the cookie no longer exists', async () => {
+    const prisma = {
+      household: {
+        findUniqueOrThrow: vi.fn().mockRejectedValue({ code: 'P2025' }),
+      },
+    };
+    const service = new InvitationService(
+      prisma as unknown as PrismaService,
+      {} as JwtService,
+    );
+
+    await expect(service.family(parent)).rejects.toBeInstanceOf(
+      UnauthorizedException,
+    );
+    await expect(
+      service.saveFamilyChild(parent, {
+        name: 'Марко',
+        birthDate: '2026-06-15',
+      }),
+    ).rejects.toBeInstanceOf(UnauthorizedException);
   });
 });

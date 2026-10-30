@@ -63,6 +63,7 @@ export interface FeedingFocusFoodDto {
 
 export interface FeedingFocusDto {
   child: FeedingChildDto | null;
+  introduced: FeedingFocusFoodDto | null;
   current: FeedingFocusFoodDto | null;
   next: FeedingFocusFoodDto | null;
 }

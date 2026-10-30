@@ -1,107 +1,22 @@
-.home-feeding {
-  display: grid;
-  gap: 14px;
-  margin-top: 18px;
-  padding: 25px 28px;
-  background: var(--soft);
-  box-shadow: none;
-}
-
-.home-feeding__heading {
-  display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-  gap: 10px;
-}
-
-.home-feeding h2 {
-  font: normal clamp(1.4rem, 2vw, 1.8rem) var(--font-display);
-  letter-spacing: -0.035em;
-  margin: 0;
-}
-
-.home-feeding__heading a {
-  color: var(--forest);
-  font-size: 0.82rem;
-  font-weight: 800;
-  text-decoration: underline;
-  text-underline-offset: 3px;
-}
-
-.home-feeding__note,
-.home-feeding__state p,
-.home-feeding small {
-  margin: 0;
-  color: var(--muted);
-  line-height: 1.45;
-}
-
-.home-feeding__pair {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px;
-}
-
-.home-feeding article {
-  display: grid;
-  align-content: start;
-  gap: 6px;
-  min-height: 118px;
-  padding: 16px 18px;
-  border-radius: 12px;
-  background: var(--surface);
-}
-
-.home-feeding article span {
-  color: var(--forest);
-  font-size: 0.78rem;
-  font-weight: 800;
-  letter-spacing: 0.02em;
-  text-transform: uppercase;
-}
-
-.home-feeding ol {
-  margin: 4px 0 0;
-  padding-left: 1.15rem;
-  color: var(--muted);
-  font-size: 0.92rem;
-}
-
-.home-feeding li + li {
-  margin-top: 4px;
-}
-
-.home-feeding article strong {
-  font: normal clamp(1.45rem, 2vw, 1.8rem) var(--font-display);
-  letter-spacing: -0.04em;
-  color: var(--ink);
-}
-
-.home-feeding em {
-  justify-self: start;
-  padding: 4px 9px;
-  border-radius: 999px;
-  background: var(--warm);
-  color: var(--danger);
-  font-size: 0.78rem;
-  font-style: normal;
-  font-weight: 800;
-}
-
-.home-feeding .button {
-  justify-self: start;
-}
-
+.home-feeding { display: grid; gap: 14px; margin-top: 16px; padding: 20px 22px; background: var(--surface); }
+.home-feeding__heading { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+.home-feeding h2 { font: 700 clamp(1.3rem, 1.8vw, 1.55rem) var(--font-display); letter-spacing: -.03em; margin: 0; }
+.home-feeding__heading a { display: inline-flex; align-items: center; padding: 4px 10px; border-radius: 999px; background: var(--soft); color: var(--forest-dark); font-size: .78rem; font-weight: 800; text-decoration: none; }
+.home-feeding__heading a:hover { background: var(--warm); }
+.home-feeding__note, .home-feeding__state p, .home-feeding small { margin: 0; color: var(--muted); line-height: 1.45; }
+.home-feeding__pair { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.home-feeding article { display: grid; align-content: start; gap: 6px; min-height: 124px; padding: 16px 18px; border-radius: 14px; border: 1px solid var(--line); background: var(--paper); }
+.home-feeding__card--introduced, .home-feeding__card--current { background: color-mix(in srgb, var(--soft) 65%, var(--surface)); border-color: var(--sage); }
+.home-feeding__card-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.home-feeding__card-head > span:first-child { color: var(--forest); font-size: .74rem; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; }
+.home-feeding ol { margin: 4px 0 0; padding-left: 1.15rem; color: var(--muted); font-size: .88rem; }
+.home-feeding li + li { margin-top: 4px; }
+.home-feeding article strong { font: 700 clamp(1.35rem, 1.9vw, 1.65rem) var(--font-display); letter-spacing: -.035em; color: var(--ink); }
+.home-feeding em { justify-self: start; padding: 3px 9px; border-radius: 999px; background: var(--warm); border: 1px solid var(--warm-strong); color: var(--danger); font-size: .75rem; font-style: normal; font-weight: 800; }
+.home-feeding__action { justify-self: start; margin-top: 6px; }
+.home-feeding > .button { justify-self: start; }
 @media (max-width: 700px) {
-  .home-feeding {
-    padding: 22px;
-  }
-
-  .home-feeding__pair {
-    grid-template-columns: 1fr;
-  }
-
-  .home-feeding .button {
-    width: 100%;
-  }
+  .home-feeding { padding: 18px; }
+  .home-feeding__pair { grid-template-columns: 1fr; }
+  .home-feeding > .button, .home-feeding__action { width: 100%; justify-self: stretch; }
 }

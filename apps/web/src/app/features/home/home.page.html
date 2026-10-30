@@ -86,16 +86,71 @@
   <app-home-sleep-card />
 
   <section class="home-shopping panel" aria-labelledby="shopping-title">
-    <h2 id="shopping-title">Що купити</h2>
+    <div class="home-card__heading">
+      <div class="home-shopping__title-group">
+        <h2 id="shopping-title">Що купити</h2>
+        @if (snapshot.hasValue()) {
+          <span class="home-shopping__badge">{{ openShopping().length }} у списку</span>
+          @if (checkedShoppingCount() > 0) {
+            <span class="home-shopping__badge home-shopping__badge--muted">{{ checkedShoppingCount() }} куплено</span>
+          }
+        }
+      </div>
+      <a routerLink="/app/shopping">Усі покупки</a>
+    </div>
+
+    <form class="home-shopping__form" (submit)="addQuickShoppingItem($event)">
+      <label class="field">
+        <span class="sr-only">Назва покупки</span>
+        <input
+          type="text"
+          placeholder="Швидко додати: молоко, хліб, підгузки…"
+          [value]="quickItemName()"
+          (input)="setQuickItemName($event)" />
+      </label>
+      <button
+        class="button button--primary"
+        type="submit"
+        [disabled]="shoppingBusy() || !quickItemName().trim()">
+        Додати
+      </button>
+    </form>
+
     @if (snapshot.isLoading()) {
       <app-loader label="Завантажуємо список…" />
     } @else if (snapshot.error()) {
-      <div><p>Не вдалося завантажити покупки.</p><button class="button button--secondary" type="button" (click)="snapshot.reload()">Повторити</button></div>
-    } @else if (openShopping().length) {
-      <p>{{ shoppingPreview() }}</p>
+      <div class="home-card__state">
+        <p>Не вдалося завантажити покупки.</p>
+        <button class="button button--secondary" type="button" (click)="snapshot.reload()">Повторити</button>
+      </div>
+    } @else if (visibleShopping().length) {
+      <div class="home-shopping__grid">
+        @for (item of visibleShopping(); track item.id) {
+          <button
+            class="home-shopping__item"
+            type="button"
+            [disabled]="togglingItemId() === item.id"
+            (click)="checkShoppingItem(item)">
+            <span class="home-shopping__check" aria-hidden="true">✓</span>
+            <span class="home-shopping__name">{{ item.name }}</span>
+            <span class="home-shopping__meta">
+              @if (item.qty > 1 || item.unit) {
+                <strong>{{ item.qty }} {{ item.unit || 'шт' }}</strong>
+              }
+              @if (item.category) {
+                <small>{{ item.category }}</small>
+              }
+            </span>
+          </button>
+        }
+      </div>
+      @if (remainingShoppingCount() > 0) {
+        <a class="home-shopping__more" routerLink="/app/shopping">
+          Ще {{ remainingShoppingCount() }} у списку покупок →
+        </a>
+      }
     } @else {
-      <p>Покупок на зараз немає.</p>
+      <p class="home-shopping__empty">Усе зі списку вже куплено. Додайте нову покупку вище або відкрийте списки.</p>
     }
-    <a class="button button--secondary" routerLink="/app/shopping" [queryParams]="{ new: '1' }">Додати покупку</a>
   </section>
 </section>

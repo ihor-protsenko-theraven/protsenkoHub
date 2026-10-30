@@ -1,3 +1,4 @@
+import { UnauthorizedException } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import type { AuthUser } from '../common/types';
 import type { PrismaService } from '../prisma/prisma.service';
@@ -232,5 +233,115 @@ describe('mobile sessions', () => {
       null,
     );
     expect(signAsync).not.toHaveBeenCalled();
+  });
+
+  it('rejects a stale web session when the user or household membership no longer exists', async () => {
+    const prisma = {
+      user: {
+        findUnique: vi.fn().mockResolvedValue(null),
+      },
+    };
+    const service = new AuthService(
+      prisma as unknown as PrismaService,
+      {} as JwtService,
+    );
+
+    await expect(service.me(user)).rejects.toBeInstanceOf(
+      UnauthorizedException,
+    );
+  });
+
+  it('resolves the active household from the database and reissues the cookie when household changed', async () => {
+    const signAsync = vi.fn().mockResolvedValue('reissued-token');
+    const decode = vi.fn().mockReturnValue({
+      sub: user.userId,
+      email: user.email,
+      householdId: 'deleted-household',
+      membershipId: 'deleted-membership',
+      displayName: user.displayName,
+      role: user.role,
+      color: user.color,
+    });
+    const prisma = {
+      user: {
+        findUnique: vi.fn().mockResolvedValue({
+          id: user.userId,
+          email: user.email,
+          displayName: user.displayName,
+          activeHouseholdId: user.householdId,
+          memberships: [
+            {
+              id: user.membershipId,
+              householdId: user.householdId,
+              role: user.role,
+              color: user.color,
+              displayName: user.displayName,
+            },
+          ],
+        }),
+      },
+    };
+    const service = new AuthService(
+      prisma as unknown as PrismaService,
+      { signAsync, decode } as unknown as JwtService,
+    );
+
+    const resolved = await service.me({
+      ...user,
+      householdId: 'deleted-household',
+      membershipId: 'deleted-membership',
+    });
+    expect(resolved).toEqual(user);
+
+    await expect(
+      service.upgradeWebToken(resolved, 'stale-token'),
+    ).resolves.toBe('reissued-token');
+  });
+
+  it('recovers a web session by email when the database was re-seeded with a new userId', async () => {
+    const signAsync = vi.fn().mockResolvedValue('reseeded-token');
+    const decode = vi.fn().mockReturnValue({
+      sub: 'old-user-id',
+      email: user.email,
+      householdId: 'old-household-id',
+      membershipId: 'old-membership-id',
+      displayName: user.displayName,
+      role: user.role,
+      color: user.color,
+    });
+    const findUnique = vi
+      .fn()
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce({
+        id: user.userId,
+        email: user.email,
+        displayName: user.displayName,
+        activeHouseholdId: user.householdId,
+        memberships: [
+          {
+            id: user.membershipId,
+            householdId: user.householdId,
+            role: user.role,
+            color: user.color,
+            displayName: user.displayName,
+          },
+        ],
+      });
+    const service = new AuthService(
+      { user: { findUnique } } as unknown as PrismaService,
+      { signAsync, decode } as unknown as JwtService,
+    );
+
+    const resolved = await service.me({
+      ...user,
+      userId: 'old-user-id',
+      householdId: 'old-household-id',
+      membershipId: 'old-membership-id',
+    });
+
+    expect(resolved).toEqual(user);
+    await expect(
+      service.upgradeWebToken(resolved, 'old-cookie-token'),
+    ).resolves.toBe('reseeded-token');
   });
 });

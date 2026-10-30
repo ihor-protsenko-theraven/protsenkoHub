@@ -1,14 +1,15 @@
 import {
   Body,
   Controller,
-  Get,
   Delete,
+  Get,
   HttpCode,
   Param,
   Post,
   Put,
   Req,
   Res,
+  UnauthorizedException,
   UseGuards,
 } from '@nestjs/common';
 import type { Request, Response } from 'express';
@@ -31,17 +32,31 @@ export class AuthController {
 
   @Get('family')
   @UseGuards(JwtAuthGuard)
-  family(@CurrentUser() user: AuthUser) {
-    return this.invitations.family(user);
+  async family(
+    @CurrentUser() user: AuthUser,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    try {
+      return await this.invitations.family(user);
+    } catch (error) {
+      this.clearCookieOnUnauthorized(res, error);
+      throw error;
+    }
   }
 
   @Put('family/child')
   @UseGuards(JwtAuthGuard)
-  saveFamilyChild(
+  async saveFamilyChild(
     @CurrentUser() user: AuthUser,
     @Body() dto: SaveFamilyChildDto,
+    @Res({ passthrough: true }) res: Response,
   ) {
-    return this.invitations.saveFamilyChild(user, dto);
+    try {
+      return await this.invitations.saveFamilyChild(user, dto);
+    } catch (error) {
+      this.clearCookieOnUnauthorized(res, error);
+      throw error;
+    }
   }
 
   @Post('family/invitations')
@@ -167,13 +182,20 @@ export class AuthController {
     @Req() req: Request,
     @Res({ passthrough: true }) res: Response,
   ) {
+    let resolvedUser: AuthUser;
+    try {
+      resolvedUser = await this.authService.me(user);
+    } catch (error) {
+      res.clearCookie(AUTH.cookieName, { path: AUTH.cookiePath });
+      throw error;
+    }
     const cookies = req.cookies as Record<string, string> | undefined;
     const upgraded = await this.authService.upgradeWebToken(
-      user,
+      resolvedUser,
       cookies?.[AUTH.cookieName],
     );
     if (upgraded) this.setCookie(res, upgraded);
-    return { user };
+    return { user: resolvedUser };
   }
 
   private setCookie(res: Response, token: string): void {
@@ -185,5 +207,14 @@ export class AuthController {
       maxAge: AUTH.maxAgeMs,
       path: AUTH.cookiePath,
     });
+  }
+
+  private clearCookieOnUnauthorized(
+    res: Response | undefined,
+    error: unknown,
+  ): void {
+    if (error instanceof UnauthorizedException) {
+      res?.clearCookie(AUTH.cookieName, { path: AUTH.cookiePath });
+    }
   }
 }

@@ -38,7 +38,9 @@ export class FeedingService {
 
   async focus(user: AuthUser): Promise<FeedingFocusDto> {
     const tracker = await this.records(user);
-    if (!tracker.child) return { child: null, current: null, next: null };
+    if (!tracker.child) {
+      return { child: null, introduced: null, current: null, next: null };
+    }
     await this.ensureDictionary();
     const categories = await this.prisma.foodCategory.findMany(categoryInclude);
     const picked = pickFeedingFocus(

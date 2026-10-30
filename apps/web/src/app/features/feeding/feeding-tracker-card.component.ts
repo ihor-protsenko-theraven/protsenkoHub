@@ -4,6 +4,7 @@ import { FEEDING, FEEDING_STATUSES } from './feeding.config';
 import { FeedingDraft, FeedingRecord, FeedingStatus, FoodItem } from './feeding.model';
 import { FeedingService } from './feeding.service';
 import { formatAllowedFrom } from './feeding-age.util';
+import { feedingGuideSteps } from './feeding-guide.util';
 
 interface SavedFeedingDraft extends FeedingDraft {
   updatedAt: string;
@@ -27,6 +28,7 @@ export class FeedingTrackerCard {
   readonly notesTooLong = FEEDING.notesTooLong;
   readonly busy = signal(false);
   readonly error = signal('');
+  readonly steps = computed(() => feedingGuideSteps(this.food().preparationGuide));
   private readonly saved = computed<SavedFeedingDraft>(() => ({
     status: this.record()?.status ?? 'PENDING',
     notes: this.record()?.notes ?? '',

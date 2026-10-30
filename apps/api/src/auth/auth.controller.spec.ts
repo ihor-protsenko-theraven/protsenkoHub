@@ -141,4 +141,31 @@ describe('mobile auth endpoints', () => {
     );
     expect(result).toEqual({ user: next });
   });
+
+  it('clears the access_token cookie when /auth/me detects a stale session', async () => {
+    const current = {
+      userId: 'parent-1',
+      email: 'parent@example.com',
+      householdId: 'deleted-household',
+    } as AuthUser;
+    const auth = {
+      me: vi.fn().mockRejectedValue(new Error('Session expired')),
+      upgradeWebToken: vi.fn(),
+    };
+    const clearCookie = vi.fn();
+    const controller = new AuthController(
+      auth as unknown as AuthService,
+      {} as InvitationService,
+    );
+
+    await expect(
+      controller.me(
+        current,
+        { cookies: { access_token: 'stale-cookie' } } as never,
+        { clearCookie } as never,
+      ),
+    ).rejects.toThrow('Session expired');
+    expect(clearCookie).toHaveBeenCalledWith('access_token', { path: '/' });
+    expect(auth.upgradeWebToken).not.toHaveBeenCalled();
+  });
 });

@@ -1,93 +1,40 @@
-.feeding-tabs {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 4px;
-  padding: 4px;
-  margin-bottom: 20px;
-  border-radius: 13px;
-  background: var(--soft);
-}
-
-.feeding-tabs button {
-  min-height: 44px;
-  border: 0;
-  border-radius: 12px;
-  background: transparent;
-  color: var(--muted);
-  font-weight: 700;
-}
-
-.feeding-tabs button[aria-selected='true'] {
-  background: var(--surface);
-  box-shadow: var(--shadow);
-  color: var(--forest-dark);
-}
-
-.guide-category {
-  margin-bottom: 22px;
-}
-
-.guide-card {
-  padding: 20px 22px;
-}
-
-.guide-card__meta {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  align-items: center;
-}
-
-.guide-card h3 {
-  margin: 0;
-  font-size: 1.06rem;
-}
-
-.guide-card h4 {
-  margin: 12px 0 0;
-  font-size: 0.82rem;
-  font-weight: 800;
-  color: var(--forest);
-}
-
-.guide-steps,
-.feeding-tips ul {
-  margin: 8px 0 0;
-  padding-left: 1.2rem;
-  color: var(--muted);
-}
-
-.guide-steps li + li,
-.feeding-tips li + li {
-  margin-top: 6px;
-}
-
-.feeding-tips {
-  margin-bottom: 16px;
-  padding: 20px 22px;
-}
-
-.feeding-tips h2 {
-  margin: 0;
-  font: normal 1.35rem var(--font-display);
-  letter-spacing: -0.03em;
-}
-
-.badge--allergen {
-  background: var(--warm);
-  color: var(--danger);
-}
-
-.age-toggle {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  min-height: 44px;
-  color: var(--ink);
-}
-
-.guide-category .list,
-.page .list {
-  display: grid;
-  gap: 12px;
-}
+.feeding-header { flex-wrap: wrap; align-items: flex-start; }
+.feeding-child-line strong { color: var(--forest-dark); }
+.feeding-progress { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.feeding-focus { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-bottom: 16px; }
+.feeding-focus__card { display: grid; align-content: start; gap: 6px; padding: 16px 18px; }
+.feeding-focus__card--done { background: color-mix(in srgb, var(--soft) 65%, var(--surface)); border-color: var(--sage); }
+.feeding-focus__label { color: var(--forest); font-size: .74rem; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; }
+.feeding-focus__card strong { font: 700 1.35rem var(--font-display); letter-spacing: -.03em; }
+.feeding-focus__card small { color: var(--muted); }
+.feeding-focus__actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; }
+@media (max-width: 700px) { .feeding-focus { grid-template-columns: 1fr; } }
+.feeding-tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; padding: 4px; margin-bottom: 16px; border-radius: 14px; background: var(--soft); border: 1px solid var(--line); }
+.feeding-tabs button { min-height: 44px; border: 0; border-radius: 10px; background: transparent; color: var(--muted); font-weight: 700; }
+.feeding-tabs button[aria-selected='true'] { background: var(--surface); box-shadow: var(--shadow-sm); color: var(--forest-dark); }
+.feeding-tips { margin-bottom: 14px; background: linear-gradient(145deg, var(--surface) 0%, var(--soft) 100%); }
+.feeding-tips summary { display: flex; align-items: center; justify-content: space-between; gap: 10px; list-style: none; font: 700 1.15rem var(--font-display); }
+.feeding-tips summary::-webkit-details-marker { display: none; }
+.feeding-tips ul, .guide-steps { margin: 10px 0 0; padding-left: 1.2rem; color: var(--muted); line-height: 1.48; }
+.feeding-tips li + li, .guide-steps li + li { margin-top: 5px; }
+.feeding-toolbar { margin-bottom: 14px; }
+.category-pills { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 20px; }
+.category-pill { display: inline-flex; align-items: center; gap: 6px; height: 44px; min-height: 44px; padding: 0 14px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); color: var(--muted); font-size: .88rem; font-weight: 700; }
+.category-pill:hover { background: var(--soft); color: var(--forest-dark); }
+.category-pill.is-active { background: var(--forest); border-color: var(--forest-dark); color: var(--surface); box-shadow: var(--shadow-sm); }
+.category-pill span { font-size: .78rem; opacity: .82; font-variant-numeric: tabular-nums; }
+.guide-category { margin-bottom: 26px; }
+.guide-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr)); gap: 12px; }
+.guide-card { display: flex; flex-direction: column; justify-content: space-between; gap: 12px; padding: 18px 20px; }
+.guide-card--done { background: color-mix(in srgb, var(--surface) 72%, var(--soft)); border-color: var(--sage); }
+.guide-card__top { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-start; gap: 8px; }
+.guide-card__meta { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.guide-card h3 { margin: 0; font-size: 1.08rem; }
+.guide-card h4 { margin: 0; font-size: .76rem; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; color: var(--forest); }
+.guide-card__note { margin: 10px 0 0; padding: 8px 10px; border-radius: 10px; background: var(--paper); border: 1px solid var(--line); font-size: .84rem; color: var(--forest-dark); }
+.guide-card__actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; padding-top: 10px; border-top: 1px solid var(--line); }
+.guide-card__actions .button { padding: 0 14px; font-size: .85rem; }
+.guide-card__actions .button:hover:not(:disabled) { transform: none; }
+.badge--allergen { background: var(--warm); border-color: var(--warm-strong); color: var(--danger); }
+.age-toggle { display: inline-flex; align-items: center; gap: 8px; height: 44px; min-height: 44px; padding: 0 12px; border-radius: 12px; background: var(--surface); border: 1px solid var(--line); color: var(--ink); font-size: .88rem; font-weight: 700; cursor: pointer; }
+.age-toggle input { width: 18px; height: 18px; accent-color: var(--forest); }

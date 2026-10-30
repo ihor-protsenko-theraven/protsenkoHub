@@ -1,2 +1,78 @@
-.family-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr));gap:20px}.family-card{padding:24px}.family-card h2{margin:0 0 8px;font:normal 1.6rem var(--font-display)}.family-card h3{margin:26px 0 10px}.family-card p{color:var(--muted);line-height:1.5}.family-card form{display:grid;gap:14px}.family-list{list-style:none;margin:18px 0 0;padding:0}.family-list li{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 0;border-top:1px solid var(--line)}.family-list small{display:block;color:var(--muted);margin-top:4px}.invite-link{display:grid;gap:10px;margin-top:20px}.invite-link input{width:100%}
-.family-card--child{background:var(--warm)}.family-card--child .badge{background:var(--surface)}
+.family-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr));
+  gap: 18px;
+}
+
+.family-card {
+  padding: 22px 24px;
+}
+
+.family-card h2 {
+  margin: 0 0 6px;
+  font: 700 1.5rem var(--font-display);
+  letter-spacing: -0.03em;
+}
+
+.family-card h3 {
+  margin: 22px 0 8px;
+  font-size: 0.92rem;
+  color: var(--forest-dark);
+}
+
+.family-card p {
+  color: var(--muted);
+  line-height: 1.5;
+  margin: 6px 0 12px;
+}
+
+.family-card form {
+  display: grid;
+  gap: 14px;
+}
+
+.family-list {
+  list-style: none;
+  margin: 14px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.family-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: var(--paper);
+  border: 1px solid var(--line);
+}
+
+.family-list small {
+  display: block;
+  color: var(--muted);
+  margin-top: 2px;
+}
+
+.invite-link {
+  display: grid;
+  gap: 10px;
+  margin-top: 18px;
+  padding-top: 16px;
+  border-top: 1px solid var(--line);
+}
+
+.invite-link input {
+  width: 100%;
+}
+
+.family-card--child {
+  background: linear-gradient(150deg, var(--surface) 0%, var(--warm) 100%);
+  border-color: var(--warm-strong);
+}
+
+.family-card--child .badge {
+  background: var(--surface);
+}
