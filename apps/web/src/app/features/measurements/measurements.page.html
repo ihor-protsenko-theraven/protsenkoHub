@@ -1,0 +1,282 @@
+<section class="page" aria-labelledby="page-title">
+  <header class="page-header">
+    <div>
+      <span class="eyebrow">Здоров'я та розвиток</span>
+      <h1 id="page-title">Вимірювання</h1>
+      @if (child(); as currentChild) {
+        <p class="page-subtitle">
+          Дитина: <strong>{{ currentChild.name }}</strong>
+          @if (currentChild.birthDate) {
+            <span> (народилася {{ currentChild.birthDate | date:'d MMMM yyyy':'':'uk' }})</span>
+          }
+        </p>
+      }
+    </div>
+    <div class="page-actions">
+      <a class="button button--secondary" routerLink="/app/children">Задачі</a>
+      <a class="button button--secondary" routerLink="/app/sleep">Сон</a>
+      <a class="button button--secondary" routerLink="/app/feeding">Прикорм</a>
+      <button class="button button--primary" type="button" (click)="createNew()">
+        + Додати запис
+      </button>
+    </div>
+  </header>
+
+  @if (notice()) {
+    <p class="message message--success" role="status">{{ notice() }}</p>
+  }
+  @if (error() && !formOpen()) {
+    <p class="message message--error" role="alert">{{ error() }}</p>
+  }
+
+  <!-- Summary KPI Cards -->
+  <section class="metrics-summary" aria-label="Останні показники">
+    @for (card of summaryCards(); track card.key) {
+      <article class="metric-card">
+        <span class="metric-card__label">{{ card.label }}</span>
+        <div class="metric-card__value-row">
+          <strong class="metric-card__value">{{ card.valueFormatted }}</strong>
+          @if (card.deltaFormatted) {
+            <span
+              class="metric-card__delta"
+              [class.is-positive]="!card.deltaFormatted.startsWith('-')"
+              [class.is-negative]="card.deltaFormatted.startsWith('-')"
+            >
+              {{ card.deltaFormatted }}
+            </span>
+          }
+        </div>
+        @if (card.measuredAtFormatted) {
+          <span class="metric-card__date">
+            Останнє: {{ card.measuredAtFormatted | date:'d MMM yyyy':'':'uk' }}
+          </span>
+        } @else {
+          <span class="metric-card__date">Немає записів</span>
+        }
+      </article>
+    }
+  </section>
+
+  <!-- Add / Edit Form Panel -->
+  @if (formOpen()) {
+    <section class="panel form-panel" aria-labelledby="form-panel-title">
+      <div class="form-panel__header">
+        <h2 id="form-panel-title">
+          {{ editingId() ? 'Редагувати вимірювання' : 'Нове вимірювання' }}
+        </h2>
+      </div>
+
+      <form (submit)="$event.preventDefault(); save()">
+        <div class="field-grid">
+          <label class="field">
+            <span>Дата вимірювання *</span>
+            <input type="date" [formField]="measurementForm.measuredAt">
+          </label>
+
+          <label class="field">
+            <span>Вага (кг)</span>
+            <input
+              type="text"
+              inputmode="decimal"
+              placeholder="наприклад, 8.45"
+              [formField]="measurementForm.weightKg"
+            >
+          </label>
+
+          <label class="field">
+            <span>Зріст (см)</span>
+            <input
+              type="text"
+              inputmode="decimal"
+              placeholder="наприклад, 71.0"
+              [formField]="measurementForm.heightCm"
+            >
+          </label>
+
+          <label class="field">
+            <span>Окружність голови (см)</span>
+            <input
+              type="text"
+              inputmode="decimal"
+              placeholder="наприклад, 43.5"
+              [formField]="measurementForm.headCircumferenceCm"
+            >
+          </label>
+
+          <label class="field field--wide">
+            <span>Нотатки або висновок лікаря</span>
+            <textarea
+              rows="2"
+              placeholder="Коментар, плановий огляд або щеплення..."
+              [formField]="measurementForm.notes"
+            ></textarea>
+          </label>
+        </div>
+
+        @if (error()) {
+          <p class="message message--error" role="alert">{{ error() }}</p>
+        }
+
+        <div class="form-actions">
+          <button class="button button--primary" type="submit" [disabled]="busy()">
+            {{ editingId() ? 'Зберегти зміни' : 'Додати вимірювання' }}
+          </button>
+          <button class="button button--secondary" type="button" [disabled]="busy()" (click)="cancel()">
+            Скасувати
+          </button>
+        </div>
+      </form>
+    </section>
+  }
+
+  <!-- History & Records Section -->
+  <section class="measurements-history" aria-labelledby="history-title">
+    <div class="history-header">
+      <h2 id="history-title" class="history-title">Історія вимірювань</h2>
+      <div class="filter-group" role="tablist" aria-label="Фільтр показників">
+        @for (item of filters; track item.value) {
+          <button
+            type="button"
+            class="filter-button"
+            [class.is-active]="filter() === item.value"
+            (click)="filter.set(item.value)"
+          >
+            {{ item.label }}
+          </button>
+        }
+      </div>
+    </div>
+
+    @if (feedResource.status() === 'loading' && !feedResource.hasValue()) {
+      <div class="loading-wrap">
+        <app-loader />
+      </div>
+    } @else if (visibleMeasurements().length === 0) {
+      <div class="empty-state">
+        <p class="empty-state__title">Ще немає записів вимірювань</p>
+        <p class="empty-state__desc">
+          Записуйте регулярні вимірювання ваги, зросту та окружності голови, щоб відстежувати розвиток дитини.
+        </p>
+        <button class="button button--primary" type="button" (click)="createNew()">
+          Додати перше вимірювання
+        </button>
+      </div>
+    } @else {
+      <div class="measurements-list">
+        @for (item of visibleMeasurements(); track item.id) {
+          <article class="measurement-card">
+            <div class="measurement-card__header">
+              <div class="measurement-card__date-group">
+                <time class="measurement-card__date" [dateTime]="item.measuredAt">
+                  {{ item.measuredAt | date:'d MMMM yyyy':'':'uk' }}
+                </time>
+                @if (item.ageLabel) {
+                  <span class="measurement-card__age-badge">{{ item.ageLabel }}</span>
+                }
+              </div>
+
+              <div class="measurement-card__actions">
+                @if (deletingId() === item.id) {
+                  <span class="delete-prompt">Видалити?</span>
+                  <button
+                    class="button button--danger button--small"
+                    type="button"
+                    [disabled]="busy()"
+                    (click)="deleteConfirmed(item.id)"
+                  >
+                    Так
+                  </button>
+                  <button
+                    class="button button--secondary button--small"
+                    type="button"
+                    [disabled]="busy()"
+                    (click)="cancelDelete()"
+                  >
+                    Ні
+                  </button>
+                } @else {
+                  <button
+                    class="button button--quiet button--small"
+                    type="button"
+                    title="Редагувати"
+                    (click)="edit(item)"
+                  >
+                    Редагувати
+                  </button>
+                  <button
+                    class="button button--quiet button--small button--danger-quiet"
+                    type="button"
+                    title="Видалити"
+                    (click)="confirmDelete(item.id)"
+                  >
+                    Видалити
+                  </button>
+                }
+              </div>
+            </div>
+
+            <div class="measurement-card__values">
+              @if (item.weightKg != null) {
+                <div class="metric-pill">
+                  <span class="metric-pill__name">Вага:</span>
+                  <strong class="metric-pill__val">{{ formatWeight(item.weightKg) }}</strong>
+                  @if (formatWeightDelta(item.weightDeltaGrams); as wDelta) {
+                    <span
+                      class="metric-pill__delta"
+                      [class.is-positive]="!wDelta.startsWith('-')"
+                      [class.is-negative]="wDelta.startsWith('-')"
+                    >
+                      {{ wDelta }}
+                    </span>
+                  }
+                </div>
+              }
+
+              @if (item.heightCm != null) {
+                <div class="metric-pill">
+                  <span class="metric-pill__name">Зріст:</span>
+                  <strong class="metric-pill__val">{{ formatHeight(item.heightCm) }}</strong>
+                  @if (formatDelta(item.heightDeltaCm, 'см'); as hDelta) {
+                    <span
+                      class="metric-pill__delta"
+                      [class.is-positive]="!hDelta.startsWith('-')"
+                      [class.is-negative]="hDelta.startsWith('-')"
+                    >
+                      {{ hDelta }}
+                    </span>
+                  }
+                </div>
+              }
+
+              @if (item.headCircumferenceCm != null) {
+                <div class="metric-pill">
+                  <span class="metric-pill__name">Голова:</span>
+                  <strong class="metric-pill__val">{{ formatHead(item.headCircumferenceCm) }}</strong>
+                  @if (formatDelta(item.headDeltaCm, 'см'); as headDelta) {
+                    <span
+                      class="metric-pill__delta"
+                      [class.is-positive]="!headDelta.startsWith('-')"
+                      [class.is-negative]="headDelta.startsWith('-')"
+                    >
+                      {{ headDelta }}
+                    </span>
+                  }
+                </div>
+              }
+            </div>
+
+            @if (item.notes) {
+              <p class="measurement-card__notes">{{ item.notes }}</p>
+            }
+
+            @if (item.createdByName) {
+              <footer class="measurement-card__footer">
+                <span>Записав(ла): {{ item.createdByName }}</span>
+              </footer>
+            }
+          </article>
+        }
+      </div>
+    }
+  </section>
+</section>

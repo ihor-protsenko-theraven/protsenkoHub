@@ -46,6 +46,7 @@ protsenkoHub/
 | Діти | `/app/children` | `/api/v1/children/tasks` |
 | Сон | `/app/sleep` | `/api/v1/children/sleep` |
 | Прикорм | `/app/feeding` | `GET /api/v1/feeding/dictionary`, `GET /api/v1/feeding/records`, `PUT /api/v1/feeding/records/:foodItemId` |
+| Вимірювання | `/app/measurements` | `GET /api/v1/children/measurements`, `POST /api/v1/children/measurements`, `PATCH /api/v1/children/measurements/:id`, `DELETE /api/v1/children/measurements/:id` |
 | Контакти | `/app/contacts` | `/api/v1/contacts` |
 | Родина | `/app/family` | `GET /api/v1/auth/family`, `PUT /api/v1/auth/family/child` |
 

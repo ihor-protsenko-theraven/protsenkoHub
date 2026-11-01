@@ -69,6 +69,8 @@ model User {
   invitationsCreated HouseholdInvitation[] @relation("InvitationCreatedBy")
   sleepProfilesUpdated SleepProfile[] @relation("SleepProfileUpdatedBy")
   childProfilesUpdated ChildProfile[] @relation("ChildProfileUpdatedBy")
+  measurementsCreated ChildMeasurement[] @relation("MeasurementCreatedBy")
+  measurementsUpdated ChildMeasurement[] @relation("MeasurementUpdatedBy")
   pushSubscriptions PushSubscription[]
   mobileSessions MobileSession[]
 }
@@ -86,6 +88,7 @@ model Household {
   contacts      Contact[]
   sleepProfile  SleepProfile?
   childProfile  ChildProfile?
+  childMeasurements ChildMeasurement[]
   sleepSessions SleepSession[]
   activeSleep   ActiveSleep?
   pushSubscriptions PushSubscription[]
@@ -248,6 +251,7 @@ model ChildProfile {
   household      Household       @relation(fields: [householdId], references: [id], onDelete: Cascade)
   updatedBy      User?           @relation("ChildProfileUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull)
   feedingRecords FeedingRecord[]
+  measurements   ChildMeasurement[]
 }
 
 // Open tracker lives in ActiveSleep (one row per household). SleepSession keeps
@@ -371,4 +375,26 @@ model FeedingRecord {
 
   @@unique([childId, foodItemId])
   @@index([childId])
+}
+
+model ChildMeasurement {
+  id                  String       @id @default(cuid())
+  householdId         String
+  childId             String
+  measuredAt          DateTime
+  weightKg            Float?
+  heightCm            Float?
+  headCircumferenceCm Float?
+  notes               String?
+  createdById         String?
+  updatedById         String?
+  createdAt           DateTime     @default(now())
+  updatedAt           DateTime     @updatedAt
+  household           Household    @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  child               ChildProfile @relation(fields: [childId], references: [id], onDelete: Cascade)
+  createdBy           User?        @relation("MeasurementCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  updatedBy           User?        @relation("MeasurementUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull)
+
+  @@index([householdId, measuredAt])
+  @@index([childId, measuredAt])
 }

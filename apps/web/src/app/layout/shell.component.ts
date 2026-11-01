@@ -23,6 +23,7 @@ export class ShellComponent {
     { path: '/app/children', label: 'Діти', icon: 'children' },
     { path: '/app/sleep', label: 'Сон', icon: 'sleep' },
     { path: '/app/feeding', label: 'Прикорм', icon: 'feeding' },
+    { path: '/app/measurements', label: 'Вимірювання', icon: 'measurements' },
     { path: '/app/contacts', label: 'Контакти', icon: 'contacts' },
     { path: '/app/family', label: 'Родина', icon: 'family' },
   ];

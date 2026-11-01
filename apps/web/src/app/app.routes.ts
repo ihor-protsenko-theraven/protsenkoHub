@@ -51,6 +51,13 @@ export const routes: Routes = [
           import('./features/feeding/feeding.page').then((m) => m.FeedingPage),
       },
       {
+        path: 'measurements',
+        loadComponent: () =>
+          import('./features/measurements/measurements.page').then(
+            (m) => m.MeasurementsPage,
+          ),
+      },
+      {
         path: 'contacts',
         loadComponent: () =>
           import('./features/contacts/contacts.page').then((m) => m.ContactsPage),
