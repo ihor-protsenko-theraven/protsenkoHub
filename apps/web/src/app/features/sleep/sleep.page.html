@@ -96,11 +96,15 @@
           }
         } @else {
           <button class="button button--primary" type="button" [disabled]="busy()" (click)="start()">Старт сну</button>
-          @if (continuableSession(); as last) {
-            <button class="button button--secondary" type="button" [disabled]="busy()" (click)="continueSaved()">Продовжити останній сон</button>
+          @if (latestSavedSession()) {
+            <button class="button button--secondary" type="button" [disabled]="busy() || !continuableSession()" (click)="continueSaved()">Продовжити останній сон</button>
           }
         }
       </div>
+
+      @if (latestSavedSession() && !continuableSession()) {
+        <p class="field-help">Цей сон уже не можна продовжити: один запис обмежений 16 годинами від початку. Почніть новий сон.</p>
+      }
 
       @if (sleep.active) {
         <details class="fold">
@@ -343,6 +347,9 @@
               <button class="button button--quiet" type="button" (click)="deletingId.set(null)">Ні</button>
             </div>
           } @else {
+            @if (continuableSession()?.id === session.id) {
+              <button class="button button--primary" type="button" [disabled]="busy()" (click)="continueSaved()">Продовжити сон</button>
+            }
             @if (session.endedAt && savedPauseSessionId() !== session.id) {
               <button class="button button--quiet" type="button" (click)="openSavedPause(session)">Додати паузу</button>
             }

@@ -22,6 +22,7 @@ export class ShellComponent {
     { path: '/app/shopping', label: 'Покупки', icon: 'shopping' },
     { path: '/app/children', label: 'Діти', icon: 'children' },
     { path: '/app/sleep', label: 'Сон', icon: 'sleep' },
+    { path: '/app/outfit', label: 'Що вдягнути', icon: 'outfit' },
     { path: '/app/feeding', label: 'Прикорм', icon: 'feeding' },
     { path: '/app/measurements', label: 'Вимірювання', icon: 'measurements' },
     { path: '/app/contacts', label: 'Контакти', icon: 'contacts' },

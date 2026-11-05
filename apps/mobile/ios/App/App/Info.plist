@@ -27,6 +27,8 @@
 	<string>6.0</string>
 	<key>CFBundleName</key>
 	<string>$(PRODUCT_NAME)</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Визначити ваше місце, щоб підібрати одяг дитині за місцевою погодою.</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>

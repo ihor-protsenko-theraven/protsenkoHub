@@ -1,0 +1,88 @@
+<section class="page outfit" aria-labelledby="page-title">
+  <header class="page-header">
+    <div>
+      <h1 id="page-title">Що вдягнути</h1>
+      <p class="page-subtitle">Підберіть одяг для прогулянки за погодою та способом подорожі.</p>
+    </div>
+  </header>
+
+  <section class="panel place-panel" aria-labelledby="place-title">
+    <div class="section-heading">
+      <div><h2 id="place-title">Куди йдете?</h2>
+        @if (data.location(); as place) { <p class="selected-place">{{ place.name }}</p> }
+      </div>
+      <button class="button button--secondary" type="button" [disabled]="locating()" (click)="locate()">
+        {{ locating() ? 'Визначаємо…' : 'Моє місце' }}
+      </button>
+    </div>
+    <form class="place-search" (submit)="search($event)">
+      <label class="field"><span>Або введіть місто</span>
+        <input type="search" autocomplete="address-level2" placeholder="Наприклад, Київ" [formField]="searchForm.name" />
+      </label>
+      <button class="button button--primary" type="submit" [disabled]="!searchForm().valid()">Знайти</button>
+    </form>
+    <p class="field-help">Для прогнозу координати передаються Open-Meteo. GPS місце не зберігаємо на пристрої.</p>
+    @if (locationError()) { <p class="message message--error" role="alert">{{ locationError() }}</p> }
+    @if (data.query()) {
+      @if (data.places.isLoading()) { <p class="field-help" role="status">Шукаємо місця…</p> }
+      @else if (data.places.error()) {
+        <p class="message message--error" role="alert">Пошук місць недоступний. Спробуйте ще раз.</p>
+        <button class="button button--secondary" type="button" (click)="data.places.reload()">Повторити</button>
+      } @else if (data.places.hasValue()) {
+        @if (data.places.value().results?.length) {
+          <ul class="places">
+            @for (place of data.places.value().results; track place.id) {
+              <li><button type="button" (click)="choose(place)">{{ place.name }}@if (place.admin1) {, {{ place.admin1 }}}@if (place.country) {, {{ place.country }}}</button></li>
+            }
+          </ul>
+        } @else { <p class="field-help">Місто не знайдено. Спробуйте повнішу назву.</p> }
+      }
+    }
+  </section>
+
+  @if (!data.location()) {
+    <section class="panel empty-advice"><h2>Почніть із місця</h2><p>Знайдіть місто або дозвольте визначити ваше місце, щоб побачити пораду.</p></section>
+  } @else {
+    <section class="panel outing-panel" aria-labelledby="outing-title">
+      <h2 id="outing-title">Про прогулянку</h2>
+      <div class="choice-group" role="group" aria-label="Коли виходите">
+        <button type="button" [attr.aria-pressed]="time() === 'now'" (click)="time.set('now')">Зараз</button>
+        <button type="button" [attr.aria-pressed]="time() === 'later'" (click)="time.set('later')">За 3 години</button>
+        <button type="button" [attr.aria-pressed]="time() === 'tomorrow'" (click)="time.set('tomorrow')">Завтра вранці</button>
+      </div>
+      <p class="field-help">{{ target() | date:'EEEE, d MMMM, HH:mm':targetTimeZone():'uk' }}</p>
+      <div class="choice-group" role="group" aria-label="Як пересуватиметься дитина">
+        <button type="button" [attr.aria-pressed]="mode() === 'stroller'" (click)="mode.set('stroller')">У візочку</button>
+        <button type="button" [attr.aria-pressed]="mode() === 'carrier'" (click)="mode.set('carrier')">У переносці</button>
+        <button type="button" [attr.aria-pressed]="mode() === 'walking'" (click)="mode.set('walking')">Пішки</button>
+        <button type="button" [attr.aria-pressed]="mode() === 'car'" (click)="mode.set('car')">В авто</button>
+      </div>
+    </section>
+
+    @if (family.overview.isLoading() || data.forecast.isLoading()) {
+      <section class="panel empty-advice" role="status"><p>Збираємо прогноз і дані дитини…</p></section>
+    } @else if (family.overview.error()) {
+      <section class="panel empty-advice" role="alert"><p>Не вдалося завантажити дані дитини.</p><button class="button button--secondary" type="button" (click)="family.overview.reload()">Повторити</button></section>
+    } @else if (!child()?.birthDate) {
+      <section class="panel empty-advice"><h2>Додайте дату народження</h2><p>Вік потрібен, щоб врахувати особливості одягу й захисту від сонця.</p><a class="button button--primary" routerLink="/app/family">Відкрити профіль дитини</a></section>
+    } @else if (data.forecast.error()) {
+      <section class="panel empty-advice" role="alert"><p>Прогноз недоступний. Перевірте з’єднання й спробуйте ще раз.</p><button class="button button--secondary" type="button" (click)="data.forecast.reload()">Оновити прогноз</button></section>
+    } @else if (advice(); as result) {
+      <section class="panel advice-card" aria-labelledby="advice-title">
+        <div class="advice-card__intro">
+          <div><span class="advice-card__place">{{ data.location()?.name }}</span><h2 id="advice-title">{{ result.title }}</h2></div>
+          <strong class="advice-card__temp">{{ weather()?.temperature | number:'1.0-0':'uk' }}°</strong>
+        </div>
+        <p class="advice-card__reason">{{ result.reason }}</p>
+        <h3>Одягніть</h3>
+        <ul class="clothes">@for (layer of result.layers; track layer) { <li>{{ layer }}</li> }</ul>
+        @if (result.take.length) { <h3>Візьміть із собою</h3><ul class="take-list">@for (item of result.take; track item) { <li>{{ item }}</li> }</ul> }
+        @for (tip of result.safety; track tip) { <p class="safety-tip">{{ tip }}</p> }
+        <p class="advice-card__foot">Орієнтир для прогулянки: перевіряйте, чи дитині комфортно, і змінюйте шари за потреби.</p>
+        <p class="advice-card__source">Дані погоди: <a href="https://open-meteo.com/" target="_blank" rel="noopener noreferrer">Open-Meteo</a></p>
+      </section>
+    } @else {
+      <section class="panel empty-advice"><p>На цей час прогнозу ще немає.</p><button class="button button--secondary" type="button" (click)="data.forecast.reload()">Оновити прогноз</button></section>
+    }
+  }
+</section>

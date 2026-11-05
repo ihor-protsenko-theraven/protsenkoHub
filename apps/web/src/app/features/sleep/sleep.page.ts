@@ -131,10 +131,15 @@ export class SleepPage {
     return {today, earlier};
   });
 
-  readonly continuableSession = computed(() => {
+  readonly latestSavedSession = computed(() => {
     const sleep = this.snapshot();
     if (!sleep || sleep.active) return null;
     const latest = sleep.sessions[0];
+    return latest?.endedAt ? latest : null;
+  });
+
+  readonly continuableSession = computed(() => {
+    const latest = this.latestSavedSession();
     if (!latest?.endedAt) return null;
     const now = Date.now() + this.clockOffset();
     return now > new Date(latest.endedAt).getTime() &&

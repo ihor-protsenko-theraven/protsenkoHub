@@ -10,6 +10,10 @@
   box-shadow: var(--shadow-lg);
 }
 
+.home-outfit { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-top: 1rem; padding: 1rem 1.25rem; text-decoration: none; color: var(--forest-dark); }
+.home-outfit strong, .home-outfit small { display: block; }
+.home-outfit strong { font: 700 1.2rem var(--font-display); }
+
 .home-hero h1 {
   font: 700 clamp(1.9rem, 4vw, 3.4rem)/1.04 var(--font-display);
   letter-spacing: -.05em;

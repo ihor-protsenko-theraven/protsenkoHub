@@ -51,6 +51,8 @@ describe('SleepPage', () => {
     const button = [...(fixture.nativeElement as HTMLElement).querySelectorAll<HTMLButtonElement>('button')]
       .find((item) => item.textContent?.trim() === 'Продовжити останній сон');
     expect(button).toBeTruthy();
+    expect([...((fixture.nativeElement as HTMLElement).querySelectorAll<HTMLButtonElement>('button'))]
+      .some((item) => item.textContent?.trim() === 'Продовжити сон')).toBe(true);
     button?.click();
     await fixture.whenStable();
     expect(continueSaved).toHaveBeenCalledWith('saved-1');
