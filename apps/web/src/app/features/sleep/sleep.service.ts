@@ -67,6 +67,12 @@ export class SleepService {
       .pipe(tap(() => this.refresh()));
   }
 
+  continueSaved(id: string) {
+    return this.api
+      .post<{ session: SleepSession }>(`/children/sleep/${id}/continue`, {})
+      .pipe(tap(() => this.refresh()));
+  }
+
   updatePause(id: string, payload: { startedAt?: string; endedAt?: string | null }) {
     return this.api
       .patch<{ session: SleepSession }>(`/children/sleep/pauses/${id}`, payload)

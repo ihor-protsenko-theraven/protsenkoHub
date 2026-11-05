@@ -11,8 +11,8 @@ import { PrismaService } from '../../prisma/prisma.service';
 import type { HouseholdPushEvent } from '../household-push.model';
 import { HouseholdPushService } from '../household-push.service';
 import {
-  CreateSleepDto,
   CreateSavedPauseDto,
+  CreateSleepDto,
   PauseSleepDto,
   ResumeSleepDto,
   StartSleepDto,
@@ -305,6 +305,74 @@ export class SleepService {
     await this.safeNotify(user, {
       type: 'sleep-stopped',
       sessionId: result.session.id,
+    });
+    return result;
+  }
+
+  async continueSaved(user: AuthUser, id: string) {
+    let result: { session: ReturnType<SleepService['map']> };
+    try {
+      result = await this.prisma.$transaction(async (tx) => {
+        if (await this.findOpen(tx, user.householdId)) {
+          throw new ConflictException('Уже є активний сон. Оновіть сторінку.');
+        }
+        const latest = await tx.sleepSession.findFirst({
+          where: { householdId: user.householdId },
+          orderBy: { startedAt: 'desc' },
+          include: sessionInclude,
+        });
+        if (!latest || latest.id !== id || !latest.endedAt) {
+          throw new ConflictException(
+            'Продовжити можна лише останній завершений сон.',
+          );
+        }
+        const now = new Date();
+        if (
+          latest.endedAt >= now ||
+          now.getTime() - latest.startedAt.getTime() >
+            MAX_SLEEP_MIN * SLEEP_TRACKER.minuteMs
+        ) {
+          throw new BadRequestException(
+            'Цей сон уже не можна продовжити. Почніть новий.',
+          );
+        }
+        const claimed = await tx.sleepSession.updateMany({
+          where: {
+            id,
+            householdId: user.householdId,
+            endedAt: latest.endedAt,
+            revision: latest.revision,
+          },
+          data: {
+            endedAt: null,
+            endedById: null,
+            updatedById: user.userId,
+            revision: { increment: 1 },
+          },
+        });
+        if (claimed.count !== 1)
+          throw new ConflictException('Стан сну змінився. Оновіть сторінку.');
+        await tx.sleepPause.create({
+          data: { sessionId: id, startedAt: latest.endedAt, endedAt: now },
+        });
+        await tx.activeSleep.create({
+          data: { householdId: user.householdId, sessionId: id },
+        });
+        const fresh = await tx.sleepSession.findFirstOrThrow({
+          where: { id },
+          include: sessionInclude,
+        });
+        return { session: this.map(fresh) };
+      });
+    } catch (error) {
+      if (this.isUnique(error))
+        throw new ConflictException('Стан сну змінився. Оновіть сторінку.');
+      throw error;
+    }
+    await this.safeNotify(user, {
+      type: 'sleep-started',
+      sessionId: id,
+      kind: result.session.kind,
     });
     return result;
   }

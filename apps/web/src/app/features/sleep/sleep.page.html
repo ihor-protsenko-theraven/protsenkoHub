@@ -96,6 +96,9 @@
           }
         } @else {
           <button class="button button--primary" type="button" [disabled]="busy()" (click)="start()">Старт сну</button>
+          @if (continuableSession(); as last) {
+            <button class="button button--secondary" type="button" [disabled]="busy()" (click)="continueSaved()">Продовжити останній сон</button>
+          }
         }
       </div>
 

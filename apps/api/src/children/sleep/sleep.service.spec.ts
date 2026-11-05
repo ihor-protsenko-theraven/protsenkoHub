@@ -40,6 +40,84 @@ function createPush(prisma: PrismaService) {
 }
 
 describe('SleepService active tracker', () => {
+  it('continues the last saved sleep and records the awake gap as a pause', async () => {
+    const startedAt = new Date(Date.now() - 60 * 60_000);
+    const endedAt = new Date(Date.now() - 10 * 60_000);
+    const saved = {
+      ...session(startedAt),
+      endedAt,
+      endedBy: { displayName: 'Ігор' },
+    };
+    const updateMany = vi.fn().mockResolvedValue({ count: 1 });
+    const createPause = vi.fn().mockResolvedValue({});
+    const tx = {
+      activeSleep: {
+        findUnique: vi.fn().mockResolvedValue(null),
+        create: vi.fn().mockResolvedValue({}),
+      },
+      sleepSession: {
+        findFirst: vi.fn().mockResolvedValueOnce(null).mockResolvedValue(saved),
+        updateMany,
+        findFirstOrThrow: vi
+          .fn()
+          .mockImplementation(async () => ({
+            ...saved,
+            endedAt: null,
+            pauses: [
+              { id: 'pause-1', startedAt: endedAt, endedAt: new Date() },
+            ],
+          })),
+      },
+      sleepPause: { create: createPause },
+    };
+    const prisma = {
+      $transaction: vi.fn((fn: (client: typeof tx) => Promise<unknown>) =>
+        fn(tx),
+      ),
+    } as unknown as PrismaService;
+    const { push } = createPush(prisma);
+
+    const result = await new SleepService(prisma, push).continueSaved(
+      user(),
+      'sleep-1',
+    );
+
+    expect(result.session.id).toBe('sleep-1');
+    expect(result.session.startedAt).toBe(startedAt.toISOString());
+    expect(result.session.endedAt).toBeNull();
+    expect(createPause).toHaveBeenCalledWith({
+      data: {
+        sessionId: 'sleep-1',
+        startedAt: endedAt,
+        endedAt: expect.any(Date),
+      },
+    });
+    expect(tx.activeSleep.create).toHaveBeenCalledWith({
+      data: { householdId: 'home-1', sessionId: 'sleep-1' },
+    });
+  });
+
+  it('rejects continuing a saved sleep when an active sleep exists', async () => {
+    const current = session(new Date());
+    const tx = {
+      activeSleep: {
+        findUnique: vi.fn().mockResolvedValue({ session: current }),
+      },
+      sleepSession: { findFirst: vi.fn() },
+    };
+    const prisma = {
+      $transaction: vi.fn((fn: (client: typeof tx) => Promise<unknown>) =>
+        fn(tx),
+      ),
+    } as unknown as PrismaService;
+    const { push } = createPush(prisma);
+
+    await expect(
+      new SleepService(prisma, push).continueSaved(user(), 'saved'),
+    ).rejects.toBeInstanceOf(ConflictException);
+    expect(tx.sleepSession.findFirst).not.toHaveBeenCalled();
+  });
+
   it('does not replace an open sleep when start is tapped again', async () => {
     const startedAt = new Date('2026-10-19T05:00:00.000Z');
     const current = session(startedAt);

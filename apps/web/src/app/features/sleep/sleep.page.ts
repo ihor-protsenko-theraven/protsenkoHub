@@ -131,6 +131,17 @@ export class SleepPage {
     return {today, earlier};
   });
 
+  readonly continuableSession = computed(() => {
+    const sleep = this.snapshot();
+    if (!sleep || sleep.active) return null;
+    const latest = sleep.sessions[0];
+    if (!latest?.endedAt) return null;
+    const now = Date.now() + this.clockOffset();
+    return now > new Date(latest.endedAt).getTime() &&
+      now - new Date(latest.startedAt).getTime() <= SLEEP_UI.maxContinuedSleepMs
+      ? latest : null;
+  });
+
   constructor() {
     void this.data.syncWidget();
     const poll = window.setInterval(() => {
@@ -242,6 +253,20 @@ export class SleepPage {
         this.notice.set('Сон продовжено.');
       },
       error: (error: unknown) => this.fail(error, 'Не вдалося продовжити сон.'),
+    });
+  }
+
+  continueSaved(): void {
+    const last = this.continuableSession();
+    if (!last) return;
+    this.busy.set(true);
+    this.data.continueSaved(last.id).subscribe({
+      next: () => {
+        this.busy.set(false);
+        this.error.set('');
+        this.notice.set('Останній сон продовжено. Проміжок після завершення збережено як паузу.');
+      },
+      error: (error: unknown) => this.fail(error, 'Не вдалося продовжити останній сон.'),
     });
   }
 

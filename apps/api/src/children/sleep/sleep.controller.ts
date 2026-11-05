@@ -71,6 +71,11 @@ export class SleepController {
     return this.sleepService.resume(user, dto);
   }
 
+  @Post(':id/continue')
+  continueSaved(@CurrentUser() user: AuthUser, @Param('id') id: string) {
+    return this.sleepService.continueSaved(user, id);
+  }
+
   @Post()
   create(@CurrentUser() user: AuthUser, @Body() dto: CreateSleepDto) {
     return this.sleepService.create(user, dto);

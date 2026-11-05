@@ -14,6 +14,49 @@ import { SleepTickerService } from './sleep-ticker.service';
 registerLocaleData(localeUk);
 
 describe('SleepPage', () => {
+  it('continues the latest saved sleep from the idle tracker', async () => {
+    const now = Date.now();
+    const saved: SleepSession = {
+      id: 'saved-1', kind: 'NAP', startedAt: new Date(now - 60 * 60_000).toISOString(),
+      endedAt: new Date(now - 10 * 60_000).toISOString(), notes: null,
+      startedByName: null, endedByName: null, updatedByName: null, pauses: [],
+    };
+    const overview = {
+      serverNow: new Date(now).toISOString(), timeZone: 'Europe/Kyiv',
+      profile: { babyName: 'Дитина', birthDate: null, ageWeeks: null, ageLabel: null,
+        napTarget: null, updatedByName: null }, active: null,
+      sessions: [saved], headline: '', detail: '', nextSleepAt: null, prepareAt: null,
+      expectedWakeAt: null, wakeWindowMin: null, lifeWeek: null, weekNote: null,
+      napTarget: null, basis: '', scheduleNote: null, howItWorks: [], disclaimer: '',
+      awakeSince: null, suggestedKind: 'NAP', activeStale: false,
+      todayBlocks: [], week: [], schedule: [], signals: [],
+      stats: { todaySleepMin: 0, todayNapCount: 0, todayNapMin: 0, todayNightMin: 0,
+        last24hSleepMin: 0, targetSleepMin: 0, sleepDebtMin: 0, weekAvgSleepMin: null,
+        weekAvgNapCount: null, bedtimeClock: null, wakeClock: null,
+        bedtimeSpreadMin: null, longestStretchMin: 0 },
+    } satisfies SleepOverview;
+    const continueSaved = vi.fn().mockReturnValue(of({ session: saved }));
+    TestBed.configureTestingModule({ imports: [SleepPage], providers: [provideRouter([])] });
+    TestBed.overrideComponent(SleepPage, { set: { providers: [
+      SleepTickerService,
+      { provide: SleepService, useValue: { widgetSyncError: signal(''), syncWidget: vi.fn(),
+        overview: { hasValue: () => true, value: () => overview, reload: vi.fn() }, continueSaved } },
+      { provide: SleepReminderService, useValue: { supported: () => false, enabled: () => false,
+        busy: () => false, available: () => false,
+        config: { error: () => undefined, isLoading: () => false } } },
+    ] } });
+
+    const fixture = TestBed.createComponent(SleepPage);
+    await fixture.whenStable();
+    const button = [...(fixture.nativeElement as HTMLElement).querySelectorAll<HTMLButtonElement>('button')]
+      .find((item) => item.textContent?.trim() === 'Продовжити останній сон');
+    expect(button).toBeTruthy();
+    button?.click();
+    await fixture.whenStable();
+    expect(continueSaved).toHaveBeenCalledWith('saved-1');
+    expect((fixture.nativeElement as HTMLElement).textContent).toContain('Останній сон продовжено');
+  });
+
   it('waits for an overview value while retrying the first failed load', async () => {
     const status = signal<'error' | 'reloading'>('error');
     const error = signal<Error | undefined>(new Error('Request failed'));
