@@ -2,7 +2,10 @@ import { ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { ConfigService } from '@nestjs/config';
 import cookieParser from 'cookie-parser';
+import { resolve } from 'node:path';
+import { type Express } from 'express';
 import { AppModule } from './app.module';
+import { serveWeb } from './web-static';
 
 function databaseEnv(): void {
   if (!process.env.DATABASE_URL) {
@@ -47,6 +50,14 @@ async function bootstrap() {
     origin: [configured, ...vercelHosts, ...capacitorOrigins],
     credentials: true,
   });
+
+  if (process.env.SERVE_WEB === 'true') {
+    const browserDirectory = resolve(
+      process.cwd(),
+      'apps/web/dist/web/browser',
+    );
+    serveWeb(app.getHttpAdapter().getInstance() as Express, browserDirectory);
+  }
 
   const port = Number(config.get('PORT') ?? 3001);
   await app.listen(port);
