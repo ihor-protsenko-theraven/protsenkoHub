@@ -17,7 +17,7 @@
 - [Трекер сну, PWA-нагадування та віджети](#трекер-сну-pwa-нагадування-та-віджети)
 - [Мобільні застосунки (Android та iOS)](#мобільні-застосунки-android-та-ios)
 - [Екрани та API](#екрани-та-api)
-- [Продакшен на Vercel і Neon](#продакшен-на-vercel-і-neon)
+- [Продакшен на Render і Neon](#продакшен-на-render-і-neon)
 - [Команди та перевірка](#команди-та-перевірка)
 - [Пов'язана документація](#повязана-документація)
 
@@ -56,7 +56,7 @@
 
 ## Архітектура системи
 
-Вебзастосунок і NestJS API розгортаються в одному проєкті Vercel на спільному домені, що дозволяє використовувати захищену `httpOnly` cookie без міждоменних обмежень. Мобільні клієнти та нативні віджети працюють із тим самим API через токени сесій, а щохвилинний розрахунок push-нагадувань ініціюється через Cloudflare Worker.
+Вебзастосунок і NestJS API розгортаються в одному сервісі Render на спільному домені, що дозволяє використовувати захищену `httpOnly` cookie без міждоменних обмежень. Мобільні клієнти та нативні віджети працюють із тим самим API через токени сесій, а щохвилинний розрахунок push-нагадувань ініціюється через Cloudflare Worker.
 
 ```mermaid
 flowchart TD
@@ -68,7 +68,7 @@ flowchart TD
 
     subgraph Edge["Хмарна інфраструктура"]
         CFWorker["Cloudflare Worker (Cron * * * * *)"]
-        VercelRouter["Vercel Routing (vercel.json)"]
+        RenderService["Render Web Service (render.yaml)"]
         WebPush["Web Push сервіси (FCM / APNs Web Push)"]
     end
 
@@ -85,17 +85,17 @@ flowchart TD
         Postgres[("PostgreSQL (Docker локально / Neon у проді)")]
     end
 
-    WebPWA -->|"HTTPS (httpOnly Cookie)"| VercelRouter
-    MobileApp -->|"HTTPS (Bearer + Refresh Token)"| VercelRouter
-    NativeWidget -->|"HTTPS (/api/v1/children/sleep/widget*)"| VercelRouter
-    CFWorker -->|"GET /api/v1/sleep-reminders/dispatch (Bearer CRON_SECRET)"| VercelRouter
+    WebPWA -->|"HTTPS (httpOnly Cookie)"| RenderService
+    MobileApp -->|"HTTPS (Bearer + Refresh Token)"| RenderService
+    NativeWidget -->|"HTTPS (/api/v1/children/sleep/widget*)"| RenderService
+    CFWorker -->|"GET /api/v1/sleep-reminders/dispatch (Bearer CRON_SECRET)"| RenderService
 
-    VercelRouter -->|"/(.*)"| WebPWA
-    VercelRouter -->|"/api/v1/*"| AuthMod
-    VercelRouter -->|"/api/v1/*"| HomeMod
-    VercelRouter -->|"/api/v1/*"| DomainMods
-    VercelRouter -->|"/api/v1/*"| SleepMod
-    VercelRouter -->|"/api/v1/sleep-reminders/*"| ReminderMod
+    RenderService -->|"/(.*)"| WebPWA
+    RenderService -->|"/api/v1/*"| AuthMod
+    RenderService -->|"/api/v1/*"| HomeMod
+    RenderService -->|"/api/v1/*"| DomainMods
+    RenderService -->|"/api/v1/*"| SleepMod
+    RenderService -->|"/api/v1/sleep-reminders/*"| ReminderMod
 
     AuthMod --> PrismaSvc
     HomeMod --> PrismaSvc
@@ -349,7 +349,7 @@ stateDiagram-v2
 Для роботи у продакшені потрібні HTTPS, застосовані міграції Postgres і стабільна пара VAPID-ключів:
 
 1. Згенеруйте ключі локально: `npx web-push generate-vapid-keys` (приватний ключ зберігайте лише в секретах середовища).
-2. Задайте у змінних середовища API / Vercel: `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` (`mailto:` або HTTPS URL) і довгий випадковий `CRON_SECRET`.
+2. Задайте у змінних середовища API / Render: `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` (`mailto:` або HTTPS URL) і довгий випадковий `CRON_SECRET`.
 3. Розгорніть Cloudflare Worker із конфігом [`workers/sleep-reminders/wrangler.jsonc`](workers/sleep-reminders/wrangler.jsonc):
    - додайте секрет `CRON_SECRET` у Worker (той самий, що в API);
    - перевірте `APP_ORIGIN` у `wrangler.jsonc`;
@@ -374,8 +374,8 @@ stateDiagram-v2
 Збірка та синхронізація мобільних проєктів:
 
 ```powershell
-$env:MOBILE_API_ORIGIN = 'https://protsenko-hub.vercel.app'
-$env:MOBILE_WEB_ORIGIN = 'https://protsenko-hub.vercel.app'
+$env:MOBILE_API_ORIGIN = 'https://protsenko-hub-i5bh.onrender.com'
+$env:MOBILE_WEB_ORIGIN = 'https://protsenko-hub-i5bh.onrender.com'
 
 npm run sync:mobile          # зібрати web (конфігурація mobile) і синхронізувати Android та iOS
 npm run sync:mobile:android  # синхронізувати лише Android
@@ -421,24 +421,22 @@ npm run sync:mobile:ios      # синхронізувати лише iOS (на m
 
 ---
 
-## Продакшен на Vercel і Neon
+## Продакшен на Render і Neon
 
-Фронтенд, API та база даних працюють у зв'язці **Vercel + Neon Postgres**. Згідно з [`vercel.json`](vercel.json), запити `/api/(.*)` спрямовуються у NestJS-сервіс, а всі інші маршрути — у статичну збірку Angular.
+Фронтенд і API працюють в одному безкоштовному Web Service на Render, а Postgres залишається в Neon. NestJS обслуговує `/api/v1/*` та зібраний Angular з одного домену. Параметри збірки й запуску описані в [`render.yaml`](render.yaml).
 
 Щоб розгорнути продакшен:
 
-1. Авторизуйтеся у Vercel CLI: `npx vercel login`.
-2. У проєкті Vercel підключіть інтеграцію **Neon Postgres** та скопіюйте два рядки підключення (pooled та direct).
-3. Налаштуйте змінні середовища для Production:
+1. Створіть Render Blueprint з цього репозиторію та файлу `render.yaml`.
+2. У Neon скопіюйте два рядки підключення (pooled та direct).
+3. Налаштуйте секретні змінні середовища Web Service:
    - `DATABASE_URL` — pooled-рядок підключення Neon;
    - `DIRECT_URL` — прямий рядок підключення Neon (для міграцій Prisma);
    - `JWT_SECRET` — довгий криптостійкий випадковий рядок;
-   - `ADMIN_EMAIL`, `ADMIN_PASSWORD`, `ADMIN_NAME`, `HOUSEHOLD_NAME` — дані першого адміністратора родини;
-   - `ALLOW_REGISTRATION=false` — встановіть після створення сімейних акаунтів;
    - `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT`, `CRON_SECRET` — для роботи Web Push-нагадувань.
-4. Виконайте деплой: `npx vercel --prod`.
+4. Render автоматично запускає збірку, `prisma migrate deploy` та сервер після встановлення змінних. Для наявної бази Neon початкового адміністратора створювати не потрібно; `ALLOW_REGISTRATION=false` задано в Blueprint.
 
-Під час встановлення залежностей API автоматично виконує `prisma migrate deploy` і, якщо задані `ADMIN_EMAIL` та `ADMIN_PASSWORD`, створює першу родину (`scripts/bootstrap-admin.js`). Демонстраційний `db:seed` у production-середовищі заблокований.
+Для нової порожньої бази першу родину можна створити через `scripts/bootstrap-admin.js`, задавши `ADMIN_EMAIL`, `ADMIN_PASSWORD`, `ADMIN_NAME` та `HOUSEHOLD_NAME` безпосередньо у середовищі. Демонстраційний `db:seed` у production-середовищі заблокований.
 
 ---
 
