@@ -2,6 +2,7 @@ import {
   Body,
   Controller,
   Get,
+  Header,
   Param,
   Put,
   Query,
@@ -19,6 +20,7 @@ export class FeedingController {
   constructor(private readonly feeding: FeedingService) {}
 
   @Get('dictionary')
+  @Header('Cache-Control', 'public, max-age=86400')
   dictionary() {
     return this.feeding.dictionary();
   }

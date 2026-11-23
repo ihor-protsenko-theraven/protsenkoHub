@@ -9,5 +9,16 @@
         "files": ["/index.html", "/*.css", "/*.js", "/manifest.webmanifest", "/icons/*.png", "/favicon.ico"]
       }
     }
+  ],
+  "dataGroups": [
+    {
+      "name": "feeding-dictionary",
+      "urls": ["/api/v1/feeding/dictionary"],
+      "cacheConfig": {
+        "maxSize": 1,
+        "maxAge": "1d",
+        "strategy": "performance"
+      }
+    }
   ]
 }

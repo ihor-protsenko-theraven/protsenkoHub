@@ -13,6 +13,7 @@ import { readPushSubscription } from '../push-subscription';
 import { EXPECTED_GUEST_SESSION } from '../toast/api-error.interceptor';
 import { AuthUser, RegisterModel } from '../models/auth.model';
 import { MobileAuthResponse } from '../models/mobile-auth.model';
+import { clearApiCache } from './api-cache.interceptor';
 import { NATIVE_REFRESH_TOKEN_STORE } from './native-refresh-token';
 import { SLEEP_WIDGET_BRIDGE } from '../../features/sleep/sleep-widget-bridge';
 
@@ -135,6 +136,7 @@ export class AuthService {
 
   setUser(user: AuthUser): void {
     const householdChanged = this.user()?.householdId !== user.householdId;
+    if (householdChanged) clearApiCache();
     this.user.set(user);
     this.ready.set(true);
     if (isNativeApp()) {
@@ -174,6 +176,7 @@ export class AuthService {
   }
 
   logout(): void {
+    clearApiCache();
     if (isNativeApp()) {
       void this.logoutNative();
       return;

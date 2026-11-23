@@ -8,6 +8,22 @@ import { AUTH } from './auth.config';
 import { authUserFromWebPayload, type JwtPayload } from './auth.model';
 import type { AuthUser } from '../common/types';
 
+const ACCOUNT_SELECT = {
+  email: true,
+  activeHouseholdId: true,
+  memberships: {
+    orderBy: { createdAt: 'asc' as const },
+    select: {
+      id: true,
+      userId: true,
+      householdId: true,
+      role: true,
+      color: true,
+      displayName: true,
+    },
+  },
+} as const;
+
 function cookieExtractor(req: Request): string | null {
   const cookies = req.cookies as Record<string, string> | undefined;
   const token = cookies?.[AUTH.cookieName];
@@ -49,40 +65,32 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     const webSession = authUserFromWebPayload(payload);
     if (webSession) return webSession;
 
+    let account;
     if (payload.typ === 'mobile-access' || payload.typ === 'widget-action') {
-      const active =
-        payload.sid &&
-        (await this.prisma.mobileSession.findFirst({
-          where: {
-            id: payload.sid,
-            userId: payload.sub,
-            revokedAt: null,
-            expiresAt: { gt: new Date() },
-          },
-          select: { id: true },
-        }));
+      const active = payload.sid
+        ? await this.prisma.mobileSession.findFirst({
+            where: {
+              id: payload.sid,
+              userId: payload.sub,
+              revokedAt: null,
+              expiresAt: { gt: new Date() },
+            },
+            select: {
+              id: true,
+              user: { select: ACCOUNT_SELECT },
+            },
+          })
+        : null;
       if (!active) {
         throw new UnauthorizedException('Mobile session expired');
       }
+      account = active.user;
+    } else {
+      account = await this.prisma.user.findUnique({
+        where: { id: payload.sub },
+        select: ACCOUNT_SELECT,
+      });
     }
-    const account = await this.prisma.user.findUnique({
-      where: { id: payload.sub },
-      select: {
-        email: true,
-        activeHouseholdId: true,
-        memberships: {
-          orderBy: { createdAt: 'asc' },
-          select: {
-            id: true,
-            userId: true,
-            householdId: true,
-            role: true,
-            color: true,
-            displayName: true,
-          },
-        },
-      },
-    });
     const membership = account?.activeHouseholdId
       ? account.memberships.find(
           (item) => item.householdId === account.activeHouseholdId,

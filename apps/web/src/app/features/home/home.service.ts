@@ -28,7 +28,15 @@ export class HomeService {
   addShoppingItem(name: string) {
     return this.api
       .post<ShoppingItem>('/shopping/items', { name, qty: 1 })
-      .pipe(tap(() => this.snapshot.reload()));
+      .pipe(
+        tap((created) => {
+          this.snapshot.update((current) =>
+            current
+              ? { ...current, shoppingItems: [...current.shoppingItems, created] }
+              : current,
+          );
+        }),
+      );
   }
 
   toggleShoppingItem(item: ShoppingItem) {
@@ -37,7 +45,20 @@ export class HomeService {
         isChecked: !item.isChecked,
         version: item.version,
       })
-      .pipe(tap(() => this.snapshot.reload()));
+      .pipe(
+        tap((updated) => {
+          this.snapshot.update((current) =>
+            current
+              ? {
+                  ...current,
+                  shoppingItems: current.shoppingItems.map((entry) =>
+                    entry.id === updated.id ? updated : entry,
+                  ),
+                }
+              : current,
+          );
+        }),
+      );
   }
 
   startSleep(kind: SleepKind) {

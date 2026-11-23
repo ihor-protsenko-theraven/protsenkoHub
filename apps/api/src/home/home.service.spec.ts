@@ -10,8 +10,8 @@ const user = { userId: 'parent-1' } as AuthUser;
 
 describe('home snapshot', () => {
   it('loads events, tasks, shopping, sleep and feeding in one round', async () => {
-    const calendar = { list: vi.fn().mockResolvedValue(['event']) };
-    const children = { list: vi.fn().mockResolvedValue(['task']) };
+    const calendar = { listUpcomingOpen: vi.fn().mockResolvedValue(['event']) };
+    const children = { listOpen: vi.fn().mockResolvedValue(['task']) };
     const shopping = { listItems: vi.fn().mockResolvedValue(['item']) };
     const sleep = { overview: vi.fn().mockResolvedValue({ active: null }) };
     const feeding = {
@@ -31,11 +31,20 @@ describe('home snapshot', () => {
       events: ['event'],
       tasks: ['task'],
       shoppingItems: ['item'],
-      sleep: { active: null },
+      sleep: {
+        active: null,
+        sessions: [],
+        todayBlocks: [],
+        week: [],
+        schedule: [],
+        signals: [],
+        howItWorks: [],
+        disclaimer: '',
+      },
       feeding: { child: null, current: null, next: null },
     });
-    expect(calendar.list).toHaveBeenCalledWith(user);
-    expect(children.list).toHaveBeenCalledWith(user);
+    expect(calendar.listUpcomingOpen).toHaveBeenCalledWith(user);
+    expect(children.listOpen).toHaveBeenCalledWith(user);
     expect(shopping.listItems).toHaveBeenCalledWith(user);
     expect(sleep.overview).toHaveBeenCalledWith(user);
     expect(feeding.focus).toHaveBeenCalledWith(user);

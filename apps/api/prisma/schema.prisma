@@ -149,6 +149,7 @@ model Event {
 
   @@index([householdId, startsAt])
   @@index([householdId, status, startsAt])
+  @@index([householdId, status, endsAt])
 }
 
 model ShoppingList {
@@ -277,6 +278,7 @@ model SleepSession {
   pauses      SleepPause[]
 
   @@index([householdId, startedAt])
+  @@index([householdId, endedAt])
 }
 
 model SleepPause {

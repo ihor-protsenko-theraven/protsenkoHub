@@ -23,3 +23,47 @@ export function dueSleepReminders(
       : [];
   });
 }
+
+/** Next future reminder timestamp (after `now`) for scheduling wake-ups. */
+export function nextSleepReminderAt(
+  overview: ReminderCandidate,
+  now: Date,
+): Date | null {
+  if (overview.active || !overview.nextSleepAt || !overview.awakeSince) {
+    return null;
+  }
+  const nextSleepAt = new Date(overview.nextSleepAt);
+  if (!Number.isFinite(nextSleepAt.getTime())) return null;
+  const nowMs = now.getTime();
+  let earliest: number | null = null;
+  for (const leadMinutes of SLEEP_REMINDER.leadMinutes) {
+    const dueAt = nextSleepAt.getTime() - leadMinutes * SLEEP_REMINDER.minuteMs;
+    if (dueAt > nowMs && (earliest === null || dueAt < earliest)) {
+      earliest = dueAt;
+    }
+  }
+  return earliest === null ? null : new Date(earliest);
+}
+
+/** Fire-and-forget notification so the external Cloudflare Worker refreshes its KV schedule. */
+export function notifySleepReminderScheduler(): void {
+  const origin = process.env.SLEEP_REMINDER_SCHEDULER_URL?.trim();
+  const secret = process.env.CRON_SECRET?.trim();
+  if (!origin || !secret) return;
+  let endpoint: URL;
+  try {
+    endpoint = new URL('/schedule', origin);
+  } catch {
+    return;
+  }
+  if (endpoint.protocol !== 'https:') return;
+  void fetch(endpoint, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${secret}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ dirty: true }),
+    signal: AbortSignal.timeout(3_000),
+  }).catch(() => undefined);
+}

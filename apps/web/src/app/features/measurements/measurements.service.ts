@@ -24,18 +24,43 @@ export class MeasurementsService {
   create(payload: MeasurementPayload) {
     return this.api
       .post<MeasurementItem>('/children/measurements', payload)
-      .pipe(tap(() => this.feed.reload()));
+      .pipe(
+        tap((created) =>
+          this.feed.update((current) => ({
+            ...current,
+            measurements: [...current.measurements, created].sort(
+              (a, b) => Date.parse(b.measuredAt) - Date.parse(a.measuredAt),
+            ),
+          })),
+        ),
+      );
   }
 
   update(id: string, payload: Partial<MeasurementPayload>) {
     return this.api
       .patch<MeasurementItem>(`/children/measurements/${id}`, payload)
-      .pipe(tap(() => this.feed.reload()));
+      .pipe(
+        tap((updated) =>
+          this.feed.update((current) => ({
+            ...current,
+            measurements: current.measurements
+              .map((entry) => (entry.id === updated.id ? updated : entry))
+              .sort((a, b) => Date.parse(b.measuredAt) - Date.parse(a.measuredAt)),
+          })),
+        ),
+      );
   }
 
   remove(id: string) {
     return this.api
       .delete<void>(`/children/measurements/${id}`)
-      .pipe(tap(() => this.feed.reload()));
+      .pipe(
+        tap(() =>
+          this.feed.update((current) => ({
+            ...current,
+            measurements: current.measurements.filter((entry) => entry.id !== id),
+          })),
+        ),
+      );
   }
 }

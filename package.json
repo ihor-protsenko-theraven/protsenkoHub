@@ -8,6 +8,7 @@
     "packages/*"
   ],
   "scripts": {
+    "dev": "node ./scripts/dev-local.js",
     "dev:api": "npm run start:dev -w api",
     "dev:web": "npm run start -w web",
     "build": "npm run build -w @protsenko/shared && npm run build -w api && npm run build -w web",

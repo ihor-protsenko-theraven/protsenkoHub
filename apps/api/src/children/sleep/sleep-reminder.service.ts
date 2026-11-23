@@ -9,7 +9,11 @@ import type { AuthUser } from '../../common/types';
 import * as webPush from 'web-push';
 import { formatClock } from './sleep-time';
 import { SLEEP_REMINDER } from './sleep-reminder.config';
-import { dueSleepReminders } from './sleep-reminder-time';
+import {
+  dueSleepReminders,
+  nextSleepReminderAt,
+  notifySleepReminderScheduler,
+} from './sleep-reminder-time';
 import type { PushError, ReminderMoment } from './sleep-reminder.model';
 import type { PushSubscriptionDto } from './dto/push-subscription.dto';
 import { SleepService } from './sleep.service';
@@ -58,6 +62,7 @@ export class SleepReminderService {
         auth: dto.keys.auth,
       },
     });
+    notifySleepReminderScheduler();
     return { enabled: true };
   }
 
@@ -71,15 +76,34 @@ export class SleepReminderService {
   async dispatch(now = new Date()) {
     const vapidDetails = this.vapidDetails();
     const subscriptions = await this.prisma.pushSubscription.findMany();
+    if (!subscriptions.length) {
+      return { sent: 0, nextReminderAt: null };
+    }
     const households = new Map<string, typeof subscriptions>();
     for (const subscription of subscriptions) {
       const group = households.get(subscription.householdId) ?? [];
       group.push(subscription);
       households.set(subscription.householdId, group);
     }
+    const householdIds = [...households.keys()];
+    const activeRows = this.prisma.activeSleep?.findMany
+      ? await this.prisma.activeSleep.findMany({
+          where: { householdId: { in: householdIds } },
+          select: { householdId: true },
+        })
+      : [];
+    const sleepingHouseholds = new Set(
+      activeRows.map((row) => row.householdId),
+    );
     let sent = 0;
+    let earliestNext: Date | null = null;
     for (const [householdId, devices] of households) {
+      if (sleepingHouseholds.has(householdId)) continue;
       const overview = await this.sleep.overviewForHousehold(householdId);
+      const next = nextSleepReminderAt(overview, now);
+      if (next && (!earliestNext || next < earliestNext)) {
+        earliestNext = next;
+      }
       const due = dueSleepReminders(overview, now);
       for (const moment of due) {
         for (const device of devices) {
@@ -132,7 +156,15 @@ export class SleepReminderService {
         }
       }
     }
-    return { sent };
+    if (this.prisma.sleepReminderDelivery?.deleteMany) {
+      const retentionCutoff = new Date(
+        now.getTime() - 7 * 24 * 60 * 60_000,
+      );
+      await this.prisma.sleepReminderDelivery
+        .deleteMany({ where: { sentAt: { lt: retentionCutoff } } })
+        .catch(() => undefined);
+    }
+    return { sent, nextReminderAt: earliestNext?.toISOString() ?? null };
   }
 
   private payload(moment: ReminderMoment, timeZone: string): string {

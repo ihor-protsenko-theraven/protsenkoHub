@@ -20,22 +20,7 @@ function request(method: string, path: string): Request {
 function setup(
   options: { sessionActive?: boolean; activeHouseholdId?: string } = {},
 ) {
-  const findFirst = vi
-    .fn<
-      (query: {
-        where: {
-          id: string;
-          userId: string;
-          revokedAt: null;
-          expiresAt: { gt: Date };
-        };
-        select: { id: boolean };
-      }) => Promise<{ id: string } | null>
-    >()
-    .mockResolvedValue(
-      options.sessionActive === false ? null : { id: 'session-1' },
-    );
-  const findUnique = vi.fn().mockResolvedValue({
+  const account = {
     email: 'parent@example.com',
     activeHouseholdId: options.activeHouseholdId ?? 'household-1',
     memberships: [
@@ -56,7 +41,25 @@ function setup(
         displayName: 'Мама',
       },
     ],
-  });
+  };
+  const findFirst = vi
+    .fn<
+      (query: {
+        where: {
+          id: string;
+          userId: string;
+          revokedAt: null;
+          expiresAt: { gt: Date };
+        };
+        select: { id: boolean; user: unknown };
+      }) => Promise<{ id: string; user: typeof account } | null>
+    >()
+    .mockResolvedValue(
+      options.sessionActive === false
+        ? null
+        : { id: 'session-1', user: account },
+    );
+  const findUnique = vi.fn().mockResolvedValue(account);
   const prisma = {
     mobileSession: { findFirst },
     user: { findUnique },
@@ -146,7 +149,7 @@ describe('JWT validation', () => {
         userId: 'parent-1',
         revokedAt: null,
       },
-      select: { id: true },
+      select: { id: true, user: expect.any(Object) },
     });
     expect(query?.where.expiresAt.gt).toBeInstanceOf(Date);
     expect(findUnique).not.toHaveBeenCalled();

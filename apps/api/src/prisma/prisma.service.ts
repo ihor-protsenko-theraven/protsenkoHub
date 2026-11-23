@@ -3,9 +3,17 @@ import { PrismaNeon } from '@prisma/adapter-neon';
 import { PrismaClient } from '@prisma/client';
 import { neonRuntimeUrl, usesNeonDriver } from './prisma-connection';
 
-const NEON_POOL_MAX = 1;
-const NEON_IDLE_MS = 5_000;
+const DEFAULT_NEON_POOL_MAX = 3;
+const NEON_IDLE_MS = 10_000;
 const NEON_CONNECT_TIMEOUT_MS = 20_000;
+
+function neonPoolMax(): number {
+  const parsed = Number(process.env.DB_POOL_MAX);
+  if (Number.isInteger(parsed) && parsed >= 1 && parsed <= 10) {
+    return parsed;
+  }
+  return DEFAULT_NEON_POOL_MAX;
+}
 
 function neonClientOptions(): ConstructorParameters<typeof PrismaClient>[0] {
   const databaseUrl = process.env.DATABASE_URL;
@@ -13,7 +21,7 @@ function neonClientOptions(): ConstructorParameters<typeof PrismaClient>[0] {
   return {
     adapter: new PrismaNeon({
       connectionString: neonRuntimeUrl(databaseUrl),
-      max: NEON_POOL_MAX,
+      max: neonPoolMax(),
       idleTimeoutMillis: NEON_IDLE_MS,
       connectionTimeoutMillis: NEON_CONNECT_TIMEOUT_MS,
     }),

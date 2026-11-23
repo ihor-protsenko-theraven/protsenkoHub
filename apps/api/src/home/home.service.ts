@@ -17,13 +17,24 @@ export class HomeService {
   ) {}
 
   async snapshot(user: AuthUser) {
-    const [events, tasks, shoppingItems, sleep, feeding] = await Promise.all([
-      this.calendar.list(user),
-      this.children.list(user),
-      this.shopping.listItems(user),
-      this.sleep.overview(user),
-      this.feeding.focus(user),
-    ]);
+    const [events, tasks, shoppingItems, sleepOverview, feeding] =
+      await Promise.all([
+        this.calendar.listUpcomingOpen(user),
+        this.children.listOpen(user),
+        this.shopping.listItems(user),
+        this.sleep.overview(user),
+        this.feeding.focus(user),
+      ]);
+    const sleep = {
+      ...sleepOverview,
+      sessions: [],
+      todayBlocks: [],
+      week: [],
+      schedule: [],
+      signals: [],
+      howItWorks: [],
+      disclaimer: '',
+    };
     return { events, tasks, shoppingItems, sleep, feeding };
   }
 }

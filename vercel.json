@@ -4,7 +4,7 @@
     "web": {
       "root": "apps/web",
       "framework": "angular",
-      "installCommand": "cd ../.. && npm ci",
+      "installCommand": "cd ../.. && SKIP_PRISMA_GENERATE=1 npm ci",
       "buildCommand": "cd ../.. && npm run build -w web",
       "outputDirectory": "dist/web/browser",
       "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }]

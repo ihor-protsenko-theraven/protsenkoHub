@@ -14,14 +14,24 @@ export class ContactsService {
   );
 
   create(payload: ContactPayload) {
-    return this.api.post<ContactItem>('/contacts', payload).pipe(tap(() => this.contacts.reload()));
+    return this.api.post<ContactItem>('/contacts', payload).pipe(
+      tap((created) => this.contacts.update((list) => [...list, created])),
+    );
   }
 
   update(id: string, payload: ContactPayload) {
-    return this.api.patch<ContactItem>(`/contacts/${id}`, payload).pipe(tap(() => this.contacts.reload()));
+    return this.api.patch<ContactItem>(`/contacts/${id}`, payload).pipe(
+      tap((updated) =>
+        this.contacts.update((list) =>
+          list.map((entry) => (entry.id === updated.id ? updated : entry)),
+        ),
+      ),
+    );
   }
 
   remove(id: string) {
-    return this.api.delete<void>(`/contacts/${id}`).pipe(tap(() => this.contacts.reload()));
+    return this.api.delete<void>(`/contacts/${id}`).pipe(
+      tap(() => this.contacts.update((list) => list.filter((entry) => entry.id !== id))),
+    );
   }
 }

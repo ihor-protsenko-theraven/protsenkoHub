@@ -131,7 +131,17 @@ Nest-модуль на домен: контролер, сервіс, `dto/`. DTO
 
 Користувач у сервісі — `AuthUser` з `@CurrentUser()`. Запити фільтруйте через `user.householdId`. Не приймайте household id з клієнта.
 
-Prisma-клієнт генерується в `postinstall`. Схема вимагає `DATABASE_URL` і `DIRECT_URL`. На Vercel їх заповнює `scripts/database-env.js` з імен Neon. Міграції продакшену — `prisma migrate deploy` під час install API.
+Prisma-клієнт генерується в `postinstall` (пропускається при `SKIP_PRISMA_GENERATE=1`, наприклад у збірці `web` на Vercel). Схема вимагає `DATABASE_URL` і `DIRECT_URL`. На Vercel їх заповнює `scripts/database-env.js` з імен Neon. Міграції продакшену — `prisma migrate deploy` під час install/build.
+
+Оптимізації ресурсів у продакшені:
+- `GET /api/v1/health` — легкий liveness без запиту в БД (не будить Neon); перевірка БД винесена в `GET /api/v1/health/ready`.
+- `PrismaService` використовує пул Neon `DB_POOL_MAX` (за замовчуванням `3`, `idleTimeoutMillis: 10_000`).
+- `FeedingService` віддає статичний довідник прикорму з пам'яті (`Cache-Control: public, max-age=86400`), а `ensureFeedingDictionary()` запускається в `upsert()` лише якщо продукт відсутній у порожній БД.
+- `HomeService.snapshot()` фільтрує майбутні `OPEN` події та незавершені задачі на рівні БД.
+- `JwtStrategy` для мобільних і віджетних токенів завантажує `mobileSession` разом із `user` і `memberships` одним запитом.
+- `SleepReminderService.dispatch()` пропускає родини з активним сном і повертає `nextReminderAt`; Cloudflare Worker (`workers/sleep-reminders`) зберігає цей час у KV `REMINDER_SCHEDULE` і не будить Render/Vercel/Neon до настання нагадування.
+- На Render (`SERVE_WEB=true`) увімкнено `compression` і `Cache-Control: public, max-age=31536000, immutable` для хешованих бандлів (`no-cache` для `index.html`, `ngsw.json`, `ngsw-worker.js`, `manifest.webmanifest`).
+- На екрані сну (`SleepPage`) інтервал фонового оновлення — 5 хв (`SLEEP_UI.pollMs = 300_000`), а `visibilitychange` обмежено throttle 30 с.
 
 `@nestjs/config`, `@nestjs/jwt` і `@nestjs/passport` зафіксовані на останніх CommonJS-версіях. Збірка Vercel підключає їх через `require()`. Не піднімайте ці пакети на ESM-релізи 12.x.
 

@@ -1,6 +1,7 @@
 import { ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { ConfigService } from '@nestjs/config';
+import compression from 'compression';
 import cookieParser from 'cookie-parser';
 import { resolve } from 'node:path';
 import { type Express } from 'express';
@@ -37,6 +38,9 @@ async function bootstrap() {
   const capacitorOrigins = ['capacitor://localhost', 'https://localhost'];
 
   app.setGlobalPrefix('api/v1');
+  if (!process.env.VERCEL) {
+    app.use(compression());
+  }
   app.use(cookieParser());
   app.useGlobalPipes(
     new ValidationPipe({

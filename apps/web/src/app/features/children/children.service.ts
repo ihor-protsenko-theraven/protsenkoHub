@@ -14,14 +14,24 @@ export class ChildrenService {
   );
 
   create(payload: TaskPayload) {
-    return this.api.post<TaskItem>('/children/tasks', payload).pipe(tap(() => this.tasks.reload()));
+    return this.api.post<TaskItem>('/children/tasks', payload).pipe(
+      tap((created) => this.tasks.update((list) => [...list, created])),
+    );
   }
 
   update(id: string, payload: Partial<TaskPayload>) {
-    return this.api.patch<TaskItem>(`/children/tasks/${id}`, payload).pipe(tap(() => this.tasks.reload()));
+    return this.api.patch<TaskItem>(`/children/tasks/${id}`, payload).pipe(
+      tap((updated) =>
+        this.tasks.update((list) =>
+          list.map((entry) => (entry.id === updated.id ? updated : entry)),
+        ),
+      ),
+    );
   }
 
   remove(id: string) {
-    return this.api.delete<void>(`/children/tasks/${id}`).pipe(tap(() => this.tasks.reload()));
+    return this.api.delete<void>(`/children/tasks/${id}`).pipe(
+      tap(() => this.tasks.update((list) => list.filter((entry) => entry.id !== id))),
+    );
   }
 }

@@ -23,7 +23,19 @@ export class FeedingService {
 
   upsert(foodItemId: string, payload: FeedingRecordPayload) {
     return this.api.put<FeedingRecord>(`/feeding/records/${foodItemId}`, payload).pipe(
-      tap(() => this.records.reload()),
+      tap((saved) =>
+        this.records.update((tracker) =>
+          tracker
+            ? {
+                ...tracker,
+                records: [
+                  saved,
+                  ...tracker.records.filter((entry) => entry.foodItemId !== saved.foodItemId),
+                ],
+              }
+            : tracker,
+        ),
+      ),
     );
   }
 }

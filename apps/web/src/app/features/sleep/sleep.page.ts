@@ -8,6 +8,7 @@ import {
   linkedSignal,
   signal,
 } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import {form, FormField, required} from '@angular/forms/signals';
 import {RouterLink} from '@angular/router';
 import {Capacitor} from '@capacitor/core';
@@ -31,6 +32,20 @@ import {SleepTimePipe} from './sleep-time.pipe';
 
 const emptyForm = (): SleepForm => ({kind: 'NAP', startedAt: '', endedAt: '', notes: ''});
 const dayCount = new Intl.NumberFormat(APP_LOCALE, {style: 'unit', unit: 'day', unitDisplay: 'long'});
+const todayFormatters = new Map<string, Intl.DateTimeFormat>();
+
+function todayFormatter(timeZone: string): Intl.DateTimeFormat {
+  let formatter = todayFormatters.get(timeZone);
+  if (!formatter) {
+    formatter = new Intl.DateTimeFormat(APP_LOCALE, {
+      timeZone,
+      day: 'numeric',
+      month: 'long',
+    });
+    todayFormatters.set(timeZone, formatter);
+  }
+  return formatter;
+}
 
 @Component({
   selector: 'app-sleep-page',
@@ -107,11 +122,7 @@ export class SleepPage {
     this.ticker.minute();
     const sleep = this.snapshot();
     if (!sleep) return '';
-    return new Intl.DateTimeFormat(APP_LOCALE, {
-      timeZone: sleep.timeZone,
-      day: 'numeric',
-      month: 'long',
-    }).format(new Date());
+    return todayFormatter(sleep.timeZone).format(new Date());
   });
 
   readonly historyLabel = computed(() =>
@@ -148,17 +159,23 @@ export class SleepPage {
   });
 
   constructor() {
-    void this.data.syncWidget();
+    let lastRefreshAt = Date.now();
+    const reloadOverview = (force = false) => {
+      const now = Date.now();
+      if (!force && now - lastRefreshAt < SLEEP_UI.visibilityMinGapMs) return;
+      lastRefreshAt = now;
+      this.data.overview.reload();
+      if (this.nativePlatform) void this.data.syncWidget();
+    };
+    if (this.nativePlatform) void this.data.syncWidget();
     const poll = window.setInterval(() => {
       if (document.visibilityState === 'visible') {
-        this.data.overview.reload();
-        void this.data.syncWidget();
+        reloadOverview(true);
       }
     }, SLEEP_UI.pollMs);
     const onVisible = () => {
       if (document.visibilityState === 'visible') {
-        this.data.overview.reload();
-        void this.data.syncWidget();
+        reloadOverview();
       }
     };
     document.addEventListener('visibilitychange', onVisible);
@@ -203,7 +220,7 @@ export class SleepPage {
     this.data.start({
       kind: this.kind(),
       startedAt: startedAt?.toISOString(),
-    }).subscribe({
+    }).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: (result) => {
         this.busy.set(false);
         this.backdate.set('');
@@ -225,7 +242,7 @@ export class SleepPage {
       return;
     }
     this.busy.set(true);
-    this.data.stop({endedAt: endedAt?.toISOString()}).subscribe({
+    this.data.stop({endedAt: endedAt?.toISOString()}).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: () => {
         this.busy.set(false);
         this.wakeAt.set('');
@@ -238,7 +255,7 @@ export class SleepPage {
 
   pause(): void {
     this.busy.set(true);
-    this.data.pause().subscribe({
+    this.data.pause().pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: (result) => {
         this.busy.set(false);
         this.error.set('');
@@ -250,7 +267,7 @@ export class SleepPage {
 
   resume(): void {
     this.busy.set(true);
-    this.data.resume().subscribe({
+    this.data.resume().pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: () => {
         this.busy.set(false);
         this.adjust.set(null);
@@ -265,7 +282,7 @@ export class SleepPage {
     const last = this.continuableSession();
     if (!last) return;
     this.busy.set(true);
-    this.data.continueSaved(last.id).subscribe({
+    this.data.continueSaved(last.id).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: () => {
         this.busy.set(false);
         this.error.set('');
@@ -306,7 +323,7 @@ export class SleepPage {
     }
     this.busy.set(true);
     if (this.adjust() === 'start') {
-      this.data.update(active.id, {startedAt: when.toISOString()}).subscribe({
+      this.data.update(active.id, {startedAt: when.toISOString()}).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
         next: () => this.adjusted('Початок сну оновлено.'),
         error: (error: unknown) => this.fail(error, 'Не вдалося змінити початок.'),
       });
@@ -328,7 +345,7 @@ export class SleepPage {
     this.data.updatePause(pauseId, {
       startedAt: when.toISOString(),
       endedAt: original.endedAt ? ended?.toISOString() : undefined,
-    }).subscribe({
+    }).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: () => this.adjusted('Паузу оновлено.'),
       error: (error: unknown) => this.fail(error, 'Не вдалося змінити паузу.'),
     });
@@ -414,7 +431,7 @@ export class SleepPage {
     const request = pauseId
       ? this.data.updatePause(pauseId, payload)
       : this.data.createSavedPause(sessionId, payload);
-    request.subscribe({
+    request.pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: () => {
         this.busy.set(false);
         this.notice.set(pauseId ? 'Паузу оновлено.' : 'Паузу додано.');
@@ -452,7 +469,7 @@ export class SleepPage {
     this.busy.set(true);
     const id = this.editingId();
     const request = id ? this.data.update(id, payload) : this.data.create(payload);
-    request.subscribe({
+    request.pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: () => {
         this.busy.set(false);
         this.notice.set(id ? 'Запис оновлено.' : 'Сон додано.');
@@ -464,7 +481,7 @@ export class SleepPage {
 
   remove(id: string): void {
     this.busy.set(true);
-    this.data.remove(id).subscribe({
+    this.data.remove(id).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: () => {
         this.busy.set(false);
         this.deletingId.set(null);
@@ -479,7 +496,7 @@ export class SleepPage {
   setNaps(count: number): void {
     if (this.snapshot()?.napTarget === count) return;
     this.busy.set(true);
-    this.data.saveProfile({ napTarget: count }).subscribe({
+    this.data.saveProfile({ napTarget: count }).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: () => {
         this.busy.set(false);
         this.error.set('');

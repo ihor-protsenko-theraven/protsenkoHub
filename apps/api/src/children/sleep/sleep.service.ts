@@ -24,6 +24,7 @@ import {
 } from './dto/sleep.dto';
 import { normalizeBabyName, SLEEP_TRACKER } from './sleep.config';
 import { buildSleepGuidance } from './sleep-guidance';
+import { notifySleepReminderScheduler } from './sleep-reminder-time';
 import { sessionInclude, type SessionRow, type SleepDb } from './sleep.model';
 import { toSleepWidgetSnapshot } from './sleep-widget';
 import type { SleepWidgetSnapshot } from './sleep-widget.model';
@@ -268,6 +269,7 @@ export class SleepService {
         sessionId: result.session.id,
         kind: result.session.kind,
       });
+      notifySleepReminderScheduler();
     }
     return result;
   }
@@ -306,6 +308,7 @@ export class SleepService {
       type: 'sleep-stopped',
       sessionId: result.session.id,
     });
+    notifySleepReminderScheduler();
     return result;
   }
 

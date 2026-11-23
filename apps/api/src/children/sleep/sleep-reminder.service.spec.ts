@@ -60,8 +60,14 @@ describe('SleepReminderService dispatch', () => {
     const service = new SleepReminderService(prisma as never, sleep as never);
     const now = new Date('2026-10-20T11:40:00.000Z');
 
-    expect(await service.dispatch(now)).toEqual({ sent: 1 });
-    expect(await service.dispatch(now)).toEqual({ sent: 0 });
+    expect(await service.dispatch(now)).toEqual({
+      sent: 1,
+      nextReminderAt: '2026-10-20T11:50:00.000Z',
+    });
+    expect(await service.dispatch(now)).toEqual({
+      sent: 0,
+      nextReminderAt: '2026-10-20T11:50:00.000Z',
+    });
     expect(webPush.sendNotification).toHaveBeenCalledTimes(1);
     expect(webPush.sendNotification).toHaveBeenCalledWith(
       expect.objectContaining({ endpoint: device.endpoint }),

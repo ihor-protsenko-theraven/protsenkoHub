@@ -26,59 +26,23 @@ const child = {
 };
 
 describe('FeedingService household access', () => {
-  it('returns the shared dictionary without household fields', async () => {
-    const findMany = vi.fn().mockResolvedValue([
-      {
-        id: 'cat-vegetables',
-        name: 'Овочі',
-        sortOrder: 1,
-        items: [
-          {
-            id: 'food-zucchini',
-            categoryId: 'cat-vegetables',
-            name: 'Кабачок',
-            allowedFromAgeMonths: 6,
-            preparationGuide: 'На парі.',
-            isAllergen: false,
-            sortOrder: 1,
-          },
-        ],
-      },
-    ]);
-    const transaction = vi.fn((operations: Promise<unknown>[]) =>
-      Promise.all(operations),
-    );
+  it('returns the shared static dictionary without hitting the database', async () => {
+    const findMany = vi.fn();
+    const transaction = vi.fn();
     const service = new FeedingService({
-      foodCategory: { findMany, upsert: vi.fn().mockResolvedValue({}) },
-      foodItem: { upsert: vi.fn().mockResolvedValue({}) },
+      foodCategory: { findMany, upsert: vi.fn() },
+      foodItem: { upsert: vi.fn() },
       $transaction: transaction,
     } as unknown as PrismaService);
 
     const first = await service.dictionary();
     const second = await service.dictionary();
 
-    expect(first).toEqual([
-      {
-        id: 'cat-vegetables',
-        name: 'Овочі',
-        items: [
-          {
-            id: 'food-zucchini',
-            categoryId: 'cat-vegetables',
-            name: 'Кабачок',
-            allowedFromAgeMonths: 6,
-            preparationGuide: 'На парі.',
-            isAllergen: false,
-          },
-        ],
-      },
-    ]);
-    expect(second).toEqual(first);
-    expect(transaction).toHaveBeenCalledTimes(1);
-    expect(findMany).toHaveBeenCalledWith({
-      orderBy: { sortOrder: 'asc' },
-      include: { items: { orderBy: { sortOrder: 'asc' } } },
-    });
+    expect(first.length).toBeGreaterThan(0);
+    expect(first[0]?.items.length).toBeGreaterThan(0);
+    expect(second).toBe(first);
+    expect(transaction).not.toHaveBeenCalled();
+    expect(findMany).not.toHaveBeenCalled();
   });
 
   it('returns an empty tracker when the household has no child', async () => {

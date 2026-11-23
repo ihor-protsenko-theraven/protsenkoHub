@@ -5,6 +5,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { UpsertFeedingRecordDto } from './dto/feeding.dto';
 import { completedAgeMonths } from './feeding-age';
 import { ensureFeedingDictionary } from './feeding-dictionary';
+import { FEEDING_DICTIONARY } from './feeding-dictionary.config';
 import { pickFeedingFocus } from './feeding-focus';
 import type {
   FeedingFocusDto,
@@ -13,14 +14,21 @@ import type {
   FoodCategoryDto,
 } from './feeding.model';
 
-const categoryInclude = {
-  orderBy: { sortOrder: 'asc' as const },
-  include: { items: { orderBy: { sortOrder: 'asc' as const } } },
-};
+const STATIC_DICTIONARY: FoodCategoryDto[] = FEEDING_DICTIONARY.map(
+  (category) => ({
+    id: category.id,
+    name: category.name,
+    items: category.items.map((item) => ({
+      id: item.id,
+      categoryId: category.id,
+      name: item.name,
+      allowedFromAgeMonths: item.allowedFromAgeMonths,
+      preparationGuide: item.preparationGuide,
+      isAllergen: item.isAllergen,
+    })),
+  }),
+);
 
-type StoredCategory = Prisma.FoodCategoryGetPayload<{
-  include: { items: true };
-}>;
 type StoredRecord = Prisma.FeedingRecordGetPayload<Record<string, never>>;
 type StoredChild = Prisma.ChildProfileGetPayload<Record<string, never>>;
 
@@ -30,10 +38,8 @@ export class FeedingService {
 
   constructor(private readonly prisma: PrismaService) {}
 
-  async dictionary(): Promise<FoodCategoryDto[]> {
-    await this.ensureDictionary();
-    const categories = await this.prisma.foodCategory.findMany(categoryInclude);
-    return categories.map((category) => this.toCategory(category));
+  dictionary(): Promise<FoodCategoryDto[]> {
+    return Promise.resolve(STATIC_DICTIONARY);
   }
 
   async focus(user: AuthUser): Promise<FeedingFocusDto> {
@@ -41,10 +47,8 @@ export class FeedingService {
     if (!tracker.child) {
       return { child: null, introduced: null, current: null, next: null };
     }
-    await this.ensureDictionary();
-    const categories = await this.prisma.foodCategory.findMany(categoryInclude);
     const picked = pickFeedingFocus(
-      categories,
+      FEEDING_DICTIONARY,
       tracker.records,
       tracker.child.ageMonths,
     );
@@ -82,10 +86,15 @@ export class FeedingService {
           : 'Спочатку додайте дитину в розділі «Родина».',
       );
     }
-    await this.ensureDictionary();
-    const food = await this.prisma.foodItem.findUnique({
+    let food = await this.prisma.foodItem.findUnique({
       where: { id: foodItemId },
     });
+    if (!food) {
+      await this.ensureDictionary();
+      food = await this.prisma.foodItem.findUnique({
+        where: { id: foodItemId },
+      });
+    }
     if (!food) throw new NotFoundException('Продукт не знайдено.');
     const notes =
       dto.notes === undefined ? undefined : normalizeNotes(dto.notes);
@@ -139,21 +148,6 @@ export class FeedingService {
         ageMonths: child.birthDate ? completedAgeMonths(child.birthDate) : null,
       },
       records: records.map((record) => this.toRecord(record)),
-    };
-  }
-
-  private toCategory(category: StoredCategory): FoodCategoryDto {
-    return {
-      id: category.id,
-      name: category.name,
-      items: category.items.map((item) => ({
-        id: item.id,
-        categoryId: item.categoryId,
-        name: item.name,
-        allowedFromAgeMonths: item.allowedFromAgeMonths,
-        preparationGuide: item.preparationGuide,
-        isAllergen: item.isAllergen,
-      })),
     };
   }
 

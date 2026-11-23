@@ -8,6 +8,9 @@ if (args.length === 0) {
   console.error('Usage: node scripts/with-database-env.js <command> [args]');
   process.exit(1);
 }
+if (process.env.SKIP_PRISMA_GENERATE === '1' && args.includes('db:generate')) {
+  process.exit(0);
+}
 
 const command = args.join(' ');
 const result = spawnSync(command, {

@@ -6,7 +6,12 @@ export class HealthController {
   constructor(private readonly prisma: PrismaService) {}
 
   @Get()
-  async check() {
+  check() {
+    return { ok: true, service: 'protsenko-hub-api' };
+  }
+
+  @Get('ready')
+  async ready() {
     try {
       await this.prisma.$queryRaw`SELECT 1`;
     } catch {

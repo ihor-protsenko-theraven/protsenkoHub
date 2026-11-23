@@ -1,4 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
+import { EventStatus } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import type { AuthUser } from '../common/types';
 import { CreateEventDto, UpdateEventDto } from './dto/event.dto';
@@ -20,6 +21,23 @@ export class CalendarService {
               },
             }
           : {}),
+      },
+      include: {
+        member: { select: { id: true, color: true, displayName: true } },
+        createdBy: { select: { displayName: true } },
+        updatedBy: { select: { displayName: true } },
+      },
+      orderBy: { startsAt: 'asc' },
+    });
+  }
+
+  listUpcomingOpen(user: AuthUser, now = new Date()) {
+    return this.prisma.event.findMany({
+      where: {
+        householdId: user.householdId,
+        softDeletedAt: null,
+        status: EventStatus.OPEN,
+        endsAt: { gte: now },
       },
       include: {
         member: { select: { id: true, color: true, displayName: true } },

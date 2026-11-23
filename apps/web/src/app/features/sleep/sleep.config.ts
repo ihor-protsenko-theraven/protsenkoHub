@@ -1,6 +1,7 @@
 export const SLEEP_UI = {
   tickMs: 1000,
-  pollMs: 30_000,
+  pollMs: 300_000,
+  visibilityMinGapMs: 30_000,
   minuteMs: 60_000,
   maxContinuedSleepMs: 16 * 60 * 60_000,
   historyDays: 21,

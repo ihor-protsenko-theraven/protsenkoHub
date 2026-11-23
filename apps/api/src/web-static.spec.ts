@@ -20,6 +20,7 @@ describe('serveWeb', () => {
     directories.push(directory);
     mkdirSync(join(directory, 'assets'));
     writeFileSync(join(directory, 'index.html'), '<h1>Family hub</h1>');
+    writeFileSync(join(directory, 'main-G2FBN6JY.js'), 'console.log(1);');
     writeFileSync(join(directory, 'assets', 'icon.svg'), '<svg />');
 
     const app = express();
@@ -28,8 +29,15 @@ describe('serveWeb', () => {
       response.json({ ok: true });
     });
 
-    expect((await request(app).get('/')).text).toContain('Family hub');
+    const homeResponse = await request(app).get('/');
+    expect(homeResponse.text).toContain('Family hub');
+    expect(homeResponse.headers['cache-control']).toBe('no-cache');
     expect((await request(app).get('/app/sleep')).text).toContain('Family hub');
+
+    const bundleResponse = await request(app).get('/main-G2FBN6JY.js');
+    expect(bundleResponse.headers['cache-control']).toBe(
+      'public, max-age=31536000, immutable',
+    );
     const iconBody: unknown = (await request(app).get('/assets/icon.svg')).body;
     expect(Buffer.isBuffer(iconBody)).toBe(true);
     if (!Buffer.isBuffer(iconBody)) {

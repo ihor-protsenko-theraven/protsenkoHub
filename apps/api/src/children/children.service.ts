@@ -26,6 +26,20 @@ export class ChildrenService {
     });
   }
 
+  listOpen(user: AuthUser) {
+    return this.prisma.solomiyaTask.findMany({
+      where: {
+        householdId: user.householdId,
+        status: { not: TaskStatus.DONE },
+      },
+      orderBy: [{ status: 'asc' }, { priority: 'desc' }, { dueAt: 'asc' }],
+      include: {
+        createdBy: { select: { displayName: true } },
+        updatedBy: { select: { displayName: true } },
+      },
+    });
+  }
+
   async create(user: AuthUser, dto: CreateTaskDto) {
     const task = await this.prisma.solomiyaTask.create({
       data: {
