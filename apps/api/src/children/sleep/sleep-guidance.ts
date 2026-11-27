@@ -45,9 +45,9 @@ const G = SLEEP_GUIDANCE;
  *    18:30–20:30 and, once several nights exist, leans toward her own time.
  */
 
-export function buildSleepGuidance(input: GuidanceInput): SleepGuidance {
+export function buildSleepGuidance(input: GuidanceInput, includeDetails = true): SleepGuidance {
   if (input.ageWeeks === null || input.ageLabel === null) {
-    return guidanceWithoutAge(input);
+    return guidanceWithoutAge(input, includeDetails);
   }
   const ageWeeks = input.ageWeeks;
   const ageLabel = input.ageLabel;
@@ -66,14 +66,13 @@ export function buildSleepGuidance(input: GuidanceInput): SleepGuidance {
   const closed = ordered.filter(
     (session): session is ClosedSession => session.endedAt !== null,
   );
-  const stats = computeStats(ordered, input.now, input.timeZone, norms);
-  const todayBlocks = computeBlocks(ordered, input.now, input.timeZone);
   const week = computeWeek(
     ordered,
     input.now,
     input.timeZone,
     norms.totalTargetMin,
   );
+  const stats = computeStats(ordered, input.now, input.timeZone, norms, week);
   const recentSessions = ordered.filter(
     (session) =>
       session.startedAt.getTime() >=
@@ -84,12 +83,12 @@ export function buildSleepGuidance(input: GuidanceInput): SleepGuidance {
   const anchor = bedtimeAnchor(ordered, input.now, input.timeZone);
   const suggested = suggestedKind(input.now, input.timeZone);
   const base = {
-    howItWorks: [...G.copy.howItWorks],
-    disclaimer: G.copy.disclaimer,
+    howItWorks: includeDetails ? [...G.copy.howItWorks] : [],
+    disclaimer: includeDetails ? G.copy.disclaimer : '',
     suggestedKind: suggested,
     stats,
-    todayBlocks,
-    week,
+    todayBlocks: includeDetails ? computeBlocks(ordered, input.now, input.timeZone) : [],
+    week: includeDetails ? week : [],
   };
 
   if (active) {
@@ -106,7 +105,7 @@ export function buildSleepGuidance(input: GuidanceInput): SleepGuidance {
         expectedWakeAt: null,
         wakeWindowMin: null,
         basis: 'stale',
-        signals: buildSignals(input, stats, null, G.copy.sourceUnfinished),
+        signals: includeDetails ? buildSignals(input, stats, null, G.copy.sourceUnfinished) : [],
         schedule: [],
         scheduleNote: null,
         activeStale: true,
@@ -138,15 +137,15 @@ export function buildSleepGuidance(input: GuidanceInput): SleepGuidance {
       expectedWakeAt: expected.toISOString(),
       wakeWindowMin: null,
       basis: 'sleeping',
-      signals: buildSignals(
+      signals: includeDetails ? buildSignals(
         input,
         stats,
         null,
         typical.personalized
           ? G.copy.sourcePersonalizedDuration
           : G.copy.sourceAgeDuration,
-      ),
-      schedule: buildSchedule({
+      ) : [],
+      schedule: includeDetails ? buildSchedule({
         now: input.now,
         timeZone: input.timeZone,
         norms,
@@ -159,7 +158,7 @@ export function buildSleepGuidance(input: GuidanceInput): SleepGuidance {
         napTarget,
         ageWeeks,
         example: false,
-      }),
+      }) : [],
       scheduleNote: G.copy.afterWakeNote,
       activeStale: false,
       awakeSince: null,
@@ -213,8 +212,8 @@ export function buildSleepGuidance(input: GuidanceInput): SleepGuidance {
       expectedWakeAt: null,
       wakeWindowMin: windowAt(norms, 0),
       basis: 'age',
-      signals: buildSignals(input, stats, windowAt(norms, 0), source),
-      schedule: buildSchedule({
+      signals: includeDetails ? buildSignals(input, stats, windowAt(norms, 0), source) : [],
+      schedule: includeDetails ? buildSchedule({
         now: input.now,
         timeZone: input.timeZone,
         norms,
@@ -227,7 +226,7 @@ export function buildSleepGuidance(input: GuidanceInput): SleepGuidance {
         napTarget,
         ageWeeks,
         example: true,
-      }),
+      }) : [],
       scheduleNote: G.copy.exampleNote,
       activeStale: false,
       awakeSince: null,
@@ -264,8 +263,8 @@ export function buildSleepGuidance(input: GuidanceInput): SleepGuidance {
     expectedWakeAt: null,
     wakeWindowMin: windowMin,
     basis,
-    signals: buildSignals(input, stats, windowMin, source),
-    schedule: buildSchedule({
+    signals: includeDetails ? buildSignals(input, stats, windowMin, source) : [],
+    schedule: includeDetails ? buildSchedule({
       now: input.now,
       timeZone: input.timeZone,
       norms,
@@ -278,14 +277,14 @@ export function buildSleepGuidance(input: GuidanceInput): SleepGuidance {
       napTarget,
       ageWeeks,
       example: false,
-    }),
+    }) : [],
     scheduleNote: null,
     activeStale: false,
     awakeSince: awakeSince.toISOString(),
   };
 }
 
-function guidanceWithoutAge(input: GuidanceInput): SleepGuidance {
+function guidanceWithoutAge(input: GuidanceInput, includeDetails: boolean): SleepGuidance {
   const ordered = [...input.sessions].sort(
     (a, b) => a.startedAt.getTime() - b.startedAt.getTime(),
   );
@@ -294,18 +293,19 @@ function guidanceWithoutAge(input: GuidanceInput): SleepGuidance {
   const closed = ordered.filter(
     (session): session is ClosedSession => session.endedAt !== null,
   );
-  const stats = computeStats(ordered, input.now, input.timeZone, null);
+  const week = computeWeek(ordered, input.now, input.timeZone, 0);
+  const stats = computeStats(ordered, input.now, input.timeZone, null, week);
   const minutes = active
     ? (input.now.getTime() - active.startedAt.getTime()) / G.minuteMs
     : 0;
   const stale = active !== null && minutes >= STALE_SLEEP_MIN;
   return {
-    howItWorks: [...G.copy.howItWorks],
-    disclaimer: G.copy.disclaimer,
+    howItWorks: includeDetails ? [...G.copy.howItWorks] : [],
+    disclaimer: includeDetails ? G.copy.disclaimer : '',
     suggestedKind: suggestedKind(input.now, input.timeZone),
     stats,
-    todayBlocks: computeBlocks(ordered, input.now, input.timeZone),
-    week: computeWeek(ordered, input.now, input.timeZone, 0),
+    todayBlocks: includeDetails ? computeBlocks(ordered, input.now, input.timeZone) : [],
+    week: includeDetails ? week : [],
     headline: stale ? G.copy.staleHeadline : G.copy.missingAgeHeadline,
     detail: stale ? G.copy.staleDetail : G.copy.missingAgeDetail,
     nextSleepAt: null,
@@ -587,6 +587,7 @@ function computeStats(
   now: Date,
   timeZone: string,
   norms: SleepNorm | null,
+  week: WeekDay[],
 ): SleepStats {
   const todayStart = startOfLocalDay(now, timeZone);
   const todayEnd = nextLocalMidnight(now, timeZone);
@@ -616,7 +617,6 @@ function computeStats(
     }
   }
   const target = norms?.totalTargetMin ?? null;
-  const week = computeWeek(sessions, now, timeZone, target ?? 0);
   const prior = week.filter((day) => day.date !== todayKey && day.sleepMin > 0);
   const sample =
     prior.length > 0 ? prior : week.filter((day) => day.sleepMin > 0);

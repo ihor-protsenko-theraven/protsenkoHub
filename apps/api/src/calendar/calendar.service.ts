@@ -1,5 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { EventStatus } from '@prisma/client';
+import { EventStatus, Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import type { AuthUser } from '../common/types';
 import { CreateEventDto, UpdateEventDto } from './dto/event.dto';
@@ -33,12 +33,7 @@ export class CalendarService {
 
   listUpcomingOpen(user: AuthUser, now = new Date()) {
     return this.prisma.event.findMany({
-      where: {
-        householdId: user.householdId,
-        softDeletedAt: null,
-        status: EventStatus.OPEN,
-        endsAt: { gte: now },
-      },
+      where: this.upcomingOpenFilter(user, now),
       include: {
         member: { select: { id: true, color: true, displayName: true } },
         createdBy: { select: { displayName: true } },
@@ -46,6 +41,26 @@ export class CalendarService {
       },
       orderBy: { startsAt: 'asc' },
     });
+  }
+
+  upcomingPreview(user: AuthUser, limit: number, now = new Date()) {
+    const where = this.upcomingOpenFilter(user, now);
+    return this.prisma.$transaction([
+      this.prisma.event.findMany({
+        where, take: limit, orderBy: [{ startsAt: 'asc' }, { id: 'asc' }],
+        select: { id: true, title: true, status: true, startsAt: true, endsAt: true },
+      }),
+      this.prisma.event.count({ where }),
+    ], { isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead });
+  }
+
+  private upcomingOpenFilter(user: AuthUser, now: Date) {
+    return {
+      householdId: user.householdId,
+      softDeletedAt: null,
+      status: EventStatus.OPEN,
+      endsAt: { gte: now },
+    };
   }
 
   async create(user: AuthUser, dto: CreateEventDto) {

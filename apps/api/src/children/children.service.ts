@@ -1,5 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { TaskStatus } from '@prisma/client';
+import { Prisma, TaskStatus } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import type { AuthUser } from '../common/types';
 import { CreateTaskDto, UpdateTaskDto } from './dto/task.dto';
@@ -28,16 +28,28 @@ export class ChildrenService {
 
   listOpen(user: AuthUser) {
     return this.prisma.solomiyaTask.findMany({
-      where: {
-        householdId: user.householdId,
-        status: { not: TaskStatus.DONE },
-      },
+      where: this.openFilter(user),
       orderBy: [{ status: 'asc' }, { priority: 'desc' }, { dueAt: 'asc' }],
       include: {
         createdBy: { select: { displayName: true } },
         updatedBy: { select: { displayName: true } },
       },
     });
+  }
+
+  openPreview(user: AuthUser, limit: number) {
+    const where = this.openFilter(user);
+    return this.prisma.$transaction([
+      this.prisma.solomiyaTask.findMany({
+        where, take: limit, orderBy: [{ dueAt: 'asc' }, { priority: 'desc' }, { id: 'asc' }],
+        select: { id: true, title: true, status: true, priority: true, dueAt: true },
+      }),
+      this.prisma.solomiyaTask.count({ where }),
+    ], { isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead });
+  }
+
+  private openFilter(user: AuthUser) {
+    return { householdId: user.householdId, status: { not: TaskStatus.DONE } };
   }
 
   async create(user: AuthUser, dto: CreateTaskDto) {

@@ -1,4 +1,4 @@
-import { Controller, Get, UseGuards } from '@nestjs/common';
+import { Controller, Get, Query, UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { CurrentUser } from '../common/current-user.decorator';
 import type { AuthUser } from '../common/types';
@@ -10,7 +10,7 @@ export class HomeController {
 
   @Get()
   @UseGuards(JwtAuthGuard)
-  snapshot(@CurrentUser() user: AuthUser) {
-    return this.home.snapshot(user);
+  snapshot(@CurrentUser() user: AuthUser, @Query('preview') preview?: string) {
+    return preview === '1' ? this.home.preview(user) : this.home.snapshot(user);
   }
 }

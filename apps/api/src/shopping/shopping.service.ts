@@ -32,6 +32,19 @@ export class ShoppingService {
     });
   }
 
+  itemsPreview(user: AuthUser, limit: number) {
+    const where = { list: { householdId: user.householdId } };
+    return this.prisma.$transaction([
+      this.prisma.shoppingItem.findMany({
+        where: { ...where, isChecked: false },
+        orderBy: [{ sortOrder: 'asc' }, { createdAt: 'asc' }, { id: 'asc' }],
+        take: limit,
+        select: { id: true, name: true, qty: true, unit: true, category: true, isChecked: true, version: true },
+      }),
+      this.prisma.shoppingItem.groupBy({ by: ['isChecked'], where, _count: { _all: true } }),
+    ], { isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead });
+  }
+
   async createItem(user: AuthUser, dto: CreateShoppingItemDto) {
     const list = dto.listId
       ? await this.prisma.shoppingList.findFirst({

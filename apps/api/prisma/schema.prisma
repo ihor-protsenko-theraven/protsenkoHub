@@ -79,6 +79,7 @@ model Household {
   id            String          @id @default(cuid())
   name          String
   timezone      String          @default("Europe/Kyiv")
+  sleepVersion  Int             @default(0)
   createdAt     DateTime        @default(now())
   updatedAt     DateTime        @updatedAt
   members       Membership[]

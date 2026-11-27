@@ -62,7 +62,7 @@ export class SleepReminderService {
         auth: dto.keys.auth,
       },
     });
-    notifySleepReminderScheduler();
+    await notifySleepReminderScheduler();
     return { enabled: true };
   }
 
@@ -70,6 +70,7 @@ export class SleepReminderService {
     await this.prisma.pushSubscription.deleteMany({
       where: { endpoint, userId: user.userId, householdId: user.householdId },
     });
+    await notifySleepReminderScheduler();
     return { enabled: false };
   }
 

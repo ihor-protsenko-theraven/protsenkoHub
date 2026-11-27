@@ -356,12 +356,19 @@ stateDiagram-v2
 1. Згенеруйте ключі локально: `npx web-push generate-vapid-keys` (приватний ключ зберігайте лише в секретах середовища).
 2. Задайте у змінних середовища API / Render: `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` (`mailto:` або HTTPS URL) і довгий випадковий `CRON_SECRET`.
 3. Розгорніть Cloudflare Worker із конфігом [`workers/sleep-reminders/wrangler.jsonc`](workers/sleep-reminders/wrangler.jsonc):
-   - прив'яжіть KV namespace `REMINDER_SCHEDULE` (дозволяє пропускати зайві запити до API та давати Render/Neon засинати);
+   - для режиму `REMINDER_MODE=cron` прив'яжіть KV namespace `REMINDER_SCHEDULE`. За відсутності прив'язки cron пропускає виклик API;
    - додайте секрет `CRON_SECRET` у Worker (той самий, що в API);
    - перевірте `APP_ORIGIN` у `wrangler.jsonc`;
    - виконайте `npx wrangler deploy --config workers/sleep-reminders/wrangler.jsonc`;
-   - *(опційно)* для миттєвого оновлення KV-розкладу після старту/зупинки сну задайте `SLEEP_REMINDER_SCHEDULER_URL` (HTTPS-origin воркера) у змінних середовища API.
+   - задайте `SLEEP_REMINDER_SCHEDULER_URL` у середовищі API для оновлення розкладу після зміни сну, профілю дитини або підписки. Origin має приймати `POST /schedule` через маршрут Worker чи власний домен.
 4. На Android або iOS (iOS 16.4+) додайте PWA на головний екран, відкрийте «Сон» і натисніть «Увімкнути».
+
+#### Перехід на Durable Object Alarm
+
+1. Розгорніть API та Worker у режимі `cron`. Перевірте доставку нагадування та успішне оновлення `/schedule` після зміни сну.
+2. Задайте `REMINDER_MODE=alarm` і збережіть cron для першого запуску. Один Durable Object планує найближче нагадування серед підписок. Після ініціалізації cron у цьому режимі виконує лише перевірку Durable Object.
+3. Перевірте нагадування після простою Render, зміни вже запланованого сну й відсутність запитів dispatch за порожнього розкладу. Після цієї перевірки приберіть cron trigger, щоб припинити також щохвилинні виклики Worker.
+4. Якщо оновлення розкладу не доходять до Worker або нагадування пропускаються, поверніть `REMINDER_MODE=cron` і відновіть cron trigger. Попередження `SleepReminderScheduler` у логах API показують невдалі оновлення розкладу.
 
 > [!NOTE]
 > Локальний `ng serve` не активує Service Worker. Перевіряйте дозвіл і отримання Web Push у production-збірці через HTTPS.

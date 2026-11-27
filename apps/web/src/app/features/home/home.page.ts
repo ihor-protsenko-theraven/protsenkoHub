@@ -5,7 +5,7 @@ import { RouterLink } from '@angular/router';
 import { finalize, map, timer } from 'rxjs';
 import { AuthService } from '../../core/services/auth.service';
 import { Loader } from '../../shared/loader.component';
-import type { ShoppingItem } from '../shopping/shopping.model';
+import type { HomeShoppingItem } from './home.model';
 import { HOME_CLOCK_REFRESH_MS, HOME_SHOPPING_PREVIEW_LIMIT } from './home.config';
 import { HomeService } from './home.service';
 import { HomeFeedingCard } from './home-feeding-card.component';
@@ -42,12 +42,19 @@ export class HomePage {
       (a.dueAt ? new Date(a.dueAt).getTime() : Infinity) - (b.dueAt ? new Date(b.dueAt).getTime() : Infinity) ||
       b.priority - a.priority));
   readonly openShopping = computed(() => this.safeShopping().filter((item) => !item.isChecked));
-  readonly checkedShoppingCount = computed(() => this.safeShopping().filter((item) => item.isChecked).length);
+  readonly totals = computed(() => this.snapshot.hasValue() ? this.snapshot.value() : undefined);
+  readonly openShoppingCount = computed(() => this.totals()?.shoppingOpenCount ?? this.openShopping().length);
+  readonly checkedShoppingCount = computed(() =>
+    this.totals()?.shoppingCheckedCount ?? this.safeShopping().filter((item) => item.isChecked).length);
   readonly visibleShopping = computed(() => this.openShopping().slice(0, HOME_SHOPPING_PREVIEW_LIMIT));
-  readonly remainingShoppingCount = computed(() => Math.max(0, this.openShopping().length - HOME_SHOPPING_PREVIEW_LIMIT));
-  readonly eventCount = computed(() => this.countLabel(this.snapshot.isLoading(), !!this.snapshot.error(), this.upcoming().length));
-  readonly taskCount = computed(() => this.countLabel(this.snapshot.isLoading(), !!this.snapshot.error(), this.openTasks().length));
-  readonly shoppingCount = computed(() => this.countLabel(this.snapshot.isLoading(), !!this.snapshot.error(), this.openShopping().length));
+  readonly remainingShoppingCount = computed(() => Math.max(0, this.openShoppingCount() - HOME_SHOPPING_PREVIEW_LIMIT));
+  readonly eventCount = computed(() => {
+    const offscreen = (this.totals()?.eventCount ?? this.safeEvents().length) - this.safeEvents().length;
+    return this.countLabel(this.snapshot.isLoading(), !!this.snapshot.error(), this.upcoming().length + offscreen);
+  });
+  readonly taskCount = computed(() => this.countLabel(this.snapshot.isLoading(), !!this.snapshot.error(),
+    this.totals()?.taskCount ?? this.openTasks().length));
+  readonly shoppingCount = computed(() => this.countLabel(this.snapshot.isLoading(), !!this.snapshot.error(), this.openShoppingCount()));
 
   setQuickItemName(event: Event): void {
     const target = event.target;
@@ -73,7 +80,7 @@ export class HomePage {
       });
   }
 
-  checkShoppingItem(item: ShoppingItem): void {
+  checkShoppingItem(item: HomeShoppingItem): void {
     if (this.togglingItemId()) return;
     this.togglingItemId.set(item.id);
     this.home

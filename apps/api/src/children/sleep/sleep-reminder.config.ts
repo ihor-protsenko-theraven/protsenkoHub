@@ -5,6 +5,7 @@ export const SLEEP_REMINDER = {
   pushTtlSeconds: 30 * 60,
   urgency: 'high' as const,
   pushTimeoutMs: 10_000,
+  schedulerTimeoutMs: 3_000,
   maxEndpointLength: 2048,
   maxKeyLength: 256,
   publicPath: '/app/sleep',

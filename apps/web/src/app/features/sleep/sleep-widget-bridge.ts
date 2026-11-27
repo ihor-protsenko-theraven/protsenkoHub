@@ -28,6 +28,7 @@ interface WidgetActionOptions {
 export interface SleepWidgetBridge {
   clear(): Promise<void>;
   refresh(http: HttpClient, isCurrent?: () => boolean): Promise<void>;
+  publish(snapshot: SleepWidgetSnapshot, isCurrent: () => boolean): Promise<void>;
   setActionCredential(credential: WidgetActionCredential | null): void;
 }
 
@@ -43,6 +44,14 @@ export const SLEEP_WIDGET_BRIDGE = new InjectionToken<SleepWidgetBridge>('SLEEP_
         isCurrent,
         () => ({ actionCredential, apiOrigin }),
       ),
+      publish: (snapshot, isCurrent) => {
+        const generation = ++cacheGeneration;
+        return publishSleepWidgetSnapshot(
+          snapshot,
+          () => generation === cacheGeneration && isCurrent(),
+          () => ({ actionCredential, apiOrigin }),
+        );
+      },
       setActionCredential: (credential) => { actionCredential = credential; },
     };
   },

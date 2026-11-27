@@ -68,7 +68,7 @@ export const apiCacheInterceptor: HttpInterceptorFn = (req, next) => {
     return next(req);
   }
 
-  if (isExcluded(req.urlWithParams)) return next(req);
+  if (req.cache === 'no-store' || isExcluded(req.urlWithParams)) return next(req);
 
   const key = req.urlWithParams;
   const now = Date.now();

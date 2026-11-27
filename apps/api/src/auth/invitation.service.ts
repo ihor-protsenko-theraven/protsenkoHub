@@ -14,6 +14,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import type { AuthUser } from '../common/types';
 import { webAccessTokenPayload } from './auth.model';
 import { HOUSEHOLD } from '../config/household.config';
+import { notifySleepReminderScheduler } from '../children/sleep/sleep-reminder-time';
 import {
   ageLabelFromDays,
   calendarAgeDays,
@@ -163,6 +164,7 @@ export class InvitationService {
       });
       return saved;
     });
+    await notifySleepReminderScheduler();
     return {
       id: child.id,
       name: child.name,

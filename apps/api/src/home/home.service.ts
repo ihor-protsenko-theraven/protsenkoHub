@@ -5,6 +5,7 @@ import { ChildrenService } from '../children/children.service';
 import { SleepService } from '../children/sleep/sleep.service';
 import { FeedingService } from '../feeding/feeding.service';
 import { ShoppingService } from '../shopping/shopping.service';
+import { HOME_PREVIEW } from './home.config';
 
 @Injectable()
 export class HomeService {
@@ -25,5 +26,21 @@ export class HomeService {
       this.feeding.focus(user),
     ]);
     return { events, tasks, shoppingItems, sleep, feeding };
+  }
+
+  async preview(user: AuthUser) {
+    const [[events, eventCount], [tasks, taskCount], [shoppingItems, counts], sleep, feeding] =
+      await Promise.all([
+        this.calendar.upcomingPreview(user, HOME_PREVIEW.events),
+        this.children.openPreview(user, HOME_PREVIEW.tasks),
+        this.shopping.itemsPreview(user, HOME_PREVIEW.shopping),
+        this.sleep.homeOverview(user),
+        this.feeding.focus(user),
+      ]);
+    return {
+      events, tasks, shoppingItems, sleep, feeding, eventCount, taskCount,
+      shoppingOpenCount: counts.find((count) => !count.isChecked)?._count._all ?? 0,
+      shoppingCheckedCount: counts.find((count) => count.isChecked)?._count._all ?? 0,
+    };
   }
 }

@@ -1,3 +1,4 @@
+import { Logger } from '@nestjs/common';
 import { SLEEP_REMINDER } from './sleep-reminder.config';
 import type { ReminderCandidate, ReminderMoment } from './sleep-reminder.model';
 
@@ -45,8 +46,9 @@ export function nextSleepReminderAt(
   return earliest === null ? null : new Date(earliest);
 }
 
-/** Fire-and-forget notification so the external Cloudflare Worker refreshes its KV schedule. */
-export function notifySleepReminderScheduler(): void {
+const schedulerLogger = new Logger('SleepReminderScheduler');
+
+export async function notifySleepReminderScheduler(): Promise<void> {
   const origin = process.env.SLEEP_REMINDER_SCHEDULER_URL?.trim();
   const secret = process.env.CRON_SECRET?.trim();
   if (!origin || !secret) return;
@@ -57,13 +59,18 @@ export function notifySleepReminderScheduler(): void {
     return;
   }
   if (endpoint.protocol !== 'https:') return;
-  void fetch(endpoint, {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${secret}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({ dirty: true }),
-    signal: AbortSignal.timeout(3_000),
-  }).catch(() => undefined);
+  try {
+    const response = await fetch(endpoint, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${secret}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ dirty: true }),
+      signal: AbortSignal.timeout(SLEEP_REMINDER.schedulerTimeoutMs),
+    });
+    if (!response.ok) schedulerLogger.warn(`Schedule update returned ${response.status}`);
+  } catch {
+    schedulerLogger.warn('Schedule update could not reach the reminder worker');
+  }
 }

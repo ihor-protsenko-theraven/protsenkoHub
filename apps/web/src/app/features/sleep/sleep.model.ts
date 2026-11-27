@@ -1,3 +1,5 @@
+import type { SleepWidgetSnapshot } from './sleep-widget.model';
+
 export type SleepKind = 'NAP' | 'NIGHT';
 export type SleepClockMode = 'asleep' | 'paused' | 'awake';
 
@@ -77,6 +79,8 @@ export interface SleepProfile {
 }
 
 export interface SleepOverview {
+  version?: number;
+  widget?: SleepWidgetSnapshot;
   serverNow: string;
   timeZone: string;
   historyDays?: number;

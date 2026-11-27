@@ -6,7 +6,7 @@ import { ApiService } from '../../core/services/api.service';
 import type { FeedingRecord } from '../feeding/feeding.model';
 import type { ShoppingItem } from '../shopping/shopping.model';
 import type { SleepKind, SleepSession } from '../sleep/sleep.model';
-import { HomeSnapshot } from './home.model';
+import { HomeShoppingItem, HomeSnapshot } from './home.model';
 
 @Injectable()
 export class HomeService {
@@ -15,6 +15,7 @@ export class HomeService {
   readonly snapshot = httpResource<HomeSnapshot>(() => ({
     url: `${API_BASE_URL}/home`,
     withCredentials: true,
+    params: { preview: '1' },
   }));
 
   markFoodIntroduced(foodItemId: string) {
@@ -30,6 +31,10 @@ export class HomeService {
       .post<ShoppingItem>('/shopping/items', { name, qty: 1 })
       .pipe(
         tap((created) => {
+          if (this.snapshot.hasValue() && this.snapshot.value().shoppingOpenCount !== undefined) {
+            this.snapshot.reload();
+            return;
+          }
           this.snapshot.update((current) =>
             current
               ? { ...current, shoppingItems: [...current.shoppingItems, created] }
@@ -39,7 +44,7 @@ export class HomeService {
       );
   }
 
-  toggleShoppingItem(item: ShoppingItem) {
+  toggleShoppingItem(item: HomeShoppingItem) {
     return this.api
       .patch<ShoppingItem>(`/shopping/items/${item.id}`, {
         isChecked: !item.isChecked,
@@ -47,6 +52,10 @@ export class HomeService {
       })
       .pipe(
         tap((updated) => {
+          if (this.snapshot.hasValue() && this.snapshot.value().shoppingOpenCount !== undefined) {
+            this.snapshot.reload();
+            return;
+          }
           this.snapshot.update((current) =>
             current
               ? {

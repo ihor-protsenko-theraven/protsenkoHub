@@ -95,7 +95,7 @@
       <div class="home-shopping__title-group">
         <h2 id="shopping-title">Що купити</h2>
         @if (snapshot.hasValue()) {
-          <span class="home-shopping__badge">{{ openShopping().length }} у списку</span>
+          <span class="home-shopping__badge">{{ openShoppingCount() }} у списку</span>
           @if (checkedShoppingCount() > 0) {
             <span class="home-shopping__badge home-shopping__badge--muted">{{ checkedShoppingCount() }} куплено</span>
           }

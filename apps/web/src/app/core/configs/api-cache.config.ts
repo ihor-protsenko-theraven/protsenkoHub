@@ -8,6 +8,7 @@ export const API_CACHE = {
     '/health',
     '/sleep-reminders/',
     '/children/sleep/widget',
+    '/children/sleep/status',
   ],
   dictionaryPathFragment: '/feeding/dictionary',
   familyPathFragment: '/auth/family',

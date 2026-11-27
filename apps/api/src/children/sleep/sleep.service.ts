@@ -24,7 +24,6 @@ import {
 } from './dto/sleep.dto';
 import { normalizeBabyName, SLEEP_TRACKER } from './sleep.config';
 import { buildSleepGuidance } from './sleep-guidance';
-import { notifySleepReminderScheduler } from './sleep-reminder-time';
 import { sessionInclude, type SessionRow, type SleepDb } from './sleep.model';
 import { toSleepWidgetSnapshot } from './sleep-widget';
 import type { SleepWidgetSnapshot } from './sleep-widget.model';
@@ -45,8 +44,28 @@ export class SleepService {
     private readonly push: HouseholdPushService,
   ) {}
 
-  async overview(user: AuthUser) {
-    return this.overviewForHousehold(user.householdId);
+  async overview(user: AuthUser, includeWidget = false) {
+    const overview = await this.overviewForHousehold(user.householdId);
+    if (!includeWidget) return overview;
+    const lastSleep = overview.sessions
+      .filter((session) => session.endedAt !== null)
+      .reduce<(typeof overview.sessions)[number] | null>(
+        (latest, session) =>
+          !latest || session.endedAt! > latest.endedAt! ? session : latest,
+        null,
+      );
+    const last = lastSleep?.endedAt
+      ? { ...lastSleep, endedAt: lastSleep.endedAt }
+      : await this.lastSleepForWidget(user.householdId);
+    return { ...overview, widget: toSleepWidgetSnapshot({ ...overview, lastSleep: last }) };
+  }
+
+  async status(user: AuthUser) {
+    const household = await this.prisma.household.findUnique({
+      where: { id: user.householdId },
+      select: { sleepVersion: true },
+    });
+    return { version: household?.sleepVersion ?? 0 };
   }
 
   async homeOverview(user: AuthUser) {
@@ -75,7 +94,7 @@ export class SleepService {
       include: { pauses: { orderBy: { startedAt: 'asc' } } },
       orderBy: { startedAt: 'desc' },
     });
-    const full = this.compose(
+    return this.compose(
       timeZone,
       profile ?? { napTarget: null },
       child ? { ...child, updatedBy: null } : null,
@@ -86,42 +105,33 @@ export class SleepService {
         updatedBy: null,
       })),
       active,
+      false,
     );
-    return {
-      ...full,
-      sessions: [],
-      todayBlocks: [],
-      week: [],
-      schedule: [],
-      signals: [],
-      howItWorks: [],
-      disclaimer: '',
-    };
   }
 
   async widgetSnapshot(user: AuthUser): Promise<SleepWidgetSnapshot> {
-    const [overview, last] = await Promise.all([
+    const [overview, lastSleep] = await Promise.all([
       this.overviewForHousehold(user.householdId),
-      this.prisma.sleepSession.findFirst({
-        where: { householdId: user.householdId, endedAt: { not: null } },
-        orderBy: { endedAt: 'desc' },
-        include: sessionInclude,
-      }),
+      this.lastSleepForWidget(user.householdId),
     ]);
-    return toSleepWidgetSnapshot({
-      ...overview,
-      lastSleep: last?.endedAt
-        ? {
-            kind: last.kind,
-            startedAt: last.startedAt.toISOString(),
-            endedAt: last.endedAt.toISOString(),
-            pauses: last.pauses.map((pause) => ({
-              startedAt: pause.startedAt.toISOString(),
-              endedAt: pause.endedAt?.toISOString() ?? null,
-            })),
-          }
-        : null,
+    return toSleepWidgetSnapshot({ ...overview, lastSleep });
+  }
+
+  private async lastSleepForWidget(householdId: string) {
+    const last = await this.prisma.sleepSession.findFirst({
+      where: { householdId, endedAt: { not: null } },
+      orderBy: { endedAt: 'desc' },
+      include: { pauses: true },
     });
+    return last?.endedAt ? {
+      kind: last.kind,
+      startedAt: last.startedAt.toISOString(),
+      endedAt: last.endedAt.toISOString(),
+      pauses: last.pauses.map((pause) => ({
+        startedAt: pause.startedAt.toISOString(),
+        endedAt: pause.endedAt?.toISOString() ?? null,
+      })),
+    } : null;
   }
 
   async widgetAction(user: AuthUser, dto: WidgetSleepActionDto) {
@@ -236,8 +246,12 @@ export class SleepService {
   /** Reuse the same current guidance for the push dispatcher. */
   async overviewForHousehold(householdId: string) {
     const since = new Date(Date.now() - HISTORY_MS);
-    const [timeZone, profile, child, active] = await Promise.all([
-      this.timeZoneOf(householdId),
+    // Read the version first so a concurrent write always triggers another refresh.
+    const household = await this.prisma.household.findUnique({
+      where: { id: householdId },
+      select: { timezone: true, sleepVersion: true },
+    });
+    const [profile, child, active] = await Promise.all([
       this.ensureProfile(householdId),
       this.prisma.childProfile.findUnique({
         where: { householdId },
@@ -257,7 +271,10 @@ export class SleepService {
       include: sessionInclude,
       orderBy: { startedAt: 'desc' },
     });
-    return this.compose(timeZone, profile, child, sessions, active);
+    return {
+      ...this.compose(household?.timezone || HOUSEHOLD.defaultTimeZone, profile, child, sessions, active),
+      version: household?.sleepVersion ?? 0,
+    };
   }
 
   async start(user: AuthUser, dto: StartSleepDto) {
@@ -319,7 +336,6 @@ export class SleepService {
         sessionId: result.session.id,
         kind: result.session.kind,
       });
-      notifySleepReminderScheduler();
     }
     return result;
   }
@@ -358,7 +374,6 @@ export class SleepService {
       type: 'sleep-stopped',
       sessionId: result.session.id,
     });
-    notifySleepReminderScheduler();
     return result;
   }
 
@@ -721,6 +736,7 @@ export class SleepService {
     } | null,
     sessions: SessionRow[],
     active: SessionRow | null,
+    includeDetails = true,
   ) {
     const now = new Date();
     const age = this.ageOf(
@@ -746,7 +762,7 @@ export class SleepService {
         })),
       })),
       napTarget: profile.napTarget,
-    });
+    }, includeDetails);
     return {
       serverNow: now.toISOString(),
       timeZone,
@@ -760,7 +776,7 @@ export class SleepService {
         updatedByName: child?.updatedBy?.displayName ?? null,
       },
       active: active ? this.map(active) : null,
-      sessions: sessions.map((session) => this.map(session)),
+      sessions: includeDetails ? sessions.map((session) => this.map(session)) : [],
       ...guidance,
     };
   }

@@ -1,11 +1,13 @@
 import { HttpClient, httpResource } from '@angular/common/http';
-import { DestroyRef, Injectable, inject, signal } from '@angular/core';
+import { computed, DestroyRef, Injectable, inject, signal } from '@angular/core';
 import { takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop';
-import { filter, take, tap } from 'rxjs';
+import { filter, finalize, take, tap } from 'rxjs';
+import { isNativeApp } from '../../core/configs/native-platform.config';
 import { ApiService } from '../../core/services/api.service';
 import { API_BASE_URL } from '../../core/configs/api.config';
 import { SLEEP_WIDGET_BRIDGE } from './sleep-widget-bridge';
 import { SleepKind, SleepOverview, SleepPayload, SleepSession } from './sleep.model';
+import { SLEEP_UI } from './sleep.config';
 
 @Injectable()
 export class SleepService {
@@ -13,20 +15,63 @@ export class SleepService {
   private readonly http = inject(HttpClient);
   private readonly widget = inject(SLEEP_WIDGET_BRIDGE);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly native = isNativeApp();
+  private checkingVersion = false;
   readonly widgetSyncError = signal('');
   readonly overview = httpResource<SleepOverview>(() => ({
     url: `${API_BASE_URL}/children/sleep`,
     withCredentials: true,
+    cache: 'no-store',
+    params: this.native ? { widget: '1' } : undefined,
   }));
   private readonly overviewStatus$ = toObservable(this.overview.status);
 
-  async syncWidget(): Promise<void> {
+  constructor() {
+    if (!this.native) return;
+    const resolved = computed(() => this.overview.hasValue() ? this.overview.value() : undefined);
+    toObservable(resolved).pipe(
+      takeUntilDestroyed(this.destroyRef),
+    ).subscribe((overview) => {
+      if (overview?.widget) void this.syncWidget(overview);
+    });
+  }
+
+  private async syncWidget(overview: SleepOverview): Promise<void> {
+    if (!overview.widget) return;
     try {
-      await this.widget.refresh(this.http);
+      await this.widget.publish(overview.widget, () =>
+        !this.destroyRef.destroyed && this.overview.hasValue() && this.overview.value() === overview,
+      );
       this.widgetSyncError.set('');
     } catch {
       this.widgetSyncError.set('Не вдалося оновити віджет. Перевірте з’єднання й відкрийте цей екран ще раз.');
     }
+  }
+
+  refreshIfChanged(): void {
+    if (this.checkingVersion || this.overview.isLoading()) return;
+    const overview = this.overview.hasValue() ? this.overview.value() : undefined;
+    if (overview?.version === undefined) {
+      this.overview.reload();
+      return;
+    }
+    this.checkingVersion = true;
+    this.http.get<{ version: number }>(`${API_BASE_URL}/children/sleep/status`, {
+      withCredentials: true,
+      cache: 'no-store',
+    }).pipe(
+      takeUntilDestroyed(this.destroyRef),
+      finalize(() => { this.checkingVersion = false; }),
+    ).subscribe({
+      next: ({ version }) => {
+        if (this.overview.hasValue() && this.overview.value() === overview &&
+            (version !== overview.version ||
+             Date.now() - Date.parse(overview.serverNow) >= SLEEP_UI.guidanceRefreshMs)) {
+          this.overview.reload();
+        }
+      },
+      error: () => undefined,
+    });
   }
 
   private refresh(): void {
@@ -40,7 +85,6 @@ export class SleepService {
         takeUntilDestroyed(this.destroyRef),
       ).subscribe(() => this.overview.reload());
     }
-    void this.syncWidget();
   }
 
   start(payload: { kind: SleepKind; startedAt?: string; notes?: string | null }) {

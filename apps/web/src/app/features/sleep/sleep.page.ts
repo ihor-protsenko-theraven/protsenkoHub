@@ -164,10 +164,8 @@ export class SleepPage {
       const now = Date.now();
       if (!force && now - lastRefreshAt < SLEEP_UI.visibilityMinGapMs) return;
       lastRefreshAt = now;
-      this.data.overview.reload();
-      if (this.nativePlatform) void this.data.syncWidget();
+      this.data.refreshIfChanged();
     };
-    if (this.nativePlatform) void this.data.syncWidget();
     const poll = window.setInterval(() => {
       if (document.visibilityState === 'visible') {
         reloadOverview(true);
