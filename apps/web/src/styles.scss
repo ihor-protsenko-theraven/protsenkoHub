@@ -746,3 +746,19 @@ a {
     background: var(--forest);
   }
 }
+
+/* Shared page helpers */
+.page-actions { display: flex; gap: .5rem; flex-wrap: wrap; align-items: center; justify-content: flex-end; }
+.loading-wrap { display: flex; justify-content: center; padding: 3rem 0; }
+.history-subheading { margin: 1rem 0 .5rem; font: 700 .92rem/1.3 inherit; color: var(--muted); }
+.empty-state {
+  text-align: center;
+  padding: 3.5rem 1.5rem;
+  background: var(--surface);
+  border: .0625rem dashed var(--line);
+  border-radius: var(--radius-lg);
+  &__title { margin: 0 0 .5rem; font-size: 1.15rem; font-weight: 700; color: var(--ink); }
+  &__desc { margin: 0 auto 1.5rem; max-width: 44ch; color: var(--muted); font-size: .92rem; line-height: 1.5; }
+}
+.shopping-rows { list-style: none; margin: 0; padding: 0; }
+.shopping-empty { padding: .75rem .25rem; color: var(--muted); }

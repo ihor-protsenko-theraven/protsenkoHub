@@ -49,6 +49,56 @@ export class SleepService {
     return this.overviewForHousehold(user.householdId);
   }
 
+  async homeOverview(user: AuthUser) {
+    const since = new Date(Date.now() - HISTORY_MS);
+    const [timeZone, profile, child, active] = await Promise.all([
+      this.timeZoneOf(user.householdId),
+      this.prisma.sleepProfile.findUnique({
+        where: { householdId: user.householdId },
+        select: { napTarget: true },
+      }),
+      this.prisma.childProfile.findUnique({
+        where: { householdId: user.householdId },
+        select: { name: true, birthDate: true },
+      }),
+      this.loadActive(user.householdId),
+    ]);
+    const sessions = await this.prisma.sleepSession.findMany({
+      where: {
+        householdId: user.householdId,
+        OR: [
+          { startedAt: { gte: since } },
+          { endedAt: null },
+          { endedAt: { gte: since } },
+        ],
+      },
+      include: { pauses: { orderBy: { startedAt: 'asc' } } },
+      orderBy: { startedAt: 'desc' },
+    });
+    const full = this.compose(
+      timeZone,
+      profile ?? { napTarget: null },
+      child ? { ...child, updatedBy: null } : null,
+      sessions.map((session) => ({
+        ...session,
+        startedBy: null,
+        endedBy: null,
+        updatedBy: null,
+      })),
+      active,
+    );
+    return {
+      ...full,
+      sessions: [],
+      todayBlocks: [],
+      week: [],
+      schedule: [],
+      signals: [],
+      howItWorks: [],
+      disclaimer: '',
+    };
+  }
+
   async widgetSnapshot(user: AuthUser): Promise<SleepWidgetSnapshot> {
     const [overview, last] = await Promise.all([
       this.overviewForHousehold(user.householdId),

@@ -13,7 +13,7 @@ describe('home snapshot', () => {
     const calendar = { listUpcomingOpen: vi.fn().mockResolvedValue(['event']) };
     const children = { listOpen: vi.fn().mockResolvedValue(['task']) };
     const shopping = { listItems: vi.fn().mockResolvedValue(['item']) };
-    const sleep = { overview: vi.fn().mockResolvedValue({ active: null }) };
+    const sleep = { homeOverview: vi.fn().mockResolvedValue({ active: null }) };
     const feeding = {
       focus: vi
         .fn()
@@ -31,22 +31,13 @@ describe('home snapshot', () => {
       events: ['event'],
       tasks: ['task'],
       shoppingItems: ['item'],
-      sleep: {
-        active: null,
-        sessions: [],
-        todayBlocks: [],
-        week: [],
-        schedule: [],
-        signals: [],
-        howItWorks: [],
-        disclaimer: '',
-      },
+      sleep: { active: null },
       feeding: { child: null, current: null, next: null },
     });
     expect(calendar.listUpcomingOpen).toHaveBeenCalledWith(user);
     expect(children.listOpen).toHaveBeenCalledWith(user);
     expect(shopping.listItems).toHaveBeenCalledWith(user);
-    expect(sleep.overview).toHaveBeenCalledWith(user);
+    expect(sleep.homeOverview).toHaveBeenCalledWith(user);
     expect(feeding.focus).toHaveBeenCalledWith(user);
   });
 });

@@ -17,6 +17,49 @@ import { clearApiCache } from './api-cache.interceptor';
 import { NATIVE_REFRESH_TOKEN_STORE } from './native-refresh-token';
 import { SLEEP_WIDGET_BRIDGE } from '../../features/sleep/sleep-widget-bridge';
 
+const WEB_USER_STORAGE_KEY = 'protsenko_web_user_v1';
+
+function readCachedWebUser(): AuthUser | null {
+  try {
+    const raw = sessionStorage.getItem(WEB_USER_STORAGE_KEY);
+    if (!raw) return null;
+    const parsed: unknown = JSON.parse(raw);
+    if (typeof parsed !== 'object' || parsed === null) return null;
+    const u = parsed as Record<string, unknown>;
+    if (
+      typeof u['userId'] !== 'string' ||
+      typeof u['email'] !== 'string' ||
+      typeof u['displayName'] !== 'string' ||
+      typeof u['householdId'] !== 'string' ||
+      typeof u['membershipId'] !== 'string' ||
+      typeof u['color'] !== 'string' ||
+      (u['role'] !== 'ADMIN' && u['role'] !== 'MEMBER')
+    ) {
+      return null;
+    }
+    return {
+      userId: u['userId'],
+      email: u['email'],
+      displayName: u['displayName'],
+      householdId: u['householdId'],
+      membershipId: u['membershipId'],
+      role: u['role'],
+      color: u['color'],
+    };
+  } catch {
+    return null;
+  }
+}
+
+function writeCachedWebUser(user: AuthUser | null): void {
+  try {
+    if (user) sessionStorage.setItem(WEB_USER_STORAGE_KEY, JSON.stringify(user));
+    else sessionStorage.removeItem(WEB_USER_STORAGE_KEY);
+  } catch {
+    // sessionStorage is optional.
+  }
+}
+
 @Injectable({ providedIn: 'root' })
 export class AuthService {
   private readonly http = inject(HttpClient);
@@ -34,8 +77,9 @@ export class AuthService {
   private sessionVersion = 0;
   private nativeLoggingOut = false;
   private postLoginRoute: '/app/sleep' | null = null;
+  private revalidating = false;
 
-  readonly user = signal<AuthUser | null>(null);
+  readonly user = signal<AuthUser | null>(isNativeApp() ? null : readCachedWebUser());
   readonly ready = signal(false);
 
   constructor() {
@@ -101,13 +145,30 @@ export class AuthService {
           next: (res) => {
             this.user.set(res.user);
             this.ready.set(true);
+            writeCachedWebUser(res.user);
           },
           error: () => {
             this.user.set(null);
             this.ready.set(true);
+            writeCachedWebUser(null);
+            clearApiCache();
           },
         }),
       );
+  }
+
+  revalidateInBackground(): void {
+    if (this.ready() || this.revalidating || isNativeApp()) return;
+    this.revalidating = true;
+    this.bootstrap().subscribe({
+      next: () => {
+        this.revalidating = false;
+      },
+      error: () => {
+        this.revalidating = false;
+        if (!this.user()) void this.router.navigateByUrl('/login');
+      },
+    });
   }
 
   login(email: string, password: string): Observable<{ user: AuthUser }> {
@@ -120,7 +181,11 @@ export class AuthService {
         { email, password },
         { withCredentials: true },
       )
-      .pipe(tap((res) => this.user.set(res.user)));
+      .pipe(tap((res) => {
+        this.user.set(res.user);
+        this.ready.set(true);
+        writeCachedWebUser(res.user);
+      }));
   }
 
   register(payload: RegisterModel): Observable<{ user: AuthUser }> {
@@ -131,7 +196,11 @@ export class AuthService {
       .post<{ user: AuthUser }>(`${API_BASE_URL}/auth/register`, payload, {
         withCredentials: true,
       })
-      .pipe(tap((res) => this.user.set(res.user)));
+      .pipe(tap((res) => {
+        this.user.set(res.user);
+        this.ready.set(true);
+        writeCachedWebUser(res.user);
+      }));
   }
 
   setUser(user: AuthUser): void {
@@ -139,6 +208,7 @@ export class AuthService {
     if (householdChanged) clearApiCache();
     this.user.set(user);
     this.ready.set(true);
+    if (!isNativeApp()) writeCachedWebUser(user);
     if (isNativeApp()) {
       if (householdChanged) {
         void this.widget.clear().catch(() => undefined).then(() => this.syncNativeWidget());
@@ -177,6 +247,7 @@ export class AuthService {
 
   logout(): void {
     clearApiCache();
+    writeCachedWebUser(null);
     if (isNativeApp()) {
       void this.logoutNative();
       return;
