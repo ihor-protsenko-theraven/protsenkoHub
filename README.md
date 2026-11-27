@@ -436,7 +436,7 @@ npm run sync:mobile:ios      # синхронізувати лише iOS (на m
 ## Продакшен на Render, Vercel і Neon
 
 Підтримуються обидва варіанти розгортання зі спільним доменом для Web та API, а PostgreSQL працює в Neon:
-- **Render (поточний продакшен, [`render.yaml`](render.yaml)):** один Web Service, де NestJS обслуговує `/api/v1/*` і статичний Angular (`SERVE_WEB=true`) зі стисненням `compression`, заголовками `Cache-Control: public, max-age=31536000, immutable` для хешованих бандлів та `npm prune --omit=dev` після збірки.
+- **Render (поточний продакшен, [`render.yaml`](render.yaml)):** один Web Service, де NestJS обслуговує `/api/v1/*` і статичний Angular (`SERVE_WEB=true`) зі стисненням `compression` та заголовками `Cache-Control: public, max-age=31536000, immutable` для хешованих бандлів.
 - **Vercel ([`vercel.json`](vercel.json)):** окремі сервіси `web` (зі `SKIP_PRISMA_GENERATE=1`) та `api` (NestJS Serverless/Fluid Function) за одним доменом.
 
 Щоб розгорнути продакшен:
