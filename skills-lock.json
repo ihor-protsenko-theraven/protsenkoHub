@@ -1,29 +1,43 @@
 {
-  "version": 1,
+  "version": 2,
   "skills": {
     "angular-developer": {
       "source": "angular/skills",
       "sourceType": "github",
       "skillPath": "angular-developer/SKILL.md",
-      "computedHash": "4f5c15393807fbdfa0c5bed201732b94d903fe010ca1de99ea1b11eadc95f481"
+      "computedHash": "2617855a19b35e6b4345f045d10e90b50a3d028e22d59fe9059872a87e7822b8"
     },
     "frontend-design": {
       "source": "anthropics/skills",
       "sourceType": "github",
       "skillPath": "skills/frontend-design/SKILL.md",
-      "computedHash": "106acf230014cbb43ca34e6410371321b56ca742f9ee0442e8ec05bf02eb0384"
+      "computedHash": "83485963700bcf11d5bf78118facb301676b69d918fee2e45a95e7f1a2840f6c"
     },
     "neon": {
       "source": "neondatabase/agent-skills",
       "sourceType": "github",
       "skillPath": "skills/neon/SKILL.md",
-      "computedHash": "be346e41230da99ec27555ea8eb781a398568a5c8d70bdc1e5d82d3f2547f2f0"
+      "computedHash": "49c6011c05fa005208d85a320a632ff5bb967a168f1cb9145a2d0bdee5a61eea"
     },
     "neon-postgres": {
       "source": "neondatabase/agent-skills",
       "sourceType": "github",
       "skillPath": "skills/neon-postgres/SKILL.md",
-      "computedHash": "31be95961c771eec138b41489ef0c77e3a99c221aca0618af87cbbc59d8cdc8e"
+      "computedHash": "d1672f8d0fe1a2bf7450a9cdc59b2ecab2231b0c30f00a66d9f262b145c6c6cc"
+    },
+    "supabase": {
+      "source": "supabase/agent-skills",
+      "commit": "c9be0e931b7930f7d02126d04774d904c381e7d7",
+      "sourceType": "github",
+      "skillPath": "skills/supabase/SKILL.md",
+      "computedHash": "2fbff32fd63b7d31585cacf0ed43e5bf8d05dd20d6c0c751d256cb967a00eec1"
+    },
+    "supabase-postgres-best-practices": {
+      "source": "supabase/agent-skills",
+      "commit": "c9be0e931b7930f7d02126d04774d904c381e7d7",
+      "sourceType": "github",
+      "skillPath": "skills/supabase-postgres-best-practices/SKILL.md",
+      "computedHash": "3eb972c2d7c818e544e35cc33ea8d7147d4d78ae08142ef40037b0fbac7a2505"
     }
   }
 }
