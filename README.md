@@ -433,11 +433,17 @@ npm run sync:mobile:ios      # синхронізувати лише iOS (на m
 
 ---
 
-## Продакшен на Render, Vercel і Neon
+## Продакшен: Render, Vercel або Docker (Koyeb / VPS)
 
-Підтримуються обидва варіанти розгортання зі спільним доменом для Web та API, а PostgreSQL працює в Neon:
+Підтримуються три варіанти розгортання зі спільним доменом для Web та API:
 - **Render (поточний продакшен, [`render.yaml`](render.yaml)):** один Web Service, де NestJS обслуговує `/api/v1/*` і статичний Angular (`SERVE_WEB=true`) зі стисненням `compression` та заголовками `Cache-Control: public, max-age=31536000, immutable` для хешованих бандлів.
 - **Vercel ([`vercel.json`](vercel.json)):** окремі сервіси `web` (зі `SKIP_PRISMA_GENERATE=1`) та `api` (NestJS Serverless/Fluid Function) за одним доменом.
+- **Docker — Koyeb Free або власний VPS / Oracle Cloud Always Free ([`Dockerfile`](Dockerfile), [`docker-compose.prod.yml`](docker-compose.prod.yml), [`Caddyfile`](Caddyfile)):**
+  - **Koyeb Free:** підключіть репозиторій через **Dockerfile**, порт `3001`, healthcheck `/api/v1/health`, і задайте `DATABASE_URL` / `DIRECT_URL` (Neon, Supabase або Aiven) + `JWT_SECRET` + VAPID/CRON змінні. При старті [`scripts/docker-start.js`](scripts/docker-start.js) сам застосує міграції (із 3 спробами при холодному старті БД) і запустить сервер.
+  - **Oracle Cloud Always Free / власний VPS:** на сервері створіть `.env.prod` із `APP_DOMAIN`, `POSTGRES_PASSWORD`, `JWT_SECRET` (та за потреби VAPID/CRON) і запустіть усе разом (PostgreSQL + API/Web + Caddy з авто-HTTPS):
+    ```bash
+    docker compose --env-file .env.prod -f docker-compose.prod.yml up -d --build
+    ```
 
 Щоб розгорнути продакшен:
 
@@ -471,6 +477,7 @@ npm run sync:mobile:ios      # синхронізувати лише iOS (на m
 | `npm run db:deploy` | Застосування production-міграцій (`prisma migrate deploy`) |
 | `npm run db:seed` | Заповнення локальної бази демо-даними |
 | `npm run sync:mobile` | Збірка Angular для мобільних платформ та синхронізація Capacitor |
+| `npm run deploy:render` | Запустити деплой на Render через `RENDER_DEPLOY_HOOK_URL` (з env або `.env.local`); `deploy:render:clean` — зі скиданням build-кешу |
 
 Перед комітом обов'язково перевіряйте проєкт командами:
 

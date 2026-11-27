@@ -14,6 +14,8 @@
     "build": "npm run build -w @protsenko/shared && npm run build -w api && npm run build -w web",
     "build:api": "npm run build -w api",
     "build:web": "npm run build -w web",
+    "deploy:render": "node ./scripts/deploy-render.js",
+    "deploy:render:clean": "node ./scripts/deploy-render.js --clear-cache",
     "build:mobile": "node apps/mobile/scripts/build-web.mjs",
     "sync:mobile": "npm run build:mobile && npm run sync -w mobile",
     "sync:mobile:android": "npm run build:mobile && npm run sync:android -w mobile",
