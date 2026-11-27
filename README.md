@@ -478,6 +478,8 @@ npm run sync:mobile:ios      # синхронізувати лише iOS (на m
 | `npm run db:seed` | Заповнення локальної бази демо-даними |
 | `npm run sync:mobile` | Збірка Angular для мобільних платформ та синхронізація Capacitor |
 | `npm run deploy:render` | Запустити деплой на Render через `RENDER_DEPLOY_HOOK_URL` (з env або `.env.local`); `deploy:render:clean` — зі скиданням build-кешу |
+| `npm run deploy:koyeb` | Запустити редеплой на Koyeb через `KOYEB_API_TOKEN` і `KOYEB_SERVICE_ID` (з env або `.env.local`); `deploy:koyeb:clean` — без build-кешу |
+| `npm run deploy:vps` | Зібрати й запустити продакшен-стек (Postgres + App + Caddy HTTPS) на VPS із `.env.prod` (шаблон — [`env.prod.example`](env.prod.example)) |
 
 Перед комітом обов'язково перевіряйте проєкт командами:
 
